@@ -124,6 +124,14 @@
 <button class="w-full px-6 py-4 bg-gray-200 text-gray-700 font-bold text-lg rounded-full shadow-lg hover:bg-gray-300 transition" onclick="scrollToScreen('screen8')">
                         Client Login
                     </button>
+        <!-- Admin Login (opens Administrator Dashboard) -->
+<button
+  onclick="openAdminDashboard()"
+  class="w-full px-6 py-3 bg-gray-200 text-gray-800 font-semibold rounded-full shadow hover:bg-gray-300 transition mt-3"
+  aria-label="Admin Login"
+>
+  Admin Login
+</button>
 <p class="text-sm text-gray-500 mt-4">By continuing you agree to our <a class="text-[#c62828] hover:underline" href="#">Terms of Service</a>.</p>
 </div>
 </div>
@@ -1428,6 +1436,20 @@ document.addEventListener('DOMContentLoaded', function(){
   });
 })();
 </script>
+<script>
+  function openAdminDashboard() {
+    // Find the first ".screen" whose text includes "Administrator Dashboard"
+    var adminEl = Array.from(document.querySelectorAll('.screen[id^="screen"]'))
+      .find(el => /Administrator Dashboard/i.test(el.textContent || ''));
+    if (!adminEl) { alert('Admin Dashboard screen not found'); return; }
 
+    if (typeof scrollToScreen === 'function') {
+      scrollToScreen(adminEl.id);
+    } else {
+      adminEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  }
+</script>
+        
 </body>
 </html>
