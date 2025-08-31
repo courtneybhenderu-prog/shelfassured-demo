@@ -1,0 +1,54 @@
+# ShelfAssured — Clickable MVP Demo
+
+Live site (after enabling Pages):  
+https://courtneybhenderu-prog.github.io/shelfassured-demo/
+
+This is a static, single-file prototype for demonstrating the ShelfAssured flow:
+- Admin/Client can **Create New Job**
+- Worker can **see Jobs Near You**, **confirm location**, **take/upload photos**, **enter shelf price**
+- Optional **Vision Analysis (beta)** for demo storytelling
+- **Client Snapshot** (printable 1-pager) with photos + analysis
+
+## Quick start
+
+1. **Upload files**
+   - Download and unzip: `shelfassured_pages_latest.zip`
+   - In this repo → **Add file → Upload files** → drag **all** files to the **repo root**  
+     (`index.html`, images, `.nojekyll`, `README_GITHUB_PAGES.txt`)
+   - **Commit**.
+
+2. **Enable GitHub Pages**
+   - Repo **Settings → Pages**
+   - **Source:** “Deploy from a branch”
+   - **Branch:** `main` • **Folder:** `/ (root)` → **Save`
+   - Your site will publish at the URL above.
+
+> Tip: If the site doesn’t look updated, hard refresh the browser (Cmd/Ctrl+Shift+R).
+
+## How to demo (60 seconds)
+
+1) **Create a Job**  
+   - From the Client Dashboard, click **Create New Job**  
+   - Fill **Brand**, **Store** (pick from list or type), **Job Type**, **Photo Instructions** → **Publish**
+
+2) **Complete the Job**  
+   - On Worker Dashboard → your job appears **under its store header**  
+   - Tap job → **Confirm Location** → **Start Job**  
+   - Camera: choose **Demo Set** (e.g., Sparkling Water Shelf) or upload a photo → **Use This Photo**  
+   - **Analysis**: click **Analyze This Photo** (optional) → **Submit for Review**  
+   - **Client Snapshot**: from Client Dashboard, open snapshot → **Print/Save PDF**
+
+## Updating the demo
+
+- **Edit UI copy or flows:** open `index.html` → ✏️ **Edit** → commit to `main`
+- **Replace images/logo:** **Add file → Upload files**, keep the same filenames to overwrite:
+  - `logo_shelfassured.png`
+  - `demo_peets_closeup.jpg`, `demo_peets_aisle.jpg`, `demo_peets_shelf.jpg`
+- **Reset the demo state:** hard refresh (Cmd/Ctrl+Shift+R); it uses `localStorage`
+
+## Notes
+- This is a client-side prototype (no backend). Vision panel shows demo output by design.
+- Keep `.nojekyll` at the repo root so GitHub Pages serves everything as-is.
+
+---
+© ShelfAssured. All rights reserved. (No open-source license is granted.)
