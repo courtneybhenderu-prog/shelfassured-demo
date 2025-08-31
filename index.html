@@ -134,6 +134,12 @@
 </button>
 <p class="text-sm text-gray-500 mt-4">By continuing you agree to our <a class="text-[#c62828] hover:underline" href="#">Terms of Service</a>.</p>
 </div>
+<!-- before -->
+<div id="screenXX" class="screen p-6">
+
+<!-- after -->
+<div id="screenXX" class="screen p-6 admin-screen">
+  <a id="admin-dashboard"></a>
 </div>
 </div>
 <!-- Screen 2: Sign-up options -->
@@ -1438,18 +1444,28 @@ document.addEventListener('DOMContentLoaded', function(){
 </script>
 <script>
   function openAdminDashboard() {
-    // Find the first ".screen" whose text includes "Administrator Dashboard"
-    var adminEl = Array.from(document.querySelectorAll('.screen[id^="screen"]'))
-      .find(el => /Administrator Dashboard/i.test(el.textContent || ''));
-    if (!adminEl) { alert('Admin Dashboard screen not found'); return; }
+    // Most reliable: look for the explicit anchor or marked screen
+    var el =
+      document.getElementById('admin-dashboard') ||
+      document.querySelector('.admin-screen') ||
+      Array.from(document.querySelectorAll('.screen[id^="screen"]'))
+        .find(sc => /Admin(istrator)?\s*Dashboard/i.test((sc.textContent || '')));
 
-    if (typeof scrollToScreen === 'function') {
-      scrollToScreen(adminEl.id);
+    if (!el) { alert('Admin Dashboard screen not found'); return; }
+
+    // If we found the anchor, jump to its parent screen
+    if (el.id === 'admin-dashboard' && el.closest('.screen')) {
+      el = el.closest('.screen');
+    }
+
+    if (typeof scrollToScreen === 'function' && el.id) {
+      scrollToScreen(el.id);
     } else {
-      adminEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      el.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
   }
 </script>
+
         
 </body>
 </html>
