@@ -31,6 +31,26 @@
   .btn-secondary{ @apply w-full px-6 py-4 bg-gray-200 text-gray-800 font-semibold rounded-full shadow hover:bg-gray-300 transition; }
   .small-link{ @apply text-sm text-red-700 hover:underline; }
 </style>
+
+<style id="sa-button-fallback">
+  /* Button fallback to keep formatting consistent even if Tailwind hiccups */
+  .sa-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 0.75rem 1rem;
+    border-radius: 9999px; /* rounded-full */
+    font-weight: 700;
+    line-height: 1.25;
+    border: 0;
+    cursor: pointer;
+    text-decoration: none;
+  }
+  /* Keep small icon-only buttons leaner */
+  .sa-btn.icon { padding: 0.5rem; border-radius: 0.75rem; }
+</style>
+
 </head>
 <body class="bg-gray-200">
 <!-- Quick Admin Navigation (shown after Admin Login) -->
@@ -993,6 +1013,27 @@ document.addEventListener('DOMContentLoaded', initState);
   #screen19 { position: absolute; inset: 0; width: 100%; }
 }
 </style>
+
+<script id="sa-button-autopatch">
+  (function(){
+    function patchButtons(){
+      var btns = document.querySelectorAll('button');
+      btns.forEach(function(b){
+        if (!b.classList.contains('sa-btn')){
+          b.classList.add('sa-btn');
+        }
+        if (!b.getAttribute('type')){
+          b.setAttribute('type','button');
+        }
+      });
+    }
+    if (document.readyState === 'loading'){
+      document.addEventListener('DOMContentLoaded', patchButtons);
+    } else {
+      patchButtons();
+    }
+  })();
+</script>
+
 </body>
 </html>
-
