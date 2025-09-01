@@ -3,654 +3,996 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>ShelfAssured – Demo (Fixed Price Flow)</title>
+<title>ShelfAssured – Demo Prototype (Patched)</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
 <script src="https://cdn.tailwindcss.com"></script>
 <style>
-  body{ font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif; background:#f3f4f6; }
-  .app-flow{ display:flex; gap:1.5rem; padding:1.5rem; overflow-x:auto; scroll-behavior:smooth; }
-  .phone{ flex-shrink:0; width:100%; max-width:400px; min-height:800px; background:#fff; border-radius:1.25rem;
-          border:4px solid #3d342f; box-shadow:0 10px 30px rgba(0,0,0,.10); overflow:hidden; position:relative; }
-  .screen{ padding:1.25rem; min-height:800px; overflow-y:auto; }
-  .taskbar{ position:sticky; bottom:0; background:#fff; padding:1rem; box-shadow:0 -6px 20px rgba(0,0,0,.08) }
-  .pill{ background:#ececec; padding:.6rem .8rem; border-radius:.75rem; display:inline-block; font-size:.85rem; color:#374151 }
-  .job{ background:#fff; border-left:4px solid #f59e0b; padding:1rem; border-radius:.9rem; box-shadow:0 2px 10px rgba(0,0,0,.06) }
-  .job.red{ border-left-color:#c62828 }
-  .spinner{ width:26px; height:26px; border:4px solid #eee; border-top-color:#c62828; border-radius:50%; animation:spin 1s linear infinite }
-  @keyframes spin{to{ transform:rotate(360deg) } }
-  .modal{ position:fixed; inset:0; background:rgba(0,0,0,.45); display:flex; align-items:center; justify-content:center; opacity:0; visibility:hidden; transition:.25s }
-  .modal.show{ opacity:1; visibility:visible }
-  .btn{ display:inline-flex; align-items:center; justify-content:center; gap:.5rem; padding:.85rem 1rem; border-radius:999px; font-weight:700 }
-  .btn-red{ background:#c62828; color:#fff }
-  .btn-red:hover{ background:#9b1f1f }
-  .btn-ghost{ background:#e5e7eb; color:#111827 }
-  .btn-ghost:hover{ background:#d1d5db }
-  .menu{ position:fixed; top:.75rem; right:.75rem; z-index:30 }
-  .menu a{ display:block; padding:.5rem 0; color:#111827 }
-  .menu-panel{ position:absolute; right:0; top:2.5rem; background:#fff; border:1px solid #e5e7eb; border-radius:.75rem; padding:.75rem 1rem; width:220px; box-shadow:0 10px 25px rgba(0,0,0,.12); display:none }
-  .menu.open .menu-panel{ display:block }
+  :root { --sa-border:#3d342f; --sa-accent:#c62828; --sa-gold:#f9a825; }
+  html,body{ height:100%; }
+  body { font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; background:#f7f3f0; color:#2d231e; }
+  .app-flow-container{ display:flex; gap:1.5rem; padding:1.5rem; overflow-x:auto; scroll-behavior:smooth; }
+  .app-container{ flex-shrink:0; width:100%; max-width:400px; min-height:800px; background:#fcfbf9; border:4px solid var(--sa-border); border-radius:1.25rem; box-shadow:0 4px 12px rgba(0,0,0,.08); position:relative; overflow:hidden; }
+  .screen{ width:100%; height:100%; padding:1.25rem; overflow-y:auto; }
+  .taskbar{ position:sticky; bottom:0; left:0; right:0; z-index:10; background:#fff; padding:1rem; border-top-left-radius:1.25rem; border-top-right-radius:1.25rem; box-shadow:0 -4px 12px rgba(0,0,0,.08); }
+  .job-box{ background:#fff; border-left:4px solid var(--sa-gold); }
+  .job-box.red-border{ border-left-color:#c62828; }
+  .loading{ border:4px solid #eee; border-top:4px solid var(--sa-accent); border-radius:50%; width:26px; height:26px; animation:spin 1s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .modal{ position:fixed; inset:0; background:rgba(0,0,0,.5); display:flex; align-items:center; justify-content:center; z-index:50; visibility:hidden; opacity:0; transition:opacity .25s ease; }
+  .modal.is-visible{ visibility:visible; opacity:1; }
+  /* Quick Admin Nav (appears when Admin mode is on) */
+  .quick-nav{ position:fixed; top:10px; left:10px; z-index:60; display:none; }
+  .quick-nav.show{ display:block; }
+  .pill{ @apply px-3 py-1 rounded-full text-xs font-semibold; }
+  .screen-title{ @apply text-3xl font-extrabold text-gray-800; }
+  .btn-primary{ @apply w-full px-6 py-4 bg-red-700 text-white font-bold text-lg rounded-full shadow hover:bg-red-800 transition; }
+  .btn-secondary{ @apply w-full px-6 py-4 bg-gray-200 text-gray-800 font-semibold rounded-full shadow hover:bg-gray-300 transition; }
+  .small-link{ @apply text-sm text-red-700 hover:underline; }
 </style>
 </head>
-<body>
+<body class="bg-gray-200">
+<!-- Quick Admin Navigation (shown after Admin Login) -->
+<div id="quick-nav" class="quick-nav">
+  <div class="bg-white/90 backdrop-blur rounded-xl shadow p-2 border border-gray-200">
+    <div class="text-xs font-bold text-gray-700 px-2 pb-1">Quick Nav (Admin)</div>
+    <div class="grid grid-cols-2 gap-2 w-64">
+      <button class="px-2 py-1 text-xs rounded bg-gray-100 hover:bg-gray-200" onclick="scrollToScreen('screen1')">Splash</button>
+      <button class="px-2 py-1 text-xs rounded bg-gray-100 hover:bg-gray-200" onclick="scrollToScreen('screen4')">Shopper Dashboard</button>
+      <button class="px-2 py-1 text-xs rounded bg-gray-100 hover:bg-gray-200" onclick="scrollToScreen('screen5')">Job Details</button>
+      <button class="px-2 py-1 text-xs rounded bg-gray-100 hover:bg-gray-200" onclick="scrollToScreen('screen6')">Photo Capture</button>
+      <button class="px-2 py-1 text-xs rounded bg-gray-100 hover:bg-gray-200" onclick="scrollToScreen('screen7')">Analysis</button>
+      <button class="px-2 py-1 text-xs rounded bg-gray-100 hover:bg-gray-200" onclick="scrollToScreen('screen8')">Client Dashboard</button>
+      <button class="px-2 py-1 text-xs rounded bg-gray-100 hover:bg-gray-200" onclick="scrollToScreen('screen13')">Client: New Job</button>
+      <button class="px-2 py-1 text-xs rounded bg-gray-100 hover:bg-gray-200" onclick="scrollToScreen('screen19')">Client Snapshot</button>
+      <button class="px-2 py-1 text-xs rounded bg-gray-100 hover:bg-gray-200" onclick="scrollToScreen('screen14')">Admin Dashboard</button>
+      <button class="px-2 py-1 text-xs rounded bg-gray-100 hover:bg-gray-200" onclick="scrollToScreen('screen15')">Admin: Users</button>
+      <button class="px-2 py-1 text-xs rounded bg-gray-100 hover:bg-gray-200" onclick="scrollToScreen('screen16')">Admin: Jobs</button>
+      <button class="px-2 py-1 text-xs rounded bg-gray-100 hover:bg-gray-200" onclick="scrollToScreen('screen17')">Admin: Support</button>
+      <button class="px-2 py-1 text-xs rounded bg-gray-100 hover:bg-gray-200" onclick="scrollToScreen('screen20')">Create Job (Form)</button>
+    </div>
+  </div>
+</div>
 
-<div class="app-flow">
-
-  <!-- Screen 1: Splash -->
-  <div class="phone">
+<div class="app-flow-container">
+  <!-- Screen 1: Splash / Role chooser -->
+  <div class="app-container">
     <div id="screen1" class="screen flex flex-col items-center justify-center text-center">
-      <div class="mb-4 text-6xl">🛒</div>
-      <h1 class="text-4xl font-extrabold text-gray-800">Shelf<span class="text-yellow-500">Assured</span></h1>
-      <p class="mt-4 text-lg text-gray-600 max-w-xs">Helping emerging brands see their products on grocery store shelves in real time.</p>
-      <div class="mt-10 w-full px-2 space-y-3">
-        <button class="btn btn-red w-full" onclick="go('screen2')">Create Account</button>
-        <button class="btn btn-ghost w-full" onclick="go('screen3')">Sign In</button>
-        <button class="btn btn-ghost w-full" onclick="go('screen8')">Client Login</button>
-        <button class="btn btn-ghost w-full" onclick="go('screen14')">Admin Login</button>
+      <div class="mb-4">
+        <!-- simple logo glyph -->
+        <div class="w-24 h-24 rounded-2xl bg-gradient-to-br from-gray-200 to-gray-300 border border-gray-400 flex items-center justify-center">
+          <span class="text-3xl">🛒</span>
+        </div>
       </div>
-      <p class="text-xs text-gray-500 mt-6">By continuing you agree to our <span class="text-red-600">Terms of Service</span>.</p>
+      <h1 class="text-4xl font-extrabold text-[#424242]">Shelf<span class="text-[var(--sa-gold)]">Assured</span></h1>
+      <p class="mt-4 text-lg text-gray-700 max-w-xs">Helping emerging brands see their products on shelves in real time.</p>
+      <div class="mt-10 w-full space-y-3">
+        <button class="btn-primary" onclick="scrollToScreen('screen2')">Create Account</button>
+        <button class="btn-secondary" onclick="scrollToScreen('screen3')">Sign In</button>
+        <button class="btn-secondary" onclick="scrollToScreen('screen8')">Client Login</button>
+        <button class="btn-secondary" onclick="enableAdminMode()">Admin Login</button>
+        <p class="text-xs text-gray-500 mt-2">By continuing, you agree to our <a href="#" class="text-red-700 underline underline-offset-2">Terms</a>.</p>
+      </div>
     </div>
   </div>
 
   <!-- Screen 2: Create Account -->
-  <div class="phone">
-    <div id="screen2" class="screen">
-      <h2 class="text-3xl font-extrabold">Create Account</h2>
-      <p class="text-gray-500">Choose a method to get started.</p>
-      <div class="mt-6 space-y-3">
-        <button class="btn w-full bg-white border border-gray-300">Sign in with Google</button>
-        <div class="text-center text-gray-400">OR</div>
-        <button class="btn btn-ghost w-full" onclick="go('screen11')">Continue with Email</button>
-      </div>
-
-      <div class="menu">
-        <button class="btn btn-ghost" onclick="toggleMenu(this)">≡ Menu</button>
-        <div class="menu-panel">
-          <a href="javascript:go('screen1')">← Splash</a>
-          <a href="javascript:go('screen3')">Sign In</a>
+  <div class="app-container">
+    <div id="screen2" class="screen flex flex-col justify-center">
+      <h2 class="screen-title text-center">Create Account</h2>
+      <p class="text-center text-gray-500 mb-6">Choose a method to get started.</p>
+      <div class="space-y-3">
+        <button class="w-full flex items-center justify-center gap-3 bg-white border border-gray-300 rounded-full py-3 shadow">
+          <span class="text-lg">🔐</span><span>Sign in with Google</span>
+        </button>
+        <div class="flex items-center gap-2">
+          <hr class="flex-1 border-gray-300"/><span class="text-xs text-gray-500">OR</span><hr class="flex-1 border-gray-300"/>
+        </div>
+        <button class="btn-secondary" onclick="scrollToScreen('screen11')">Continue with Email</button>
+        <div class="text-center mt-3">
+          <button class="small-link" onclick="scrollToScreen('screen1')">Back to Splash</button>
         </div>
       </div>
     </div>
   </div>
 
   <!-- Screen 3: Sign In -->
-  <div class="phone">
-    <div id="screen3" class="screen">
-      <h2 class="text-2xl font-bold">Welcome Back!</h2>
-      <p class="text-gray-500">Sign in to your account.</p>
-      <div class="mt-6 space-y-4 max-w-xs">
-        <div>
-          <label class="text-sm">Email</label>
-          <input id="login-email" type="email" class="w-full border rounded px-3 py-2"/>
+  <div class="app-container">
+    <div id="screen3" class="screen flex flex-col justify-between">
+      <div>
+        <h2 class="text-2xl font-bold text-gray-800 mb-2">Welcome Back!</h2>
+        <p class="text-gray-500 mb-4">Sign in to your account.</p>
+        <div class="space-y-3">
+          <div>
+            <label class="block text-sm font-medium">Email</label>
+            <input type="email" class="mt-1 w-full border rounded px-3 py-2" />
+          </div>
+          <div>
+            <label class="block text-sm font-medium">Password</label>
+            <input type="password" class="mt-1 w-full border rounded px-3 py-2" />
+          </div>
+          <button class="btn-primary" onclick="scrollToScreen('screen4')">Sign In</button>
         </div>
-        <div>
-          <label class="text-sm">Password</label>
-          <input id="login-pass" type="password" class="w-full border rounded px-3 py-2"/>
-        </div>
-        <button class="btn btn-red w-full" onclick="go('screen4')">Sign In</button>
       </div>
-
-      <div class="menu">
-        <button class="btn btn-ghost" onclick="toggleMenu(this)">≡ Menu</button>
-        <div class="menu-panel">
-          <a href="javascript:go('screen1')">← Splash</a>
-          <a href="javascript:go('screen4')">→ Shopper Dashboard</a>
-        </div>
+      <div class="text-center">
+        <span class="text-sm text-gray-500">No account?</span>
+        <button class="small-link ml-1" onclick="scrollToScreen('screen2')">Sign up</button>
       </div>
     </div>
   </div>
 
   <!-- Screen 4: Shopper Dashboard -->
-  <div class="phone">
-    <div id="screen4" class="screen">
-      <h2 class="text-3xl font-extrabold">Hello, Courtney!</h2>
-      <p class="text-gray-500">Your ShelfAssured Dashboard</p>
+  <div class="app-container">
+    <div id="screen4" class="screen flex flex-col">
+      <div>
+        <h2 class="screen-title">Hello, Courtney!</h2>
+        <p class="text-gray-500">Your ShelfAssured Dashboard</p>
 
-      <div class="grid grid-cols-2 gap-3 mt-5">
-        <div class="bg-white p-3 rounded-xl shadow border-l-4 border-gray-400">
-          <p class="text-xs text-gray-500">Total Income</p>
-          <p id="total-income" class="text-2xl font-bold">$15.00</p>
+        <div class="grid grid-cols-2 gap-3 mt-5">
+          <div class="bg-white p-4 rounded-xl shadow border-l-4 border-gray-400">
+            <p class="text-xs text-gray-500">Total Income</p>
+            <p id="total-income" class="text-2xl font-bold">$15.00</p>
+          </div>
+          <div class="bg-white p-4 rounded-xl shadow border-l-4 border-[var(--sa-accent)]">
+            <p class="text-xs text-gray-500">Current Jobs</p>
+            <p class="text-2xl font-bold">4</p>
+          </div>
         </div>
-        <div class="bg-white p-3 rounded-xl shadow border-l-4 border-red-600">
-          <p class="text-xs text-gray-500">Current Jobs</p>
-          <p class="text-2xl font-bold">4</p>
+
+        <div class="mt-5" id="jobs-section">
+          <div class="flex items-center justify-between">
+            <h3 class="text-xl font-bold">Jobs Near You</h3>
+            <button class="text-sm text-red-700 hover:underline">Filter</button>
+          </div>
+          <div id="jobs-dynamic" class="mt-3 space-y-3"></div>
+
+          <!-- Static store block -->
+          <div class="bg-gray-200 p-3 rounded text-sm font-medium text-gray-700 mt-4">
+            Whole Foods Market - 10133 Louetta Rd, Houston, TX 77070
+          </div>
+          <div class="job-box p-4 rounded-xl shadow cursor-pointer hover:shadow-lg"
+               onclick="showLocationModal('Whole Foods Market - 10133 Louetta Rd, Houston, TX 77070')">
+            <p class="font-bold">Rambler Sparkling Water</p>
+            <p class="text-sm text-gray-500 mt-1">Take and upload 2 photos</p>
+            <p class="text-sm font-semibold text-[var(--sa-gold)] mt-2">Earn $3.00</p>
+          </div>
         </div>
       </div>
 
-      <div class="mt-6">
-        <div class="flex items-center justify-between">
-          <h3 class="text-xl font-bold">Jobs Near You</h3>
-          <span class="pill">Filter</span>
-        </div>
-
-        <div class="mt-3 pill">Whole Foods Market - 10133 Louetta Rd, Houston, TX 77070</div>
-        <div class="job mt-2 cursor-pointer" onclick="openJob('Rambler Sparkling Water','Whole Foods Market - 10133 Louetta Rd, Houston, TX 77070',300)">
-          <p class="font-bold">Rambler Sparkling Water</p>
-          <p class="text-gray-500 text-sm">Take and upload 2 photos</p>
-          <p class="text-yellow-600 font-semibold text-sm mt-1">Earn $3.00</p>
-        </div>
-
-        <div class="mt-3 pill">H‑E‑B - 20017 Bridgeland Creek Pkwy, Cypress, TX 77433</div>
-        <div class="job red mt-2 cursor-pointer" onclick="openJob('RIND Snacks','H‑E‑B - 20017 Bridgeland Creek Pkwy, Cypress, TX 77433',300)">
-          <p class="font-bold">RIND Snacks</p>
-          <p class="text-gray-500 text-sm">Take and upload 3 photos</p>
-          <p class="text-yellow-600 font-semibold text-sm mt-1">Earn $3.00</p>
-        </div>
-      </div>
-
-      <div class="taskbar mt-8">
-        <div class="flex justify-around text-gray-600">
-          <button class="font-bold text-red-700">Dashboard</button>
-          <button onclick="go('screen9')">Jobs</button>
-          <button onclick="go('screen10')">Brands</button>
-          <button onclick="go('screen11')">Profile</button>
+      <div class="taskbar mt-auto">
+        <div class="flex justify-around text-gray-500">
+          <button class="flex flex-col items-center text-[var(--sa-accent)] font-bold">
+            <span>🏠</span><span class="text-xs mt-1">Dashboard</span>
+          </button>
+          <button class="flex flex-col items-center hover:text-[var(--sa-accent)]" onclick="scrollToScreen('screen9')">
+            <span>📝</span><span class="text-xs mt-1">Jobs</span>
+          </button>
+          <button class="flex flex-col items-center hover:text-[var(--sa-accent)]" onclick="scrollToScreen('screen10')">
+            <span>🏷️</span><span class="text-xs mt-1">Brands</span>
+          </button>
+          <button class="flex flex-col items-center hover:text-[var(--sa-accent)]" onclick="scrollToScreen('screen11')">
+            <span>👤</span><span class="text-xs mt-1">Profile</span>
+          </button>
         </div>
       </div>
     </div>
   </div>
 
   <!-- Screen 5: Job Details -->
-  <div class="phone">
-    <div id="screen5" class="screen">
-      <button class="text-gray-500" onclick="go('screen4')">← Back</button>
+  <div class="app-container">
+    <div id="screen5" class="screen flex flex-col">
+      <button class="text-gray-500 hover:text-gray-700 w-10" onclick="scrollToScreen('screen4')">←</button>
       <h2 id="job-title" class="text-3xl font-bold mt-2">Rambler Sparkling Water</h2>
       <p id="job-store" class="text-gray-500">Whole Foods Market</p>
-      <p id="job-payout" class="text-yellow-600 font-bold text-2xl mt-2">$3.00</p>
+      <p id="job-payout" class="text-2xl font-bold text-[var(--sa-gold)] mt-3">$3.00</p>
 
-      <div class="mt-4">
-        <h3 class="font-bold text-lg">Job Instructions</h3>
-        <ul class="mt-2 list-disc pl-5 text-gray-700">
-          <li>Go to the beverage aisle → sparkling water.</li>
-          <li>Take a clear shelf section photo.</li>
-          <li>Take the product tag w/ price + barcode.</li>
+      <div class="mt-5">
+        <h3 class="text-xl font-bold">Job Instructions</h3>
+        <p class="text-sm text-gray-500 mt-1">Follow these steps carefully to complete the job and get paid.</p>
+        <ul class="mt-3 space-y-2 text-gray-700">
+          <li>✔ Go to the beverage aisle.</li>
+          <li>✔ Take a photo of the shelf section.</li>
+          <li>✔ Take a photo of the product tag (price + barcode readable).</li>
         </ul>
       </div>
 
       <div class="mt-5 bg-white p-4 rounded-xl shadow border">
-        <label class="text-sm font-medium">Confirm Shelf Price</label>
-        <div class="mt-1 relative">
-          <span class="absolute left-3 top-2 text-gray-500">$</span>
-          <input id="price-input" class="pl-6 pr-12 w-full border rounded px-2 py-2" placeholder="2.99" inputmode="decimal">
-          <span class="absolute right-3 top-2 text-gray-500">USD</span>
+        <label for="price-input" class="block text-sm font-medium text-gray-700">Confirm Shelf Price</label>
+        <div class="mt-1 relative rounded-md shadow-sm">
+          <div class="pointer-events-none absolute inset-y-0 left-0 pl-3 flex items-center">$</div>
+          <input id="price-input" type="text" inputmode="decimal" pattern="\\d+(\\.\\d{1,2})?"
+                 class="block w-full pl-7 pr-12 sm:text-sm border-gray-300 rounded-md focus:ring-red-500 focus:border-red-500"
+                 placeholder="2.99" aria-describedby="price-help"/>
+          <div class="absolute inset-y-0 right-0 flex items-center pr-3">USD</div>
         </div>
-        <p class="text-xs text-gray-500 mt-1">Type the price shown on the shelf tag.</p>
+        <p id="price-help" class="text-xs text-gray-500 mt-2">Enter the price shown on the <b>shelf tag</b> (e.g., 2.99).</p>
       </div>
 
-      <button class="btn btn-red w-full mt-5" onclick="capturePriceAndProceed()">Start Job</button>
+      <button class="btn-primary mt-5" onclick="capturePriceAndProceed()">Start Job</button>
     </div>
   </div>
 
   <!-- Screen 6: Photo Capture -->
-  <div class="phone">
-    <div id="screen6" class="screen">
-      <button class="text-gray-500" onclick="go('screen5')">← Back</button>
-      <h2 class="text-xl font-bold mt-2">Take Photo 1 of 2</h2>
-      <p class="text-gray-500">Shelf Section</p>
-
-      <div class="mt-4 bg-white p-3 rounded shadow max-w-xs">
-        <div class="text-sm mb-2">Upload or take a photo</div>
-        <input id="photo-input" type="file" accept="image/*" class="text-sm"/>
-        <div id="photo-preview" class="mt-3 h-40 bg-gray-100 rounded flex items-center justify-center text-gray-400">
+  <div class="app-container">
+    <div id="screen6" class="screen flex flex-col items-center">
+      <button class="self-start text-gray-400 hover:text-gray-700" onclick="scrollToScreen('screen5')">← Back</button>
+      <div class="mt-4 w-full max-w-sm bg-white text-black p-4 rounded-lg shadow">
+        <div class="flex items-center justify-between mb-2">
+          <label class="block text-sm font-medium">Photo Input Mode</label>
+          <button id="mode-toggle" class="px-2 py-1 border rounded text-xs" onclick="togglePhotoMode()">Use Auto Demo</button>
+        </div>
+        <div id="upload-block">
+          <label class="block text-sm font-medium mb-2">Upload or take a photo</label>
+          <input id="photo-input" type="file" accept="image/*" capture="environment" class="block w-full text-sm"/>
+        </div>
+        <div id="photo-preview" class="mt-3 w-full h-40 bg-gray-200 rounded-md flex items-center justify-center text-gray-500">
           No photo selected
         </div>
-        <button class="btn btn-red w-full mt-3" onclick="usePhoto()">Use This Photo</button>
+        <button class="mt-4 w-full px-4 py-2 bg-red-700 text-white font-semibold rounded-md hover:bg-red-800" onclick="proceedToAnalysis()">Use This Photo</button>
+        <p class="text-xs text-gray-600 mt-2">Tip: Auto Demo loads a sample image for quick walkthroughs.</p>
+      </div>
+      <div class="flex-1 flex flex-col items-center justify-center mt-6">
+        <div class="w-24 h-24 mb-3 rounded-full bg-gray-600/70 flex items-center justify-center text-gray-200">📷</div>
+        <h2 class="text-lg font-bold">Take Photo 1 of 2</h2>
+        <p class="text-gray-500 text-sm">Shelf Section</p>
       </div>
     </div>
   </div>
 
   <!-- Screen 7: Uploading & Analysis -->
-  <div class="phone">
-    <div id="screen7" class="screen">
-      <div class="spinner mx-auto"></div>
-      <h2 class="text-2xl font-extrabold text-center mt-4">Uploading &amp; Analyzing...</h2>
-      <p class="text-gray-500 text-center">This should only take a few seconds.</p>
+  <div class="app-container">
+    <div id="screen7" class="screen flex flex-col items-center justify-center text-center">
+      <div class="loading"></div>
+      <h2 class="text-lg font-bold mt-4">Uploading &amp; Analyzing...</h2>
+      <p class="text-gray-500 max-w-xs mt-1">Fantastic! Let's see if we got everything we need. This should only take a few seconds.</p>
 
-      <div class="mt-5 max-w-sm mx-auto bg-white p-4 rounded-xl shadow border-l-4 border-red-600">
-        <p class="font-bold">Checking…</p>
-        <p class="text-sm text-gray-600">✓ Proper lighting</p>
+      <div class="mt-5 bg-white p-4 rounded-xl shadow border-l-4 border-[var(--sa-accent)] w-full max-w-sm text-left">
+        <p class="font-bold">Checking...</p>
+        <p class="text-sm text-gray-600 mt-1">✓ Proper lighting</p>
         <p class="text-sm text-gray-600">✓ In-focus</p>
         <p class="text-sm text-gray-600">✓ Visible product</p>
       </div>
 
-      <div class="mt-5 max-w-sm mx-auto bg-white p-4 rounded-xl shadow">
+      <div id="vision-analysis" class="mt-4 bg-white p-4 rounded-xl shadow border text-left w-full max-w-sm">
         <div class="flex items-center justify-between">
-          <h3 class="font-bold">Analysis (beta)</h3>
-          <button class="px-2 py-1 border rounded text-sm" onclick="fakeVision()">Analyze This Photo</button>
+          <h3 class="font-bold">Vision Analysis (beta)</h3>
+          <button id="vision-btn" class="text-sm border px-3 py-1 rounded" onclick="runVisionAnalysis()">Analyze This Photo</button>
         </div>
-        <div id="analysis-box" class="text-sm text-gray-800 mt-2"></div>
+        <p class="text-xs text-gray-600 mt-1">Prototype-only: click <b>Analyze This Photo</b> to populate a structured summary.</p>
+        <div id="vision-results" class="mt-3 text-sm text-gray-800"></div>
       </div>
 
-      <div class="flex items-center justify-between max-w-sm mx-auto mt-6">
-        <button class="btn btn-ghost" onclick="go('screen5')">Back</button>
-        <button class="btn btn-red" onclick="submitJob()">Submit for Review</button>
-      </div>
-
-      <div class="menu">
-        <button class="btn btn-ghost" onclick="toggleMenu(this)">≡ Menu</button>
-        <div class="menu-panel">
-          <a href="javascript:go('screen4')">Worker Dashboard</a>
-          <a href="javascript:go('screen8')">Client Dashboard</a>
-          <a href="javascript:go('screen14')">Admin Dashboard</a>
-        </div>
+      <div class="flex gap-2 w-full max-w-sm mt-5">
+        <button class="flex-1 px-4 py-3 rounded-full bg-gray-200 text-gray-800 font-semibold hover:bg-gray-300" onclick="scrollToScreen('screen5')">Back</button>
+        <button class="flex-1 px-4 py-3 rounded-full bg-red-700 text-white font-bold hover:bg-red-800" onclick="submitJob()">Submit for Review</button>
       </div>
     </div>
   </div>
 
   <!-- Screen 8: Client Dashboard -->
-  <div class="phone">
-    <div id="screen8" class="screen">
-      <h2 class="text-3xl font-extrabold">Client Dashboard</h2>
-      <div class="grid grid-cols-2 gap-3 mt-5">
-        <div class="bg-white p-3 rounded-xl shadow border-l-4 border-blue-500">
-          <p class="text-xs text-gray-500">Shelf Presence Score</p>
-          <p class="text-2xl font-bold">89%</p>
+  <div class="app-container">
+    <div id="screen8" class="screen flex flex-col">
+      <div>
+        <h2 class="screen-title">Client Dashboard</h2>
+        <p class="text-gray-500">Real-time data at your fingertips</p>
+
+        <div class="grid grid-cols-2 gap-3 mt-5">
+          <div class="bg-white p-4 rounded-xl shadow border-l-4 border-blue-500">
+            <p class="text-xs text-gray-500">Shelf Presence Score</p>
+            <p class="text-2xl font-bold">89%</p>
+            <p class="text-[10px] text-gray-500 mt-1">Planogram · Facings · Tidiness</p>
+          </div>
+          <div class="bg-white p-4 rounded-xl shadow border-l-4 border-[var(--sa-accent)]">
+            <p class="text-xs text-gray-500">Out-of-Stock Alerts</p>
+            <p class="text-2xl font-bold">🚨</p>
+            <p class="text-[10px] text-gray-500 mt-1">Whole Foods, Houston</p>
+          </div>
         </div>
-        <div class="bg-white p-3 rounded-xl shadow border-l-4 border-red-600">
-          <p class="text-xs text-gray-500">Out-of-Stock Alerts</p>
-          <p class="text-2xl font-bold">🚨</p>
+
+        <div class="mt-5 bg-white p-4 rounded-xl shadow">
+          <h3 class="text-xl font-bold">Recent Audits</h3>
+          <p class="text-sm text-gray-500">Latest photos from your team</p>
+          <div class="mt-3 grid grid-cols-3 gap-2">
+            <div class="w-full h-20 bg-gray-200 rounded-lg"></div>
+            <div class="w-full h-20 bg-gray-200 rounded-lg"></div>
+            <div class="w-full h-20 bg-gray-200 rounded-lg"></div>
+            <div class="w-full h-20 bg-gray-200 rounded-lg"></div>
+            <div class="w-full h-20 bg-gray-200 rounded-lg"></div>
+            <div class="w-full h-20 bg-gray-200 rounded-lg"></div>
+          </div>
         </div>
       </div>
 
-      <div class="bg-white p-3 rounded-xl shadow mt-4 border-l-4 border-green-600">
+      <button class="btn-secondary mt-4" onclick="scrollToScreen('screen13')">Create New Job</button>
+
+      <div class="mt-4 bg-white p-4 rounded-xl shadow border-l-4 border-green-600">
         <p class="text-xs text-gray-500">Latest Reported Shelf Price</p>
         <p class="text-2xl font-bold">$<span id="reported-price">—</span></p>
-        <p class="text-xs text-gray-500"><span id="reported-price-location">Location pending</span></p>
+        <p class="text-[11px] text-gray-500"><span id="reported-price-location">Location pending</span></p>
       </div>
 
-      <div class="flex gap-2 mt-5">
-        <button class="btn btn-ghost flex-1" onclick="go('screen19'); buildReport()">Open Client Snapshot</button>
-        <button class="btn btn-red flex-1" onclick="go('screen20')">Create New Job</button>
+      <div class="mt-3 grid grid-cols-2 gap-2">
+        <button class="w-full px-6 py-3 bg-gray-800 text-white font-semibold rounded-full hover:bg-black"
+                onclick="scrollToScreen('screen19'); buildReportFromState(); injectReportAnalysis();">Open Client Snapshot</button>
+        <button class="w-full px-6 py-3 border rounded-full" onclick="scrollToScreen('screen1')">Back to Splash</button>
       </div>
 
-      <div class="menu">
-        <button class="btn btn-ghost" onclick="toggleMenu(this)">≡ Menu</button>
-        <div class="menu-panel">
-          <a href="javascript:go('screen1')">← Splash</a>
-          <a href="javascript:go('screen4')">Worker Dashboard</a>
-          <a href="javascript:go('screen19')">Client Snapshot</a>
-          <a href="javascript:go('screen20')">Create New Job</a>
+      <div class="mt-4 bg-white p-4 rounded-xl shadow">
+        <div class="flex items-center justify-between">
+          <h3 class="text-xl font-bold">Jobs Map</h3>
+          <button class="text-sm border px-2 py-1 rounded" onclick="toggleMapMode()">Toggle Live Map</button>
+        </div>
+        <div id="map-static" class="mt-3">
+          <div class="w-full h-48 rounded bg-gray-200 flex items-center justify-center text-gray-600">Map Placeholder</div>
+          <p class="text-[11px] text-gray-500 mt-1">Static placeholder. Toggle for live map (internet required).</p>
+        </div>
+        <div id="map-live" class="hidden mt-3">
+          <iframe class="w-full h-48 rounded" loading="lazy" src="https://www.google.com/maps?q=Houston,+TX&output=embed"></iframe>
         </div>
       </div>
     </div>
   </div>
 
-  <!-- Screen 9: My Jobs -->
-  <div class="phone">
-    <div id="screen9" class="screen">
-      <h2 class="text-3xl font-extrabold">My Jobs</h2>
-      <div class="mt-4 space-y-3">
-        <div class="job border-l-4" style="border-left-color:#10b981">
+  <!-- Screen 9: Shopper Jobs List -->
+  <div class="app-container">
+    <div id="screen9" class="screen flex flex-col">
+      <h2 class="screen-title">My Jobs</h2>
+      <p class="text-gray-500">View your current and completed tasks</p>
+      <div class="mt-5 space-y-3">
+        <div class="bg-white p-4 rounded-xl shadow border-l-4 border-green-500">
           <p class="font-bold">Rambler Sparkling Water</p>
-          <p class="text-sm text-gray-600">Completed</p>
+          <p class="text-sm text-gray-500 mt-1">Completed at Whole Foods Market</p>
+          <p class="text-green-600 font-semibold text-sm mt-2">Earned $3.00</p>
         </div>
-        <div class="job border-l-4" style="border-left-color:#f59e0b">
+        <div class="bg-white p-4 rounded-xl shadow border-l-4 border-yellow-500">
           <p class="font-bold">Neutral Milk</p>
-          <p class="text-sm text-gray-600">In progress</p>
+          <p class="text-sm text-gray-500 mt-1">In progress at Whole Foods Market</p>
+          <p class="text-yellow-600 font-semibold text-sm mt-2">Est. $3.00</p>
         </div>
       </div>
 
-      <div class="taskbar mt-8">
-        <div class="flex justify-around text-gray-600">
-          <button onclick="go('screen4')">Dashboard</button>
-          <button class="font-bold text-red-700">Jobs</button>
-          <button onclick="go('screen10')">Brands</button>
-          <button onclick="go('screen11')">Profile</button>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Screen 10: Brands (stub) -->
-  <div class="phone">
-    <div id="screen10" class="screen">
-      <h2 class="text-3xl font-extrabold">Brands</h2>
-      <p class="text-gray-500">Tap to view more.</p>
-      <div class="mt-4 grid grid-cols-2 gap-3">
-        <div class="bg-white p-3 rounded-xl shadow text-center cursor-pointer" onclick="openBrand('Rambler Sparkling Water','Rambler is a Texas-based sparkling water brand…')">
-          <div class="text-3xl">💧</div>
-          <p class="font-bold mt-1">Rambler</p>
-        </div>
-        <div class="bg-white p-3 rounded-xl shadow text-center cursor-pointer" onclick="openBrand('Neutral Milk','Neutral partners with regenerative farmers…')">
-          <div class="text-3xl">🥛</div>
-          <p class="font-bold mt-1">Neutral</p>
-        </div>
-      </div>
-
-      <div class="taskbar mt-8">
-        <div class="flex justify-around text-gray-600">
-          <button onclick="go('screen4')">Dashboard</button>
-          <button onclick="go('screen9')">Jobs</button>
-          <button class="font-bold text-red-700">Brands</button>
-          <button onclick="go('screen11')">Profile</button>
+      <div class="taskbar mt-auto">
+        <div class="flex justify-around text-gray-500">
+          <button class="flex flex-col items-center hover:text-[var(--sa-accent)]" onclick="scrollToScreen('screen4')">
+            <span>🏠</span><span class="text-xs mt-1">Dashboard</span>
+          </button>
+          <button class="flex flex-col items-center text-[var(--sa-accent)] font-bold">
+            <span>📝</span><span class="text-xs mt-1">Jobs</span>
+          </button>
+          <button class="flex flex-col items-center hover:text-[var(--sa-accent)]" onclick="scrollToScreen('screen10')">
+            <span>🏷️</span><span class="text-xs mt-1">Brands</span>
+          </button>
+          <button class="flex flex-col items-center hover:text-[var(--sa-accent)]" onclick="scrollToScreen('screen11')">
+            <span>👤</span><span class="text-xs mt-1">Profile</span>
+          </button>
         </div>
       </div>
     </div>
   </div>
 
-  <!-- Screen 11: Profile (stub) -->
-  <div class="phone">
-    <div id="screen11" class="screen">
-      <h2 class="text-3xl font-extrabold">My Profile</h2>
-      <div class="mt-4 space-y-3">
-        <div class="bg-white p-3 rounded-xl shadow">
+  <!-- Screen 10: Brands -->
+  <div class="app-container">
+    <div id="screen10" class="screen flex flex-col">
+      <h2 class="screen-title">Brands</h2>
+      <p class="text-gray-500">Explore participating brands & offers</p>
+      <div class="mt-5 grid grid-cols-2 gap-3">
+        <div class="bg-white p-4 rounded-xl shadow text-center cursor-pointer" onclick="scrollToScreen('screen12'); updateBrandBio('Rambler Sparkling Water','Texas-based sparkling water with a crisp, clean profile.')">
+          <div class="w-20 h-20 mx-auto rounded-full bg-gray-200 flex items-center justify-center text-gray-400">R</div>
+          <p class="font-bold mt-2">Rambler Sparkling Water</p>
+          <p class="text-xs text-[var(--sa-gold)]">Save 10%</p>
+        </div>
+        <div class="bg-white p-4 rounded-xl shadow text-center cursor-pointer" onclick="scrollToScreen('screen12'); updateBrandBio('Peet\\'s Coffee','Specialty coffee known for rich, deep flavors.')">
+          <div class="w-20 h-20 mx-auto rounded-full bg-gray-200 flex items-center justify-center text-gray-400">PC</div>
+          <p class="font-bold mt-2">Peet's Coffee</p>
+          <p class="text-xs text-[var(--sa-gold)]">Explore</p>
+        </div>
+      </div>
+
+      <div class="taskbar mt-auto">
+        <div class="flex justify-around text-gray-500">
+          <button class="flex flex-col items-center hover:text-[var(--sa-accent)]" onclick="scrollToScreen('screen4')">
+            <span>🏠</span><span class="text-xs mt-1">Dashboard</span>
+          </button>
+          <button class="flex flex-col items-center hover:text-[var(--sa-accent)]" onclick="scrollToScreen('screen9')">
+            <span>📝</span><span class="text-xs mt-1">Jobs</span>
+          </button>
+          <button class="flex flex-col items-center text-[var(--sa-accent)] font-bold">
+            <span>🏷️</span><span class="text-xs mt-1">Brands</span>
+          </button>
+          <button class="flex flex-col items-center hover:text-[var(--sa-accent)]" onclick="scrollToScreen('screen11')">
+            <span>👤</span><span class="text-xs mt-1">Profile</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Screen 11: Profile -->
+  <div class="app-container">
+    <div id="screen11" class="screen flex flex-col">
+      <h2 class="screen-title">My Profile</h2>
+      <p class="text-gray-500">Account settings & information</p>
+      <div class="mt-5 space-y-3">
+        <div class="bg-white p-4 rounded-xl shadow border-l-4 border-gray-400">
           <p class="font-bold">Total Earnings</p>
-          <p class="text-xl">$15.00</p>
+          <p class="text-2xl font-bold">$15.00</p>
+        </div>
+        <div class="bg-white p-4 rounded-xl shadow border-l-4 border-gray-400">
+          <p class="font-bold">Jobs Completed</p>
+          <p class="text-2xl font-bold">2</p>
         </div>
       </div>
 
-      <div class="taskbar mt-8">
-        <div class="flex justify-around text-gray-600">
-          <button onclick="go('screen4')">Dashboard</button>
-          <button onclick="go('screen9')">Jobs</button>
-          <button onclick="go('screen10')">Brands</button>
-          <button class="font-bold text-red-700">Profile</button>
+      <div class="taskbar mt-auto">
+        <div class="flex justify-around text-gray-500">
+          <button class="flex flex-col items-center hover:text-[var(--sa-accent)]" onclick="scrollToScreen('screen4')">
+            <span>🏠</span><span class="text-xs mt-1">Dashboard</span>
+          </button>
+          <button class="flex flex-col items-center hover:text-[var(--sa-accent)]" onclick="scrollToScreen('screen9')">
+            <span>📝</span><span class="text-xs mt-1">Jobs</span>
+          </button>
+          <button class="flex flex-col items-center hover:text-[var(--sa-accent)]" onclick="scrollToScreen('screen10')">
+            <span>🏷️</span><span class="text-xs mt-1">Brands</span>
+          </button>
+          <button class="flex flex-col items-center text-[var(--sa-accent)] font-bold">
+            <span>👤</span><span class="text-xs mt-1">Profile</span>
+          </button>
         </div>
       </div>
     </div>
   </div>
 
   <!-- Screen 12: Brand Bio -->
-  <div class="phone">
-    <div id="screen12" class="screen">
-      <button class="text-gray-500" onclick="go('screen10')">← Back</button>
-      <h2 id="brand-title" class="text-3xl font-extrabold mt-2"></h2>
-      <p id="brand-text" class="text-gray-700 mt-3"></p>
+  <div class="app-container">
+    <div id="screen12" class="screen flex flex-col">
+      <button class="text-gray-500 hover:text-gray-700 w-10" onclick="scrollToScreen('screen10')">←</button>
+      <h2 id="brand-bio-title" class="screen-title mt-2"></h2>
+      <p id="brand-bio-text" class="text-gray-600 mt-3"></p>
+      <button class="btn-secondary mt-5" onclick="scrollToScreen('screen10')">Back to Brands</button>
     </div>
   </div>
 
-  <!-- Screen 13: Client – Tier picker (stub) -->
-  <div class="phone">
-    <div id="screen13" class="screen">
-      <h2 class="text-3xl font-extrabold">Create New Job</h2>
-      <div class="mt-4 space-y-3">
-        <div class="job">Standard Check</div>
-        <div class="job">Launch Day Bundle</div>
-        <div class="job red">Rush Audit</div>
+  <!-- Screen 13: Client – Create New Job (tier picker) -->
+  <div class="app-container">
+    <div id="screen13" class="screen flex flex-col">
+      <h2 class="screen-title">Create New Job</h2>
+      <p class="text-gray-500">Pick the best option for your needs</p>
+      <div class="mt-5 space-y-3">
+        <div class="bg-white p-4 rounded-xl shadow border-l-4 border-green-500">Standard Check — core photos within 48h</div>
+        <div class="bg-white p-4 rounded-xl shadow border-l-4 border-yellow-500">Launch Day Bundle — multiple stores within 24h</div>
+        <div class="bg-white p-4 rounded-xl shadow border-l-4 border-red-500">Rush Audit — urgent photos within 6h</div>
       </div>
-      <div class="flex gap-2 mt-5">
-        <button class="btn btn-red flex-1" onclick="go('screen8')">Select Job Type</button>
-        <button class="btn btn-ghost flex-1" onclick="go('screen8')">Cancel</button>
+      <div class="mt-5 space-y-2">
+        <button class="btn-secondary" onclick="scrollToScreen('screen20')">Open Full Job Form</button>
+        <button class="btn-secondary" onclick="scrollToScreen('screen8')">Cancel</button>
       </div>
     </div>
   </div>
 
   <!-- Screen 14: Admin Dashboard -->
-  <div class="phone">
-    <div id="screen14" class="screen">
-      <h2 class="text-3xl font-extrabold">Admin Dashboard</h2>
-      <div class="mt-4 grid grid-cols-1 gap-3">
-        <div class="bg-white p-3 rounded-xl shadow border-l-4 border-gray-400">
-          <p class="font-bold">New User Sign-ups</p>
-          <div class="flex items-center justify-between mt-1">
+  <div class="app-container">
+    <div id="screen14" class="screen flex flex-col">
+      <h2 class="screen-title">Admin Dashboard</h2>
+      <p class="text-gray-500">Platform-wide oversight</p>
+      <div class="mt-5 space-y-3">
+        <div class="bg-white p-4 rounded-xl shadow border-l-4 border-gray-400 flex items-center justify-between">
+          <div>
+            <p class="font-bold">New User Sign-ups</p>
             <p class="text-2xl font-bold">5</p>
-            <button class="text-red-700" onclick="go('screen15')">Review</button>
           </div>
+          <button class="small-link" onclick="scrollToScreen('screen15')">Review</button>
         </div>
-        <div class="bg-white p-3 rounded-xl shadow border-l-4 border-yellow-500">
-          <p class="font-bold">Jobs to Approve</p>
-          <div class="flex items-center justify-between mt-1">
+        <div class="bg-white p-4 rounded-xl shadow border-l-4 border-[var(--sa-gold)] flex items-center justify-between">
+          <div>
+            <p class="font-bold">Jobs to Approve</p>
             <p class="text-2xl font-bold">3</p>
-            <button class="text-red-700" onclick="go('screen16')">Review</button>
           </div>
+          <button class="small-link" onclick="scrollToScreen('screen16')">Review</button>
+        </div>
+        <div class="bg-white p-4 rounded-xl shadow border-l-4 border-red-500 flex items-center justify-between">
+          <div>
+            <p class="font-bold">Support Requests</p>
+            <p class="text-2xl font-bold">1</p>
+          </div>
+          <button class="small-link" onclick="scrollToScreen('screen17')">View</button>
         </div>
       </div>
-
-      <div class="menu">
-        <button class="btn btn-ghost" onclick="toggleMenu(this)">≡ Menu</button>
-        <div class="menu-panel">
-          <a href="javascript:go('screen1')">← Splash</a>
-          <a href="javascript:go('screen4')">Worker Dashboard</a>
-          <a href="javascript:go('screen8')">Client Dashboard</a>
-        </div>
+      <div class="mt-4 grid grid-cols-2 gap-2">
+        <button class="btn-secondary" onclick="scrollToScreen('screen1')">Back to Splash</button>
+        <button class="btn-secondary" onclick="scrollToScreen('screen20')">Create Job (Form)</button>
       </div>
     </div>
   </div>
 
-  <!-- Screen 15 / 16 / 17 stubs -->
-  <div class="phone"><div id="screen15" class="screen">
-    <button class="text-gray-500" onclick="go('screen14')">← Back to Admin</button>
-    <h2 class="text-3xl font-extrabold">Review New Users</h2>
-  </div></div>
-  <div class="phone"><div id="screen16" class="screen">
-    <button class="text-gray-500" onclick="go('screen14')">← Back to Admin</button>
-    <h2 class="text-3xl font-extrabold">Review Job Submissions</h2>
-  </div></div>
-  <div class="phone"><div id="screen17" class="screen">
-    <button class="text-gray-500" onclick="go('screen14')">← Back to Admin</button>
-    <h2 class="text-3xl font-extrabold">Support Requests</h2>
-  </div></div>
+  <!-- Screen 15: Admin – User Approval -->
+  <div class="app-container">
+    <div id="screen15" class="screen flex flex-col">
+      <h2 class="screen-title">Review New Users</h2>
+      <p class="text-gray-500">Approve or deny new gig workers</p>
+      <div class="mt-5 bg-white p-4 rounded-xl shadow border-l-4 border-gray-400">
+        <p class="font-bold">New User: Jane Doe</p>
+        <p class="text-sm text-gray-500">Joined: Aug 28, 2025 — Houston, TX</p>
+        <div class="mt-3 flex gap-2">
+          <button class="px-4 py-2 rounded-full bg-green-600 text-white text-sm">Approve</button>
+          <button class="px-4 py-2 rounded-full bg-red-600 text-white text-sm">Deny</button>
+        </div>
+      </div>
+      <button class="btn-secondary mt-4" onclick="scrollToScreen('screen14')">Back to Admin Dashboard</button>
+    </div>
+  </div>
+
+  <!-- Screen 16: Admin – Job Approval -->
+  <div class="app-container">
+    <div id="screen16" class="screen flex flex-col">
+      <h2 class="screen-title">Review Job Submissions</h2>
+      <p class="text-gray-500">Approve or reject job photos</p>
+      <div class="mt-5 bg-white p-4 rounded-xl shadow border-l-4 border-[var(--sa-gold)]">
+        <p class="font-bold">Job: Peet's Coffee</p>
+        <p class="text-sm text-gray-500">User: Jane Doe | H‑E‑B, Bridgeland</p>
+        <div class="grid grid-cols-3 gap-2 mt-3">
+          <div class="h-28 rounded bg-gray-200 flex items-center justify-center text-xs text-gray-500">Aisle View</div>
+          <div class="h-28 rounded bg-gray-200 flex items-center justify-center text-xs text-gray-500">Shelf View</div>
+          <div class="h-28 rounded bg-gray-200 flex items-center justify-center text-xs text-gray-500">Price Tag</div>
+        </div>
+        <div class="mt-3 flex gap-2">
+          <button class="px-4 py-2 rounded-full bg-green-600 text-white text-sm">Approve</button>
+          <button class="px-4 py-2 rounded-full bg-red-600 text-white text-sm">Reject</button>
+        </div>
+      </div>
+      <button class="btn-secondary mt-4" onclick="scrollToScreen('screen14')">Back to Admin Dashboard</button>
+    </div>
+  </div>
+
+  <!-- Screen 17: Admin – Support -->
+  <div class="app-container">
+    <div id="screen17" class="screen flex flex-col">
+      <h2 class="screen-title">Support Requests</h2>
+      <p class="text-gray-500">View and respond to user help requests</p>
+      <div class="mt-5 bg-white p-4 rounded-xl shadow border-l-4 border-red-500">
+        <p class="font-bold">Support: John Doe</p>
+        <p class="text-sm text-gray-500">Peet's Coffee @ H‑E‑B Bridgeland</p>
+        <p class="mt-2">"My photos keep getting rejected. I can't figure out why."</p>
+        <div class="mt-3 flex gap-2">
+          <button class="px-4 py-2 rounded-full bg-blue-600 text-white text-sm">Reply</button>
+          <button class="px-4 py-2 rounded-full bg-gray-300 text-gray-800 text-sm">Resolve</button>
+        </div>
+      </div>
+      <button class="btn-secondary mt-4" onclick="scrollToScreen('screen14')">Back to Admin Dashboard</button>
+    </div>
+  </div>
 
   <!-- Screen 19: Client Snapshot -->
-  <div class="phone">
+  <div class="app-container">
     <div id="screen19" class="screen">
-      <div class="max-w-sm mx-auto bg-white p-4 rounded-xl shadow">
-        <div class="flex items-center justify-between">
-          <h2 class="text-xl font-extrabold">Client Snapshot</h2>
-          <button class="btn btn-red" onclick="window.print()">Print / Save PDF</button>
-        </div>
-        <div class="grid grid-cols-2 gap-2 mt-3">
-          <div class="bg-gray-50 p-2 rounded"><p class="text-xs text-gray-500">Brand</p><p id="rep-brand" class="font-semibold">—</p></div>
-          <div class="bg-gray-50 p-2 rounded"><p class="text-xs text-gray-500">Store</p><p id="rep-store" class="font-semibold">—</p></div>
-          <div class="bg-gray-50 p-2 rounded"><p class="text-xs text-gray-500">Reported Price</p><p id="rep-price" class="font-semibold">—</p></div>
-          <div class="bg-gray-50 p-2 rounded"><p class="text-xs text-gray-500">Submitted</p><p id="rep-when" class="font-semibold">—</p></div>
-        </div>
-        <div class="mt-4">
-          <p class="font-semibold">Analysis Summary</p>
-          <div id="rep-analysis" class="text-sm text-gray-800 bg-gray-50 p-2 rounded">No analysis captured yet.</div>
-        </div>
-      </div>
-      <div class="menu">
-        <button class="btn btn-ghost" onclick="toggleMenu(this)">≡ Menu</button>
-        <div class="menu-panel">
-          <a href="javascript:go('screen8')">← Client Dashboard</a>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Screen 20: Create New Job – full form (uses localStorage job pool) -->
-  <div class="phone">
-    <div id="screen20" class="screen">
-      <h2 class="text-3xl font-extrabold">Create New Job</h2>
-      <div class="max-w-sm mt-4 space-y-3">
-        <div>
-          <label class="text-sm">Product / Brand</label>
-          <input id="cj-brand" class="w-full border rounded px-3 py-2" placeholder="e.g., Rambler Sparkling Water"/>
-        </div>
-        <div>
-          <label class="text-sm">Store</label>
-          <input id="cj-store" class="w-full border rounded px-3 py-2" placeholder="Start typing a store…"/>
-        </div>
-        <div>
-          <label class="text-sm">Job Type</label>
-          <div class="space-y-1 mt-1">
-            <label class="flex gap-2 items-center"><input type="radio" name="cj-type" value="standard" checked> Standard Check</label>
-            <label class="flex gap-2 items-center"><input type="radio" name="cj-type" value="launch"> Launch Day Bundle</label>
-            <label class="flex gap-2 items-center"><input type="radio" name="cj-type" value="rush"> Rush Audit</label>
+      <div class="max-w-2xl mx-auto bg-white rounded-xl shadow p-6 print:shadow-none">
+        <div class="flex items-center justify-between mb-4">
+          <h2 class="text-2xl font-extrabold">ShelfAssured — Client Snapshot</h2>
+          <div class="flex gap-2">
+            <button class="px-3 py-2 border rounded-md" onclick="scrollToScreen('screen8')">Back to Client</button>
+            <button class="px-3 py-2 bg-[var(--sa-accent)] text-white rounded-md" onclick="window.print()">Print / Save PDF</button>
           </div>
         </div>
-        <div>
-          <label class="text-sm">Photo Instructions</label>
-          <textarea id="cj-notes" class="w-full border rounded px-3 py-2" rows="3"
-            placeholder="e.g., Take an up-close photo of the product tag (price + barcode must be readable)."></textarea>
-          <p class="text-xs text-gray-500">These appear on the worker’s Job Instructions screen.</p>
+        <div class="grid grid-cols-2 gap-4">
+          <div class="bg-gray-50 p-3 rounded">
+            <p class="text-xs text-gray-500">Brand</p>
+            <p id="report-brand" class="font-semibold">—</p>
+          </div>
+          <div class="bg-gray-50 p-3 rounded">
+            <p class="text-xs text-gray-500">Store</p>
+            <p id="report-store" class="font-semibold">—</p>
+          </div>
+          <div class="bg-gray-50 p-3 rounded">
+            <p class="text-xs text-gray-500">Reported Shelf Price</p>
+            <p id="report-price" class="font-semibold">—</p>
+          </div>
+          <div class="bg-gray-50 p-3 rounded">
+            <p class="text-xs text-gray-500">Submitted</p>
+            <p id="report-date" class="font-semibold">—</p>
+          </div>
         </div>
-        <div class="flex gap-2">
-          <button class="btn btn-red flex-1" onclick="publishJob()">Publish Job</button>
-          <button class="btn btn-ghost flex-1" onclick="go('screen8')">Cancel</button>
+        <div class="mt-5">
+          <p class="font-semibold text-gray-700 mb-2">Photos</p>
+          <div id="report-photos" class="grid grid-cols-3 gap-2"></div>
         </div>
-      </div>
-
-      <div class="menu">
-        <button class="btn btn-ghost" onclick="toggleMenu(this)">≡ Menu</button>
-        <div class="menu-panel">
-          <a href="javascript:go('screen8')">← Client Dashboard</a>
-          <a href="javascript:go('screen4')">→ Worker Dashboard</a>
+        <div class="mt-5">
+          <p class="font-semibold text-gray-700 mb-2">Analysis Summary</p>
+          <div id="report-analysis" class="text-sm text-gray-800 bg-gray-50 p-3 rounded">No analysis captured yet. Use <b>Analyze This Photo</b> on the Analysis screen.</div>
         </div>
       </div>
     </div>
   </div>
 
-</div><!-- /.app-flow -->
+  <!-- Screen 20: Create New Job (form) -->
+  <div class="app-container">
+    <div id="screen20" class="screen">
+      <div class="max-w-2xl mx-auto bg-white rounded-xl shadow p-6">
+        <h2 class="text-2xl font-extrabold mb-4">Create New Job</h2>
+        <div class="grid grid-cols-1 gap-4">
+          <div>
+            <label class="block text-sm font-medium">Product / Brand</label>
+            <input id="cj-brand" type="text" class="mt-1 w-full border rounded px-3 py-2" placeholder="e.g., Rambler Sparkling Water"/>
+          </div>
+          <div>
+            <label class="block text-sm font-medium">Store</label>
+            <input id="cj-store" list="store-options" type="text" class="mt-1 w-full border rounded px-3 py-2" placeholder="Start typing a store..."/>
+            <datalist id="store-options">
+              <option>Whole Foods Market - 10133 Louetta Rd, Houston, TX 77070</option>
+              <option>H-E-B - 28520 Tomball Pkwy, Houston, TX 77070</option>
+              <option>Sprouts Farmers Market - 22506 Tomball Pkwy, Houston, TX 77375</option>
+              <option>Central Market - 3815 Westheimer Rd, Houston, TX 77027</option>
+              <option>Whole Foods Market - Kensington High St, London W8 6NA, UK</option>
+            </datalist>
+          </div>
+          <div>
+            <label class="block text-sm font-medium">Job Type</label>
+            <div class="mt-1 space-y-2">
+              <label class="flex items-center gap-2"><input type="radio" name="cj-type" value="standard" checked/> <span>Standard Check — core photos within 48h</span></label>
+              <label class="flex items-center gap-2"><input type="radio" name="cj-type" value="launch"/> <span>Launch Day Bundle — multiple stores within 24h</span></label>
+              <label class="flex items-center gap-2"><input type="radio" name="cj-type" value="rush"/> <span>Rush Audit — urgent photos within 6h</span></label>
+            </div>
+          </div>
+          <div>
+            <label class="block text-sm font-medium">Photo Instructions</label>
+            <textarea id="cj-notes" rows="4" class="mt-1 w-full border rounded px-3 py-2" placeholder="e.g., Take an up-close photo of the product tag (price + barcode must be readable)."></textarea>
+          </div>
+          <div class="flex gap-3">
+            <button class="px-4 py-2 bg-[var(--sa-accent)] text-white rounded-md" onclick="publishJob()">Publish Job</button>
+            <button class="px-4 py-2 border rounded-md" onclick="scrollToScreen('screen8')">Cancel</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div><!-- /app-flow-container -->
 
-<!-- Logic -->
+<!-- Modals -->
+<div id="location-modal" class="modal">
+  <div class="bg-white p-6 rounded-2xl shadow-xl w-80 text-center">
+    <h3 class="text-xl font-bold mb-2">Confirm Your Location</h3>
+    <p class="text-sm text-gray-600">To confirm you're at the correct store, we need to check your current location.</p>
+    <p id="location-modal-text" class="text-sm text-red-600 mt-3 hidden">It looks like you're not at the correct store. Please try again when you arrive.</p>
+    <div class="mt-4 flex justify-center gap-3">
+      <button class="px-4 py-2 rounded-full bg-[var(--sa-accent)] text-white" onclick="confirmLocation()">Confirm Location</button>
+      <button class="px-4 py-2 rounded-full border" onclick="hideModal('location-modal')">Cancel</button>
+    </div>
+  </div>
+</div>
+
 <script>
-  function go(id){ document.getElementById(id).scrollIntoView({behavior:'smooth', block:'start'}); }
-  function toggleMenu(btn){ btn.parentElement.classList.toggle('open'); }
+/* ---------- Core state & helpers ---------- */
+const SA = {
+  earningsKey: 'sa_earnings_cents',
+  jobsKey: 'sa_jobs_completed',
+  priceKey: 'sa_last_price',
+  storeKey: 'sa_last_store',
+  brandKey: 'sa_last_brand',
+  photoKey: 'sa_last_photo',
+  submittedAtKey: 'sa_last_submitted_at',
+  adminKey: 'sa_admin_mode',
+};
 
-  // Simple brand bio
-  function openBrand(title, text){
-    document.getElementById('brand-title').textContent = title;
-    document.getElementById('brand-text').textContent  = text;
-    go('screen12');
+function scrollToScreen(id){
+  const el = document.getElementById(id);
+  if (el) el.scrollIntoView({behavior:'smooth', block:'start'});
+}
+
+function showLocationModal(storeName){
+  window._targetStore = storeName || '';
+  document.getElementById('location-modal').classList.add('is-visible');
+}
+function hideModal(id){ document.getElementById(id)?.classList.remove('is-visible'); }
+function confirmLocation(){
+  hideModal('location-modal');
+  if (window._targetStore){
+    try { localStorage.setItem(SA.storeKey, window._targetStore); } catch(e){}
   }
+  updateJobDetailsUI();
+  scrollToScreen('screen5');
+}
 
-  // ---- Job context + price handling ----
-  const SA = {
-    priceKey: 'sa_price',
-    storeKey: 'sa_store',
-    brandKey: 'sa_brand',
-    whenKey:  'sa_when',
-    photoKey: 'sa_photo'
-  };
+function updateBrandBio(title, text){
+  const t = document.getElementById('brand-bio-title');
+  const b = document.getElementById('brand-bio-text');
+  if (t) t.textContent = title || '';
+  if (b) b.textContent = text || '';
+}
 
-  function openJob(brand, store, payoutCents){
-    localStorage.setItem(SA.brandKey, brand || '');
-    localStorage.setItem(SA.storeKey, store || '');
-    document.getElementById('job-title').textContent = brand;
-    document.getElementById('job-store').textContent = store;
-    document.getElementById('job-payout').textContent = '$' + (payoutCents/100).toFixed(2);
-    go('screen5');
+/* ---------- Price capture patch ---------- */
+function normalizePrice(raw){
+  if (raw == null) return null;
+  let s = String(raw).replace(/[^\d.,]/g,'').trim();
+  if (!s) return null;
+  if (s.includes(',') && s.includes('.')) s = s.replace(/,/g,'');
+  else if (s.includes(',')) s = s.replace(',', '.');
+  const n = parseFloat(s);
+  if (isNaN(n)) return null;
+  return n.toFixed(2);
+}
+function capturePriceAndProceed(){
+  const el = document.getElementById('price-input');
+  const raw = el ? el.value : '';
+  const norm = normalizePrice(raw);
+  if (norm == null){
+    alert('Please enter a valid shelf price, e.g., 2.99');
+    if (el) el.focus();
+    return;
   }
+  try {
+    localStorage.setItem('sa_price', norm);
+    localStorage.setItem(SA.priceKey, norm);
+  } catch(e){}
+  scrollToScreen('screen6');
+}
 
-  function normalizePrice(raw){
-    if (raw == null) return null;
-    let v = String(raw).trim();
-    if (!v) return null;
-    // Keep digits, comma, dot
-    v = v.replace(/[^0-9\.,]/g,'');
-    // If both comma and dot exist, assume commas are thousands separators
-    if (v.indexOf(',') >= 0 && v.indexOf('.') >= 0){
-      v = v.replace(/,/g,'');
-    } else if (v.indexOf(',') >= 0 && v.indexOf('.') < 0){
-      // Comma as decimal
-      v = v.replace(',', '.');
-    }
-    // Collapse multiple dots
-    const parts = v.split('.');
-    if (parts.length > 2){ v = parts[0] + '.' + parts.slice(1).join(''); }
-    const num = parseFloat(v);
-    if (isNaN(num)) return null;
-    return num.toFixed(2);
-  }
-
-  function capturePriceAndProceed(){
-    const input = document.getElementById('price-input');
-    const normalized = normalizePrice(input ? input.value : '');
-    if (!normalized){
-      alert('Please enter a valid shelf price, e.g., 2.99');
-      input && input.focus();
+/* ---------- Submit flow (uses saved price) ---------- */
+(function(){
+  const _orig = window.submitJob;
+  window.submitJob = function(){
+    let price = localStorage.getItem('sa_price') || localStorage.getItem(SA.priceKey) || '';
+    price = normalizePrice(price);
+    if (price == null){
+      alert('Please enter a valid shelf price on the Job Instructions screen.');
+      scrollToScreen('screen5');
+      setTimeout(()=>document.getElementById('price-input')?.focus(), 350);
       return;
     }
-    localStorage.setItem(SA.priceKey, normalized);
-    go('screen6');
-  }
+    // Save keys
+    try {
+      localStorage.setItem('sa_price', price);
+      localStorage.setItem(SA.priceKey, price);
+      localStorage.setItem(SA.brandKey, localStorage.getItem('sa_current_job_brand') || 'Rambler Sparkling Water');
+      localStorage.setItem(SA.submittedAtKey, String(Date.now()));
+      // earnings + jobs
+      const cents = parseInt(localStorage.getItem(SA.earningsKey) || '1500', 10);
+      localStorage.setItem(SA.earningsKey, String(cents + 300));
+      const jobs = parseInt(localStorage.getItem(SA.jobsKey) || '2', 10);
+      localStorage.setItem(SA.jobsKey, String(jobs + 1));
+    } catch(e){}
+    syncClientUI();
+    scrollToScreen('screen9');
+    if (_orig) return _orig();
+  };
+})();
 
-  // Photo capture demo
-  document.addEventListener('change', function(e){
-    if (e.target && e.target.id === 'photo-input' && e.target.files && e.target.files[0]){
-      const reader = new FileReader();
-      reader.onload = function(ev){
-        const img = new Image();
+/* ---------- Photo handling (demo) ---------- */
+let autoDemoMode = false;
+function togglePhotoMode(){
+  autoDemoMode = !autoDemoMode;
+  const btn = document.getElementById('mode-toggle');
+  const up = document.getElementById('upload-block');
+  if (btn) btn.textContent = autoDemoMode ? 'Use Upload Mode' : 'Use Auto Demo';
+  if (up) up.style.display = autoDemoMode ? 'none' : 'block';
+  if (autoDemoMode){
+    const preview = document.getElementById('photo-preview');
+    if (preview){
+      preview.innerHTML = '';
+      const ph = document.createElement('div');
+      ph.className = 'w-full h-40 rounded bg-[conic-gradient(at_top_left,_#ddd,_#bbb)] flex items-center justify-center text-gray-600';
+      ph.textContent = 'Demo Photo';
+      preview.appendChild(ph);
+    }
+    try { localStorage.setItem(SA.photoKey, 'demo'); } catch(e){}
+  }
+}
+document.addEventListener('change', (e)=>{
+  if (e.target && e.target.id === 'photo-input' && e.target.files?.[0]){
+    const reader = new FileReader();
+    reader.onload = (ev)=>{
+      const preview = document.getElementById('photo-preview');
+      if (preview){
+        preview.innerHTML='';
+        const img = document.createElement('img');
         img.src = ev.target.result;
         img.className = 'max-h-40 object-contain';
-        const prev = document.getElementById('photo-preview');
-        prev.innerHTML = '';
-        prev.appendChild(img);
-        localStorage.setItem(SA.photoKey, img.src);
-      };
-      reader.readAsDataURL(e.target.files[0]);
+        preview.appendChild(img);
+      }
+      try { localStorage.setItem(SA.photoKey, ev.target.result); } catch(e){}
+    };
+    reader.readAsDataURL(e.target.files[0]);
+  }
+});
+function proceedToAnalysis(){
+  const preview = document.getElementById('photo-preview');
+  const img = preview ? preview.querySelector('img') : null;
+  if (img){ try { localStorage.setItem(SA.photoKey, img.src); } catch(e){} }
+  scrollToScreen('screen7');
+}
+
+/* ---------- Vision analysis (demo placeholder) ---------- */
+function runVisionAnalysis(){
+  const box = document.getElementById('vision-results');
+  if (!box) return;
+  const html = `
+    <div class="mb-1"><b>Detected brands:</b> Peet's, Café Bustelo, Tim Hortons (approx.)</div>
+    <table class="w-full text-xs mt-1">
+      <thead><tr><th class="text-left">Brand / Variety</th><th class="text-left">Approx. Facings</th><th class="text-left">Shelf Position</th></tr></thead>
+      <tbody>
+        <tr><td>Peet's – Major Dickason's</td><td>4–5</td><td>center-left, row 2</td></tr>
+        <tr><td>Café Bustelo – Espresso</td><td>3</td><td>lower row</td></tr>
+        <tr><td>Tim Hortons – Original</td><td>2</td><td>upper row</td></tr>
+      </tbody>
+    </table>
+    <p class="mt-2 text-xs text-gray-600">Note: demo-only approximations. OCR/pricing not enabled in MVP — use manual price field.</p>
+  `;
+  box.innerHTML = html;
+  try { localStorage.setItem('sa_last_analysis_html', html); } catch(e){}
+}
+function injectReportAnalysis(){
+  const ana = localStorage.getItem('sa_last_analysis_html');
+  const box = document.getElementById('report-analysis');
+  if (ana && box) box.innerHTML = ana;
+}
+
+/* ---------- Client Snapshot helpers ---------- */
+function buildReportFromState(){
+  const brand = localStorage.getItem(SA.brandKey) || '—';
+  const store = localStorage.getItem(SA.storeKey) || '—';
+  const price = localStorage.getItem(SA.priceKey);
+  const when = localStorage.getItem(SA.submittedAtKey);
+  const photo = localStorage.getItem(SA.photoKey);
+  const fmt = when ? (new Date(parseInt(when,10))).toLocaleString() : '—';
+
+  const set = (id,val)=>{ const el=document.getElementById(id); if (el) el.textContent = val; };
+  set('report-brand', brand);
+  set('report-store', store);
+  set('report-price', price ? ('$'+normalizePrice(price)) : '—');
+  set('report-date', fmt);
+
+  const box = document.getElementById('report-photos');
+  if (box){
+    box.innerHTML = '';
+    if (photo && photo !== 'demo'){
+      const img = document.createElement('img');
+      img.src = photo;
+      img.className = 'w-full h-24 object-cover rounded';
+      box.appendChild(img);
+    } else {
+      const ph = document.createElement('div');
+      ph.className = 'w-full h-24 rounded bg-gray-200 flex items-center justify-center text-gray-500';
+      ph.textContent = 'No photo';
+      box.appendChild(ph);
     }
+  }
+}
+
+/* ---------- Jobs map toggle ---------- */
+let _liveMap = false;
+function toggleMapMode(){
+  _liveMap = !_liveMap;
+  document.getElementById('map-static')?.classList.toggle('hidden', _liveMap);
+  document.getElementById('map-live')?.classList.toggle('hidden', !_liveMap);
+}
+
+/* ---------- Jobs pool (for Create Job form) ---------- */
+function getJobsPool(){ try { return JSON.parse(localStorage.getItem('sa_jobs_pool')||'[]'); } catch(e){ return []; } }
+function setJobsPool(arr){ try { localStorage.setItem('sa_jobs_pool', JSON.stringify(arr||[])); } catch(e){} }
+function renderJobsPool(){
+  const mount = document.getElementById('jobs-dynamic');
+  if (!mount) return;
+  const jobs = getJobsPool();
+  mount.innerHTML = '';
+  if (!jobs.length) return;
+
+  // Group by store
+  const groups = {};
+  jobs.forEach(j=>{
+    const key = j.store || 'Other';
+    if (!groups[key]) groups[key] = [];
+    groups[key].push(j);
   });
 
-  function usePhoto(){
-    // Proceed to analysis whether uploaded or not (demo)
-    go('screen7');
+  Object.keys(groups).forEach(store => {
+    const head = document.createElement('div');
+    head.className = 'bg-gray-200 p-3 rounded text-sm font-medium text-gray-700';
+    head.textContent = store;
+    mount.appendChild(head);
+
+    groups[store].forEach(job => {
+      const card = document.createElement('div');
+      card.className = 'job-box p-4 rounded-xl shadow cursor-pointer hover:shadow-lg';
+      card.innerHTML = `<p class="font-bold">${job.brand||'New Product'}</p>
+                        <p class="text-sm text-gray-500 mt-1">Take and upload 2 photos</p>
+                        <p class="text-sm font-semibold text-[var(--sa-gold)] mt-2">Earn $${((job.payoutCents||300)/100).toFixed(2)}</p>`;
+      card.onclick = () => {
+        try {
+          localStorage.setItem('sa_current_job_brand', job.brand||'');
+          localStorage.setItem('sa_current_job_store', job.store||'');
+          localStorage.setItem('sa_current_job_payout', String(job.payoutCents||300));
+          localStorage.setItem('sa_current_job_notes', job.notes||'');
+        } catch(e){}
+        showLocationModal(job.store||'Unknown store');
+      };
+      mount.appendChild(card);
+    });
+  });
+}
+function publishJob(){
+  const brand = (document.getElementById('cj-brand')?.value||'').trim();
+  const store = (document.getElementById('cj-store')?.value||'').trim();
+  const notes = (document.getElementById('cj-notes')?.value||'').trim();
+  const type = (document.querySelector('input[name="cj-type"]:checked')||{}).value || 'standard';
+  if (!brand || !store){ alert('Please fill in Product/Brand and Store.'); return; }
+  let payout = 300;
+  if (type === 'launch') payout = 1200;
+  if (type === 'rush') payout = 600;
+  const jobs = getJobsPool();
+  jobs.push({ id:`job_${Date.now()}`, brand, store, notes, type, payoutCents:payout });
+  setJobsPool(jobs);
+  try {
+    localStorage.setItem('sa_current_job_brand', brand);
+    localStorage.setItem('sa_current_job_store', store);
+    localStorage.setItem('sa_current_job_payout', String(payout));
+    localStorage.setItem('sa_current_job_notes', notes);
+  } catch(e){}
+  scrollToScreen('screen4');
+  setTimeout(renderJobsPool, 100);
+  alert('Job published! It now appears in Jobs Near You.');
+}
+function updateJobDetailsUI(){
+  const brand = localStorage.getItem('sa_current_job_brand') || 'Rambler Sparkling Water';
+  const store = localStorage.getItem('sa_current_job_store') || localStorage.getItem(SA.storeKey) || 'Whole Foods Market';
+  const payout = parseInt(localStorage.getItem('sa_current_job_payout')||'300',10);
+
+  const titleEl = document.getElementById('job-title');
+  const storeEl = document.getElementById('job-store');
+  const payEl = document.getElementById('job-payout');
+  if (titleEl) titleEl.textContent = brand;
+  if (storeEl) storeEl.textContent = store;
+  if (payEl) payEl.textContent = '$'+(payout/100).toFixed(2);
+}
+
+/* ---------- Client UI sync ---------- */
+function syncClientUI(){
+  const rp = document.getElementById('reported-price');
+  const rpl = document.getElementById('reported-price-location');
+  const price = localStorage.getItem(SA.priceKey);
+  const store = localStorage.getItem(SA.storeKey);
+  if (rp) rp.textContent = price ? normalizePrice(price) : '—';
+  if (rpl) rpl.textContent = store || 'Location pending';
+  // earnings on dashboard
+  const cents = parseInt(localStorage.getItem(SA.earningsKey)||'1500',10);
+  const ti = document.getElementById('total-income');
+  if (ti) ti.textContent = '$' + (cents/100).toFixed(2);
+}
+
+/* ---------- Admin mode ---------- */
+function enableAdminMode(){
+  try { localStorage.setItem(SA.adminKey,'1'); } catch(e){}
+  document.getElementById('quick-nav')?.classList.add('show');
+  scrollToScreen('screen14');
+}
+function restoreAdminMode(){
+  const v = localStorage.getItem(SA.adminKey);
+  if (v === '1'){ document.getElementById('quick-nav')?.classList.add('show'); }
+}
+
+/* ---------- Init ---------- */
+function initState(){
+  if (localStorage.getItem(SA.earningsKey) === null) localStorage.setItem(SA.earningsKey,'1500');
+  if (localStorage.getItem(SA.jobsKey) === null) localStorage.setItem(SA.jobsKey,'2');
+  renderJobsPool();
+  syncClientUI();
+  restoreAdminMode();
+  // prime default dynamic job for demo
+  if (!getJobsPool().length){
+    setJobsPool([
+      {id:'job_demo1', brand:'Neutral Milk', store:'Whole Foods Market - 10133 Louetta Rd, Houston, TX 77070', notes:'Tag photo + shelf section', type:'standard', payoutCents:300},
+      {id:'job_demo2', brand:'RIND Snacks', store:'H‑E‑B - 20017 Bridgeland Creek Pkwy, Cypress, TX 77433', notes:'3 photos incl. price tag', type:'rush', payoutCents:300},
+    ]);
+    renderJobsPool();
   }
-
-  function fakeVision(){
-    const box = document.getElementById('analysis-box');
-    box.innerHTML = '<b>Detected brands:</b> Approx. Peet\\'s / Rambler / others…<br>' +
-                    'Counts and shelf positions (approx.).<br>' +
-                    '<span class="text-xs text-gray-500">Demo only – OCR not enabled.</span>';
-    localStorage.setItem('sa_last_analysis_html', box.innerHTML);
-  }
-
-  function submitJob(){
-    // Use stored price (or try to pick up from current field).
-    let val = normalizePrice(localStorage.getItem(SA.priceKey));
-    if (!val){
-      const input = document.getElementById('price-input');
-      val = normalizePrice(input ? input.value : '');
-    }
-    if (!val){
-      alert('Please enter a valid shelf price, e.g., 2.99');
-      go('screen5');
-      return;
-    }
-    localStorage.setItem(SA.priceKey, val);
-    localStorage.setItem(SA.whenKey, String(Date.now()));
-
-    // Update client dashboard numbers
-    syncClientTiles();
-    // Move to Jobs list (simulating completion)
-    go('screen9');
-  }
-
-  function syncClientTiles(){
-    const price = localStorage.getItem(SA.priceKey);
-    const store = localStorage.getItem(SA.storeKey);
-    const priceEl = document.getElementById('reported-price');
-    const locEl = document.getElementById('reported-price-location');
-    if (priceEl) priceEl.textContent = price || '—';
-    if (locEl)   locEl.textContent = store || 'Location pending';
-  }
-
-  function buildReport(){
-    syncClientTiles();
-    const brand = localStorage.getItem(SA.brandKey) || '—';
-    const store = localStorage.getItem(SA.storeKey) || '—';
-    const price = localStorage.getItem(SA.priceKey) || '—';
-    const when  = localStorage.getItem(SA.whenKey);
-    const whenTxt = when ? new Date(parseInt(when,10)).toLocaleString() : '—';
-    document.getElementById('rep-brand').textContent = brand;
-    document.getElementById('rep-store').textContent = store;
-    document.getElementById('rep-price').textContent = price === '—' ? '—' : ('$' + price);
-    document.getElementById('rep-when').textContent  = whenTxt;
-    const ana = localStorage.getItem('sa_last_analysis_html');
-    if (ana) document.getElementById('rep-analysis').innerHTML = ana;
-  }
-
-  // --- Client create job (adds to pool) ---
-  function publishJob(){
-    const brand = (document.getElementById('cj-brand').value || '').trim();
-    const store = (document.getElementById('cj-store').value || '').trim();
-    const notes = (document.getElementById('cj-notes').value || '').trim();
-    const type  = (document.querySelector('input[name=\"cj-type\"]:checked') || {}).value || 'standard';
-    if (!brand || !store){ alert('Please fill in Product/Brand and Store.'); return; }
-    const payout = type==='launch' ? 1200 : (type==='rush' ? 600 : 300);
-
-    // Prime current job context so worker can see it immediately
-    localStorage.setItem(SA.brandKey, brand);
-    localStorage.setItem(SA.storeKey, store);
-    alert('Job published! It now appears in Jobs Near You.');
-    go('screen4');
-  }
-
-  // Initialize client tiles on load
-  document.addEventListener('DOMContentLoaded', syncClientTiles);
+}
+document.addEventListener('DOMContentLoaded', initState);
 </script>
 
+<style>
+@media print {
+  body * { visibility: hidden; }
+  #screen19, #screen19 * { visibility: visible; }
+  #screen19 { position: absolute; inset: 0; width: 100%; }
+}
+</style>
 </body>
 </html>
+
