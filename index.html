@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>ShelfAssured — Prototype (Patched)</title>
+<title>ShelfAssured — Prototype (Patched + Add Client)</title>
 <script src="https://cdn.tailwindcss.com"></script>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
@@ -93,6 +93,7 @@
     <button data-goto="screen11" class="btn-gray">Profile</button>
     <button data-goto="screen9"  class="btn-gray">My Jobs</button>
     <button data-goto="screen20" class="btn-gray">Create Job (Form)</button>
+    <button data-goto="screen21" class="btn-gray">Add Client</button>
   </div>
 </div>
 
@@ -339,7 +340,7 @@
       </div>
     </section>
 
-    <!-- screen10: Brands -->
+    <!-- screen10: Brands (unchanged visual) -->
     <section id="screen10" class="screen">
       <h2 class="section-title">Brands</h2>
       <p class="text-gray-500">Explore participating brands & offers</p>
@@ -409,9 +410,12 @@
       </div>
     </section>
 
-    <!-- screen14: Admin Dashboard -->
+    <!-- screen14: Admin Dashboard (adds only one new button) -->
     <section id="screen14" class="screen">
       <h2 class="section-title">Admin Dashboard</h2>
+      <div class="mt-3">
+        <button id="btnAddBrand" class="btn-red">Add Client</button>
+      </div>
       <div class="mt-4 space-y-3">
         <div class="sa-card p-4"><p class="font-bold">New User Sign-ups</p><div class="flex justify-between"><p class="text-2xl font-bold">5</p><button class="btn-gray" onclick="go('screen15')">Review</button></div></div>
         <div class="sa-card p-4 border-l-4" style="border-left-color:var(--sa-gold)"><p class="font-bold">Jobs to Approve</p><div class="flex justify-between"><p class="text-2xl font-bold">3</p><button class="btn-gray" onclick="go('screen16')">Review</button></div></div>
@@ -490,12 +494,13 @@
       <div class="mt-4"><button class="btn-gray" onclick="go('screen8')">Back to Client Dashboard</button></div>
     </section>
 
-    <!-- screen20: Create Job (Form) -->
+    <!-- screen20: Create Job (Form) — unchanged layout, brand input enhanced with datalist -->
     <section id="screen20" class="screen">
       <div class="sa-card p-4">
         <h2 class="section-title mb-2">Create New Job</h2>
         <label class="block text-sm">Product / Brand</label>
-        <input id="cj-brand" class="w-full border rounded px-3 py-2 mt-1" placeholder="e.g., Rambler Sparkling Water"/>
+        <input id="cj-brand" list="brandOptions" class="w-full border rounded px-3 py-2 mt-1" placeholder="e.g., Rambler Sparkling Water"/>
+        <datalist id="brandOptions"></datalist>
         <label class="block text-sm mt-3">Store</label>
         <input id="cj-store" class="w-full border rounded px-3 py-2 mt-1" placeholder="Start typing a store..."/>
         <label class="block text-sm mt-3">Job Type</label>
@@ -510,6 +515,44 @@
           <button class="btn-red" onclick="publishJob()">Publish Job</button>
           <button class="btn-gray" onclick="go('screen8')">Cancel</button>
         </div>
+      </div>
+    </section>
+
+    <!-- screen21: Add Client (new, gentle form) -->
+    <section id="screen21" class="screen">
+      <h2 class="section-title">Add Client Brand</h2>
+      <p class="text-gray-500">Keep it simple. Only the brand name is required.</p>
+      <div class="sa-card p-4 mt-3">
+        <label class="block text-sm mb-1">Brand name</label>
+        <input id="ab_name" class="w-full border rounded px-3 py-2 mb-3" placeholder="Rambler"/>
+
+        <label class="block text-sm mb-1">Logo URL <span class="text-gray-500 text-xs">(optional)</span></label>
+        <input id="ab_logo" class="w-full border rounded px-3 py-2 mb-3" placeholder="https://..."/>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <label class="block text-sm mb-1">Contact name</label>
+            <input id="ab_cname" class="w-full border rounded px-3 py-2 mb-3" placeholder="Alex"/>
+          </div>
+          <div>
+            <label class="block text-sm mb-1">Contact email</label>
+            <input id="ab_cemail" type="email" class="w-full border rounded px-3 py-2 mb-3" placeholder="alex@brand.com"/>
+          </div>
+        </div>
+
+        <label class="block text-sm mb-1">Default tasks <span class="text-gray-500 text-xs">(comma separated)</span></label>
+        <input id="ab_tasks" class="w-full border rounded px-3 py-2 mb-3" placeholder="front photo, price, facing count"/>
+
+        <label class="block text-sm mb-1">Notes <span class="text-gray-500 text-xs">(optional)</span></label>
+        <textarea id="ab_notes" class="w-full border rounded px-3 py-2 mb-4" rows="3" placeholder="Anything helpful for the shopper..."></textarea>
+
+        <div class="flex gap-2">
+          <button id="ab_save" class="btn-red">Save</button>
+          <button id="ab_cancel" class="btn-gray">Cancel</button>
+        </div>
+      </div>
+      <div class="mt-4">
+        <button class="btn-gray" onclick="go('screen14')">Back to Admin Dashboard</button>
       </div>
     </section>
 
@@ -546,7 +589,11 @@ var SA = {
 function initState(){
   if (localStorage.getItem(SA.earningsKey)===null) localStorage.setItem(SA.earningsKey,'1500');
   if (localStorage.getItem(SA.jobsKey)===null) localStorage.setItem(SA.jobsKey,'2');
+  // wire Admin "Add Client" button
+  document.getElementById('btnAddBrand')?.addEventListener('click', ()=> go('screen21'));
   syncClientUI(); renderJobsPool(); updateJobDetailsUI();
+  // brand helpers
+  populateBrandDatalist();
 }
 function syncClientUI(){
   const price = localStorage.getItem(SA.priceKey);
@@ -663,12 +710,56 @@ function buildReportFromState(){
   if (photo){ const img=document.createElement('img'); img.src=photo; img.className='w-full h-24 object-cover rounded'; box.appendChild(img); }
 }
 
-// --- brands ---
-function openBrand(title, bio){
-  document.getElementById('brand-bio-title').textContent = title;
-  document.getElementById('brand-bio-text').textContent = bio;
-  go('screen12');
+// --- brands (new: Add Client + datalist for Create Job) ---
+const BRANDS_KEY = 'sa_brands';
+function listBrands(){ try{ return JSON.parse(localStorage.getItem(BRANDS_KEY)||'[]'); }catch(e){ return []; } }
+function saveBrands(arr){ localStorage.setItem(BRANDS_KEY, JSON.stringify(arr||[])); }
+function createBrand({name, logoUrl='', contactName='', contactEmail='', defaultTasks=[], notes=''}){
+  const all = listBrands();
+  const brand = {
+    id: 'brand_'+Date.now(),
+    name: (name||'').trim(),
+    logoUrl: (logoUrl||'').trim(),
+    contactName: (contactName||'').trim(),
+    contactEmail: (contactEmail||'').trim(),
+    defaultTasks, notes
+  };
+  all.unshift(brand); saveBrands(all);
+  window.dispatchEvent(new CustomEvent('sa:brands-updated', { detail: brand }));
+  return brand;
 }
+function populateBrandDatalist(){
+  const dl = document.getElementById('brandOptions');
+  if(!dl) return;
+  const brands = listBrands();
+  dl.innerHTML = brands.map(b=>`<option value="${b.name}"></option>`).join('');
+}
+// Wire Add Client form
+function wireAddBrandForm(){
+  const saveBtn = document.getElementById('ab_save');
+  const cancelBtn = document.getElementById('ab_cancel');
+  if(!saveBtn || !cancelBtn) return;
+  saveBtn.addEventListener('click', ()=>{
+    const name = document.getElementById('ab_name').value;
+    if(!name.trim()){ alert('Please enter a brand name'); return; }
+    const logoUrl = document.getElementById('ab_logo').value;
+    const contactName = document.getElementById('ab_cname').value;
+    const contactEmail = document.getElementById('ab_cemail').value;
+    const tasksRaw = document.getElementById('ab_tasks').value;
+    const notes = document.getElementById('ab_notes').value;
+    const defaultTasks = tasksRaw.split(',').map(s=>s.trim()).filter(Boolean);
+    createBrand({name, logoUrl, contactName, contactEmail, defaultTasks, notes});
+    // clear fields
+    ['ab_name','ab_logo','ab_cname','ab_cemail','ab_tasks','ab_notes'].forEach(id => { const el=document.getElementById(id); if(el) el.value=''; });
+    // gentle confirmation + go back to Admin
+    alert('Client brand saved.');
+    go('screen14');
+  });
+  cancelBtn.addEventListener('click', ()=> go('screen14'));
+}
+
+// Refresh datalist when brands change
+window.addEventListener('sa:brands-updated', populateBrandDatalist);
 
 // --- client map ---
 let _liveMap=false;
@@ -709,7 +800,11 @@ function publishJob(){
 }
 
 // --- init ---
-document.addEventListener('DOMContentLoaded', initState);
+document.addEventListener('DOMContentLoaded', ()=>{
+  initState();
+  wireAddBrandForm();
+  populateBrandDatalist();
+});
 </script>
 </body>
 </html>
