@@ -775,7 +775,7 @@ function buildReportFromState(){
 const BRANDS_KEY = 'sa_brands';
 function listBrands(){ try{ return JSON.parse(localStorage.getItem(BRANDS_KEY)||'[]'); }catch(e){ return []; } }
 function saveBrands(arr){ localStorage.setItem(BRANDS_KEY, JSON.stringify(arr||[])); }
-function createBrand({name, logoUrl='', contactName='', contactEmail='', defaultTasks=[], notes=''}){
+function createBrand({name, logoUrl='', contactName='', contactEmail='', defaultTasks=[], notes='', stores=[], skus=[], categories=[]}){
   const all = listBrands();
   const brand = {
     id: 'brand_'+Date.now(),
@@ -783,7 +783,12 @@ function createBrand({name, logoUrl='', contactName='', contactEmail='', default
     logoUrl: (logoUrl||'').trim(),
     contactName: (contactName||'').trim(),
     contactEmail: (contactEmail||'').trim(),
-    defaultTasks, notes
+    defaultTasks,
+    notes,
+    // NEW fields
+    stores: stores || [],
+    skus: skus || [], // [{upc,name,flavor?,imgUrl?}]
+    categories: categories || []
   };
   all.unshift(brand); saveBrands(all);
   window.dispatchEvent(new CustomEvent('sa:brands-updated', { detail: brand }));
@@ -828,38 +833,99 @@ function wireAddBrandForm(){
   const saveBtn = document.getElementById('ab_save');
   const cancelBtn = document.getElementById('ab_cancel');
   if(!saveBtn || !cancelBtn) return;
-  saveBtn.addEventListener('click', function(){
-    const name = document.getElementById('ab_name').value;
-    if(!name.trim()){ alert('Please enter a brand name'); return; }
-    const logoUrl = document.getElementById('ab_logo').value;
-    const contactName = document.getElementById('ab_cname').value;
-    const contactEmail = document.getElementById('ab_cemail').value;
-    const tasksRaw = document.getElementById('ab_tasks').value;
-    const notes = document.getElementById('ab_notes').value;
-    const defaultTasks = (tasksRaw||'').split(',').map(function(s){ return s.trim(); }).filter(Boolean);
-    createBrand({name, logoUrl, contactName, contactEmail, defaultTasks, notes});
-    // clear fields
-    ['ab_name','ab_logo','ab_cname','ab_cemail','ab_tasks','ab_notes'].forEach(function(id){
-      var el=document.getElementById(id); if(el) el.value='';
+
+  function parseStores(raw){
+    return (raw||'').split('\n').map(s=>s.trim()).filter(Boolean);
+  }
+  function parseSkus(raw){
+    const rows = (raw||'').split('\n').map(s=>s.trim()).filter(Boolean);
+    const out = []; let skipped = 0;
+    rows.forEach(line=>{
+      const parts = line.split(',').map(s=>s.trim());
+      const upc = (parts[0]||'').replace(/[^0-9]/g,'');
+      if(!window.isUPC(upc)){ skipped++; return; }
+      const name = parts[1]||'';
+      const flavor = parts[2]||'';
+      const imgUrl = parts[3]||'';
+      out.push({ upc, name, flavor, imgUrl });
     });
-    alert('Client brand saved.');
-    go('screen10'); // go straight to Brands
+    const note = document.getElementById('ab_skus_note');
+    if(note) note.textContent = skipped ? `Skipped ${skipped} invalid line(s).` : '';
+    return out;
+  }
+  function parseCategories(raw){
+    return window.uniq((raw||'').split(',').map(s=>s.trim()).filter(Boolean));
+  }
+
+  saveBtn.addEventListener('click', function(){
+    const name = (document.getElementById('ab_name').value||'').trim();
+    if(!name){ alert('Please enter a brand name.'); return; }
+
+    const logoUrl = document.getElementById('ab_logo').value||'';
+    const contactName = document.getElementById('ab_cname').value||'';
+    const contactEmail = document.getElementById('ab_cemail').value||'';
+    const tasksRaw = document.getElementById('ab_tasks').value||'';
+    const notes = document.getElementById('ab_notes').value||'';
+    const stores = parseStores(document.getElementById('ab_stores').value);
+    const skus = parseSkus(document.getElementById('ab_skus').value);
+    const categories = parseCategories(document.getElementById('ab_categories').value);
+    const defaultTasks = (tasksRaw||'').split(',').map(s=>s.trim()).filter(Boolean);
+
+    // Merge if brand already exists (case-insensitive)
+    const all = listBrands();
+    const ix = all.findIndex(b => (b.name||'').toLowerCase() === name.toLowerCase());
+    if(ix >= 0){
+      const doMerge = confirm('Brand exists. Merge new stores/SKUs/categories into it?');
+      if(!doMerge) return;
+
+      const existing = all[ix];
+
+      // merge primitives if provided
+      if(logoUrl) existing.logoUrl = logoUrl;
+      if(contactName) existing.contactName = contactName;
+      if(contactEmail) existing.contactEmail = contactEmail;
+      if(defaultTasks.length) existing.defaultTasks = defaultTasks;
+      if(notes) existing.notes = notes;
+
+      // merge arrays
+      existing.stores = window.uniq([...(existing.stores||[]), ...stores]);
+      existing.categories = window.uniq([...(existing.categories||[]), ...categories]);
+
+      // merge SKUs by UPC
+      const byUPC = new Map((existing.skus||[]).map(s=>[s.upc, s]));
+      (skus||[]).forEach(s=>{
+        if(byUPC.has(s.upc)){
+          const cur = byUPC.get(s.upc);
+          // update missing fields only
+          cur.name = s.name || cur.name;
+          cur.flavor = s.flavor || cur.flavor;
+          cur.imgUrl = s.imgUrl || cur.imgUrl;
+        } else {
+          byUPC.set(s.upc, s);
+        }
+      });
+      existing.skus = Array.from(byUPC.values());
+
+      all[ix] = existing;
+      saveBrands(all);
+      window.dispatchEvent(new CustomEvent('sa:brands-updated', { detail: existing }));
+      alert('Brand updated.');
+    } else {
+      createBrand({ name, logoUrl, contactName, contactEmail, defaultTasks, notes, stores, skus, categories });
+      alert('Client brand saved.');
+    }
+
+    // clear fields
+    ['ab_name','ab_logo','ab_cname','ab_cemail','ab_stores','ab_skus','ab_categories','ab_tasks','ab_notes'].forEach(id=>{
+      const el=document.getElementById(id); if(el) el.value='';
+    });
+
+    go('screen10'); // go to Brands
   });
+
   cancelBtn.addEventListener('click', function(){ go('screen14'); });
 }
-// Refresh UI when brands change
-window.addEventListener('sa:brands-updated', function(){
-  populateBrandDatalist();
-  renderClientBrands();
-});
 
-// --- client map ---
-let _liveMap=false;
-function toggleMapMode(){
-  _liveMap=!_liveMap;
-  document.getElementById('map-static').classList.toggle('hidden', _liveMap);
-  document.getElementById('map-live').classList.toggle('hidden', !_liveMap);
-}
 
 // --- job pool (create job form) ---
 function getJobsPool(){ try{ return JSON.parse(localStorage.getItem('sa_jobs_pool')||'[]'); }catch(e){ return []; } }
