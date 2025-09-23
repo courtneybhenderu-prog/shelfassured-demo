@@ -568,6 +568,22 @@
 </div>
 
 <script>
+(function(){
+  // ----- SAFETY: only add if not already present -----
+  if (typeof window.saGet === 'function') return;
+
+  window.saGet = function(key, fallback=null){
+    try { return JSON.parse(localStorage.getItem(key)); }
+    catch(e){ return localStorage.getItem(key) || fallback; }
+  };
+  window.saSet = function(key, val){
+    try { localStorage.setItem(key, JSON.stringify(val)); }
+    catch(e){ localStorage.setItem(key, val); }
+  };
+  window.isUPC = str => /^[0-9]{8,14}$/.test(str||'');
+  window.isPrice = str => /^[0-9]+(\.[0-9]{1,2})?$/.test(str||'');
+  window.uniq = arr => [...new Set(arr||[])];
+})();
 // --- basic navigation + nav dropdown ---
 function go(id){
   closeNav();
