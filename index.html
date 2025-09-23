@@ -527,42 +527,77 @@
     </section>
 
     <!-- screen21: Add Client (new, gentle form) -->
-    <section id="screen21" class="screen">
-      <h2 class="section-title">Add Client Brand</h2>
-      <p class="text-gray-500">Keep it simple. Only the brand name is required.</p>
-      <div class="sa-card p-4 mt-3">
-        <label class="block text-sm mb-1">Brand name</label>
-        <input id="ab_name" class="w-full border rounded px-3 py-2 mb-3" placeholder="Rambler"/>
+  <section id="screen21" class="screen">
+  <h2 class="section-title">Add Client Brand</h2>
+  <p class="text-gray-500">Only the brand name is required. You can add more details anytime.</p>
 
+  <div class="sa-card p-4 mt-3">
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+      <div>
+        <label class="block text-sm mb-1">Brand name *</label>
+        <input id="ab_name" class="w-full border rounded px-3 py-2" placeholder="Rambler"/>
+      </div>
+      <div>
         <label class="block text-sm mb-1">Logo URL <span class="text-gray-500 text-xs">(optional)</span></label>
-        <input id="ab_logo" class="w-full border rounded px-3 py-2 mb-3" placeholder="https://..."/>
-
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <div>
-            <label class="block text-sm mb-1">Contact name</label>
-            <input id="ab_cname" class="w-full border rounded px-3 py-2 mb-3" placeholder="Alex"/>
-          </div>
-          <div>
-            <label class="block text-sm mb-1">Contact email</label>
-            <input id="ab_cemail" type="email" class="w-full border rounded px-3 py-2 mb-3" placeholder="alex@brand.com"/>
-          </div>
-        </div>
-
-        <label class="block text-sm mb-1">Default tasks <span class="text-gray-500 text-xs">(comma separated)</span></label>
-        <input id="ab_tasks" class="w-full border rounded px-3 py-2 mb-3" placeholder="front photo, price, facing count"/>
-
-        <label class="block text-sm mb-1">Notes <span class="text-gray-500 text-xs">(optional)</span></label>
-        <textarea id="ab_notes" class="w-full border rounded px-3 py-2 mb-4" rows="3" placeholder="Anything helpful for the shopper..."></textarea>
-
-        <div class="flex gap-2">
-          <button id="ab_save" class="btn-red">Save</button>
-          <button id="ab_cancel" class="btn-gray">Cancel</button>
-        </div>
+        <input id="ab_logo" class="w-full border rounded px-3 py-2" placeholder="https://..."/>
       </div>
-      <div class="mt-4">
-        <button class="btn-gray" onclick="go('screen14')">Back to Admin Dashboard</button>
+    </div>
+
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-3">
+      <div>
+        <label class="block text-sm mb-1">Contact name</label>
+        <input id="ab_cname" class="w-full border rounded px-3 py-2" placeholder="Alex"/>
       </div>
-    </section>
+      <div>
+        <label class="block text-sm mb-1">Contact email</label>
+        <input id="ab_cemail" type="email" class="w-full border rounded px-3 py-2" placeholder="alex@brand.com"/>
+      </div>
+    </div>
+
+    <div class="mt-3">
+      <label class="block text-sm mb-1">
+        Stores <span class="text-gray-500 text-xs">(one per line)</span>
+      </label>
+      <textarea id="ab_stores" rows="4" class="w-full border rounded px-3 py-2" placeholder="H-E-B - 20017 Bridgeland Creek Pkwy, Cypress, TX 77433
+Whole Foods Market - 10133 Louetta Rd, Houston, TX 77070"></textarea>
+    </div>
+
+    <div class="mt-3">
+      <label class="block text-sm mb-1">
+        SKUs <span class="text-gray-500 text-xs">(CSV lines: UPC,Name[,Flavor][,ImgURL])</span>
+      </label>
+      <textarea id="ab_skus" rows="4" class="w-full border rounded px-3 py-2" placeholder="012345678905,Rambler Sparkling Water,Lime
+012345678906,Rambler Sparkling Water,Cherry,https://example.com/img.jpg"></textarea>
+      <div id="ab_skus_note" class="text-xs text-gray-500 mt-1"></div>
+    </div>
+
+    <div class="mt-3">
+      <label class="block text-sm mb-1">
+        Categories <span class="text-gray-500 text-xs">(comma separated)</span>
+      </label>
+      <input id="ab_categories" class="w-full border rounded px-3 py-2" placeholder="Beverages, Water"/>
+    </div>
+
+    <div class="mt-3">
+      <label class="block text-sm mb-1">Default tasks <span class="text-gray-500 text-xs">(comma separated)</span></label>
+      <input id="ab_tasks" class="w-full border rounded px-3 py-2" placeholder="front photo, price, facing count"/>
+    </div>
+
+    <div class="mt-3">
+      <label class="block text-sm mb-1">Notes <span class="text-gray-500 text-xs">(optional)</span></label>
+      <textarea id="ab_notes" class="w-full border rounded px-3 py-2" rows="3" placeholder="Anything helpful for the shopper..."></textarea>
+    </div>
+
+    <div class="flex gap-2 mt-4">
+      <button id="ab_save" class="btn-red">Save</button>
+      <button id="ab_cancel" class="btn-gray">Cancel</button>
+    </div>
+  </div>
+
+  <div class="mt-4">
+    <button class="btn-gray" onclick="go('screen14')">Back to Admin Dashboard</button>
+  </div>
+</section>
 
   </div>
 </div>
