@@ -1296,10 +1296,26 @@ function publishJob(){
   const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1sbWhtemh2d3Rzc3dpZ2Z2a3d4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTg3NTYwNDQsImV4cCI6MjA3NDMzMjA0NH0.sr3x6TkgXlK4Nc8SHPwoS6q5TDGXeExfFK2vPoOTPYk';
   
   // Initialize Supabase
-  const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  let supabase;
+  try {
+    supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    console.log('✅ Supabase client initialized');
+  } catch (error) {
+    console.error('❌ Supabase initialization failed:', error);
+    supabase = null;
+  }
+  
+  // Store original saGet/saSet functions as fallback
+  const originalSaGet = window.saGet;
+  const originalSaSet = window.saSet;
   
   // Enhanced saGet/saSet functions with Supabase integration
   window.saGet = async function(key, fallback = null) {
+    // If Supabase is not available, use original function
+    if (!supabase) {
+      return originalSaGet ? originalSaGet(key, fallback) : fallback;
+    }
+    
     try {
       switch(key) {
         case 'brands':
@@ -1343,15 +1359,13 @@ function publishJob(){
           return jobs || fallback;
           
         default:
-          // Fallback to localStorage for other keys
-          try { return JSON.parse(localStorage.getItem(key)); }
-          catch(e){ return localStorage.getItem(key) || fallback; }
+          // Fallback to original function for other keys
+          return originalSaGet ? originalSaGet(key, fallback) : fallback;
       }
     } catch (error) {
       console.error('Supabase Error:', error);
-      // Fallback to localStorage on error
-      try { return JSON.parse(localStorage.getItem(key)); }
-      catch(e){ return localStorage.getItem(key) || fallback; }
+      // Fallback to original function on error
+      return originalSaGet ? originalSaGet(key, fallback) : fallback;
     }
   };
 
@@ -1359,9 +1373,13 @@ function publishJob(){
     try {
       // For now, just store in localStorage as backup
       // In production, you'd want to save to Supabase
-      try { localStorage.setItem(key, JSON.stringify(val)); }
-      catch(e){ localStorage.setItem(key, val); }
-      return true;
+      if (originalSaSet) {
+        return originalSaSet(key, val);
+      } else {
+        try { localStorage.setItem(key, JSON.stringify(val)); }
+        catch(e){ localStorage.setItem(key, val); }
+        return true;
+      }
     } catch (error) {
       console.error('Storage Error:', error);
       return false;
@@ -1370,6 +1388,10 @@ function publishJob(){
 
   // Authentication functions
   window.saSignUp = async function(email, password, userData = {}) {
+    if (!supabase) {
+      return { success: false, error: 'Supabase not available' };
+    }
+    
     try {
       const { data, error } = await supabase.auth.signUp({
         email,
@@ -1401,6 +1423,10 @@ function publishJob(){
   };
 
   window.saSignIn = async function(email, password) {
+    if (!supabase) {
+      return { success: false, error: 'Supabase not available' };
+    }
+    
     try {
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
@@ -1415,6 +1441,10 @@ function publishJob(){
   };
 
   window.saSignOut = async function() {
+    if (!supabase) {
+      return { success: false, error: 'Supabase not available' };
+    }
+    
     try {
       const { error } = await supabase.auth.signOut();
       if (error) throw error;
