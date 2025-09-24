@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>ShelfAssured — Prototype (Add Client + Your Brands)</title>
 <script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
   :root{
@@ -1290,12 +1291,174 @@ function publishJob(){
 </script>
 
 <script>
+  // Supabase Configuration
+  const SUPABASE_URL = 'https://mlmhmzhvwtsswigfvkwx.supabase.co';
+  const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1sbWhtemh2d3Rzc3dpZ2Z2a3d4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTg3NTYwNDQsImV4cCI6MjA3NDMzMjA0NH0.sr3x6TkgXlK4Nc8SHPwoS6q5TDGXeExfFK2vPoOTPYk';
+  
+  // Initialize Supabase
+  const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  
+  // Enhanced saGet/saSet functions with Supabase integration
+  window.saGet = async function(key, fallback = null) {
+    try {
+      switch(key) {
+        case 'brands':
+          const { data: brands, error: brandsError } = await supabase
+            .from('brands')
+            .select('*')
+            .eq('is_active', true)
+            .order('name');
+          if (brandsError) throw brandsError;
+          return brands || fallback;
+          
+        case 'stores':
+          const { data: stores, error: storesError } = await supabase
+            .from('stores')
+            .select('*')
+            .eq('is_active', true)
+            .order('name');
+          if (storesError) throw storesError;
+          return stores || fallback;
+          
+        case 'skus':
+          const { data: skus, error: skusError } = await supabase
+            .from('skus')
+            .select('*')
+            .eq('is_active', true)
+            .order('name');
+          if (skusError) throw skusError;
+          return skus || fallback;
+          
+        case 'jobs':
+          const { data: jobs, error: jobsError } = await supabase
+            .from('jobs')
+            .select(`
+              *,
+              brands(name),
+              job_stores(store_id, stores(name, address)),
+              job_skus(sku_id, skus(name, upc))
+            `)
+            .order('created_at', { ascending: false });
+          if (jobsError) throw jobsError;
+          return jobs || fallback;
+          
+        default:
+          // Fallback to localStorage for other keys
+          try { return JSON.parse(localStorage.getItem(key)); }
+          catch(e){ return localStorage.getItem(key) || fallback; }
+      }
+    } catch (error) {
+      console.error('Supabase Error:', error);
+      // Fallback to localStorage on error
+      try { return JSON.parse(localStorage.getItem(key)); }
+      catch(e){ return localStorage.getItem(key) || fallback; }
+    }
+  };
+
+  window.saSet = async function(key, val) {
+    try {
+      // For now, just store in localStorage as backup
+      // In production, you'd want to save to Supabase
+      try { localStorage.setItem(key, JSON.stringify(val)); }
+      catch(e){ localStorage.setItem(key, val); }
+      return true;
+    } catch (error) {
+      console.error('Storage Error:', error);
+      return false;
+    }
+  };
+
+  // Authentication functions
+  window.saSignUp = async function(email, password, userData = {}) {
+    try {
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: { data: userData }
+      });
+      
+      if (error) throw error;
+      
+      // Create user profile
+      if (data.user) {
+        const { error: profileError } = await supabase
+          .from('users')
+          .insert([{
+            id: data.user.id,
+            email: userData.email,
+            full_name: userData.fullName,
+            phone: userData.phone,
+            role: userData.role || 'contractor'
+          }]);
+        
+        if (profileError) console.error('Profile creation error:', profileError);
+      }
+      
+      return { success: true, data };
+    } catch (error) {
+      return { success: false, error: error.message };
+    }
+  };
+
+  window.saSignIn = async function(email, password) {
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password
+      });
+      
+      if (error) throw error;
+      return { success: true, data };
+    } catch (error) {
+      return { success: false, error: error.message };
+    }
+  };
+
+  window.saSignOut = async function() {
+    try {
+      const { error } = await supabase.auth.signOut();
+      if (error) throw error;
+      return { success: true };
+    } catch (error) {
+      return { success: false, error: error.message };
+    }
+  };
+
+  // Helper function for empty states
   window.saEmptyState = function(title, sub){
     return '<div class="rounded-2xl border p-6 text-center bg-white">' +
       '<div class="text-base font-medium">' + title + '</div>' +
       '<div class="text-sm text-gray-500 mt-1">' + sub + '</div>' +
       '</div>';
   };
+
+  // Initialize app with Supabase
+  document.addEventListener('DOMContentLoaded', async function() {
+    console.log('🚀 ShelfAssured initialized with Supabase!');
+    
+    // Check if user is logged in
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user) {
+      console.log('✅ User logged in:', user.email);
+    } else {
+      console.log('ℹ️ No user logged in');
+    }
+    
+    // Load data from Supabase
+    try {
+      const brands = await saGet('brands', []);
+      const stores = await saGet('stores', []);
+      const jobs = await saGet('jobs', []);
+      
+      console.log('📊 Data loaded:', { 
+        brands: brands.length, 
+        stores: stores.length, 
+        jobs: jobs.length 
+      });
+    } catch (error) {
+      console.error('❌ Error loading data:', error);
+    }
+  });
 </script>
 
 </body>
