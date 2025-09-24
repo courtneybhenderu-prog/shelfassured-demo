@@ -154,17 +154,64 @@
         </div>
 
         <div class="mt-3 space-y-2" id="jobs-static">
-          <div class="text-sm text-gray-700 bg-gray-100 rounded p-2">Whole Foods Market - 10133 Louetta Rd, Houston, TX 77070</div>
-          <div class="sa-card p-4 cursor-pointer" onclick="setJob('Rambler Sparkling Water','Whole Foods Market - 10133 Louetta Rd, Houston, TX 77070',300); go('screen5')">
-            <p class="font-bold">Rambler Sparkling Water</p><p class="text-sm text-gray-500">Take and upload 2 photos</p><p class="text-sm text-[#F9A825] font-semibold mt-1">Earn $3.00</p>
-          </div>
-          <div class="sa-card p-4 cursor-pointer" onclick="setJob('Neutral Milk','Whole Foods Market - 10133 Louetta Rd, Houston, TX 77070',300); go('screen5')">
-            <p class="font-bold">Neutral Milk</p><p class="text-sm text-gray-500">Take and upload 3 photos</p><p class="text-sm text-[#F9A825] font-semibold mt-1">Earn $3.00</p>
-          </div>
-          <div class="text-sm text-gray-700 bg-gray-100 rounded p-2">H‑E‑B - 20017 Bridgeland Creek Pkwy, Cypress, TX 77433</div>
-          <div class="sa-card p-4 border-l-4 cursor-pointer" style="border-left-color:var(--sa-red)" onclick="setJob('RIND Snacks','H‑E‑B - 20017 Bridgeland Creek Pkwy, Cypress, TX 77433',300); go('screen5')">
-            <p class="font-bold">RIND Snacks</p><p class="text-sm text-gray-500">Take and upload 3 photos</p><p class="text-sm text-[#F9A825] font-semibold mt-1">Earn $3.00</p>
-          </div>
+        <script>
+          (function () {
+            var container = document.getElementById('jobs-static');
+            if (!container) return;
+            container.innerHTML = '';
+            var jobs = (window.saGet && saGet('jobs')) || [];
+            var stores = (window.saGet && saGet('stores')) || [];
+
+            jobs.forEach(function (job) {
+              var nStores = job && job.allStores ? stores.length : ((job && job.storeIds) ? job.storeIds.length : 0);
+              var skuCount = (job && job.skuIds) ? job.skuIds.length : 0;
+              var perStore = (job && job.payoutPerStore) ? job.payoutPerStore : 5;
+              var payout = perStore * nStores;
+              var title = (job && (job.title || job.clientName || (job.client && job.client.name))) || 'Untitled Job';
+
+              var card = document.createElement('div');
+              card.className = 'sa-card p-4 flex items-center justify-between';
+
+              var left = document.createElement('div');
+              var titleEl = document.createElement('p');
+              titleEl.className = 'font-bold';
+              titleEl.textContent = title;
+              var subEl = document.createElement('p');
+              subEl.className = 'text-sm text-gray-500';
+              subEl.textContent = (nStores || 0) + ' ' + (nStores === 1 ? 'store' : 'stores') + ' • ' + (skuCount || 0) + ' ' + (skuCount === 1 ? 'SKU' : 'SKUs');
+              left.appendChild(titleEl);
+              left.appendChild(subEl);
+
+              var right = document.createElement('div');
+              right.className = 'text-right flex items-end gap-3';
+              var amounts = document.createElement('div');
+              var payoutEl = document.createElement('div');
+              payoutEl.className = 'text-xl font-semibold text-[#F9A825]';
+              payoutEl.textContent = '$' + payout;
+              var perEl = document.createElement('div');
+              perEl.className = 'text-xs text-gray-500';
+              perEl.textContent = '$' + perStore + '/store';
+              amounts.appendChild(payoutEl);
+              amounts.appendChild(perEl);
+
+              var btn = document.createElement('button');
+              btn.className = 'sa-btn px-3 py-1 text-sm';
+              btn.textContent = 'Start';
+              btn.addEventListener('click', function () {
+                if (job && job.id != null) {
+                  location.hash = '#job/' + job.id;
+                }
+              });
+
+              right.appendChild(amounts);
+              right.appendChild(btn);
+
+              card.appendChild(left);
+              card.appendChild(right);
+              container.appendChild(card);
+            });
+          })();
+        </script>
         </div>
 
         <!-- dynamic jobs published by admin/client -->
@@ -524,6 +571,82 @@
       <datalist id="brandStoresList"></datalist>
       <div class="text-xs text-gray-500 mt-1">Tip: choose from suggestions or type any store, then press Enter.</div>
       <div id="cj-store-chips" class="flex flex-wrap gap-2 mt-2"></div>
+      <div id="sa-payout-hint" class="text-sm mt-2 hidden">
+        <span class="font-medium">Payout hint:</span>
+        <span id="sa-payout-hint-text">$0</span>
+      </div>
+      <script>
+        (function () {
+          var PER_STORE = 5;
+          var chipsEl = document.getElementById('cj-store-chips');
+          var inputEl = document.getElementById('cj-store');
+          var allStoresEl = document.getElementById('cj-allstores');
+          var hintEl = document.getElementById('sa-payout-hint');
+          var hintTextEl = document.getElementById('sa-payout-hint-text');
+
+          function getSelectedCount() {
+            if (chipsEl) {
+              return chipsEl.children ? chipsEl.children.length : 0;
+            }
+            return 0;
+          }
+
+          function updatePayoutHint() {
+            var n = getSelectedCount();
+            var all = allStoresEl && allStoresEl.checked;
+
+            if (all && n === 0) {
+              // Show hint even if no explicit stores when "all stores" is selected
+              hintTextEl.textContent = '$' + PER_STORE + ' × all stores';
+              hintEl.classList.remove('hidden');
+              return;
+            }
+
+            if (n > 0) {
+              var total = PER_STORE * n;
+              var suffix = all ? ' (all stores)' : '';
+              hintTextEl.textContent = '$' + PER_STORE + ' × ' + n + ' stores = $' + total + suffix;
+              hintEl.classList.remove('hidden');
+            } else {
+              // Fallback: if user typed a value but no chip created yet, count as 1
+              var typed = inputEl && inputEl.value && inputEl.value.trim().length > 0;
+              if (typed) {
+                var totalTyped = PER_STORE * 1;
+                var suffixTyped = all ? ' (all stores)' : '';
+                hintTextEl.textContent = '$' + PER_STORE + ' × 1 store = $' + totalTyped + suffixTyped;
+                hintEl.classList.remove('hidden');
+              } else {
+                hintEl.classList.add('hidden');
+              }
+            }
+          }
+
+          // Observe changes to chips container (chips added/removed)
+          if (window.MutationObserver && chipsEl) {
+            var observer = new MutationObserver(updatePayoutHint);
+            observer.observe(chipsEl, { childList: true, subtree: false });
+          }
+
+          // Listen to checkbox and input changes
+          if (allStoresEl) {
+            allStoresEl.addEventListener('change', updatePayoutHint);
+          }
+          if (inputEl) {
+            inputEl.addEventListener('input', updatePayoutHint);
+            inputEl.addEventListener('change', updatePayoutHint);
+            inputEl.addEventListener('blur', updatePayoutHint);
+            inputEl.addEventListener('keydown', function (e) {
+              if (e.key === 'Enter') {
+                // Defer to allow any chip-creation logic elsewhere to run first
+                setTimeout(updatePayoutHint, 0);
+              }
+            });
+          }
+
+          // Initial render
+          updatePayoutHint();
+        })();
+      </script>
     </div>
 
     <!-- SKUs -->
@@ -1164,9 +1287,16 @@ function publishJob(){
   ['cj-brand','cj-store','cj-sku','cj-category','cj-notes'].forEach(id=>{ const el=document.getElementById(id); if(el) el.value=''; });
   renderStoreChips(); renderSkuChips(); updatePayoutHint();
 }
-
-// --- init ---
-document.addEventListener('DOMContentLoaded', initState);
 </script>
+
+<script>
+  window.saEmptyState = function(title, sub){
+    return '<div class="rounded-2xl border p-6 text-center bg-white">' +
+      '<div class="text-base font-medium">' + title + '</div>' +
+      '<div class="text-sm text-gray-500 mt-1">' + sub + '</div>' +
+      '</div>';
+  };
+</script>
+
 </body>
 </html>
