@@ -58,7 +58,9 @@
                 if (result.success) {
                     showMessage(messageEl, 'Signed in successfully!', 'success');
                     console.log('✅ Signed in successfully');
-                    setTimeout(() => goToPage('../dashboard/contractor.html'), 1000);
+                    
+                    // For now, redirect to shelfer dashboard (we'll add role detection later)
+                    setTimeout(() => goToPage('../dashboard/shelfer.html'), 1000);
                 } else {
                     console.error('❌ Sign in failed:', result.error);
                     showMessage(messageEl, 'Sign in failed: ' + result.error, 'error');

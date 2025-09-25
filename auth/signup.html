@@ -31,8 +31,8 @@
                     <div class="form-group">
                         <select id="signup-role" class="w-full border rounded px-3 py-3" required>
                             <option value="">Select your role</option>
-                            <option value="contractor">Contractor (I want to do jobs)</option>
-                            <option value="client">Client (I want to post jobs)</option>
+                            <option value="shelfer">Shelfer (I want to audit shelves and earn money)</option>
+                            <option value="brand_client">Brand Client (I want to post jobs for my products)</option>
                         </select>
                     </div>
                     
@@ -87,7 +87,10 @@
                 if (result.success) {
                     showMessage(messageEl, 'Account created successfully! Please check your email to verify your account.', 'success');
                     console.log('✅ Account created successfully');
-                    setTimeout(() => goToPage('../dashboard/contractor.html'), 2000);
+                    
+                    // Redirect based on role
+                    const redirectPage = role === 'brand_client' ? '../dashboard/brand-client.html' : '../dashboard/shelfer.html';
+                    setTimeout(() => goToPage(redirectPage), 2000);
                 } else {
                     console.error('❌ Signup failed:', result.error);
                     showMessage(messageEl, 'Error: ' + result.error, 'error');

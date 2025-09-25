@@ -123,15 +123,15 @@ window.saSignUp = async function(email, password, userData = {}) {
     // Create user profile
     if (data.user) {
       console.log('🔄 Creating user profile...', data.user.id);
-      const { error: profileError } = await supabase
-        .from('users')
-        .insert([{
-          id: data.user.id,
-          email: userData.email,
-          full_name: userData.fullName,
-          phone: userData.phone,
-          role: userData.role || 'contractor'
-        }]);
+        const { error: profileError } = await supabase
+          .from('users')
+          .insert([{
+            id: data.user.id,
+            email: userData.email,
+            full_name: userData.fullName,
+            phone: userData.phone,
+            role: userData.role || 'shelfer'
+          }]);
       
       if (profileError) {
         console.error('❌ Profile creation error:', profileError);

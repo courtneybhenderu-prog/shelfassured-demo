@@ -14,7 +14,7 @@ CREATE TABLE users (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     is_active BOOLEAN DEFAULT true,
-    role VARCHAR(50) DEFAULT 'contractor' CHECK (role IN ('admin', 'contractor', 'client'))
+    role VARCHAR(50) DEFAULT 'shelfer' CHECK (role IN ('admin', 'shelfer', 'brand_client'))
 );
 
 -- Brands table
