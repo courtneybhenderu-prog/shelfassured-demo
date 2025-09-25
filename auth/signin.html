@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sign In - ShelfAssured</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <link rel="stylesheet" href="../shared/styles.css">
+</head>
+<body>
+    <div class="shell">
+        <div class="phone">
+            <section class="screen">
+                <h2 class="section-title">Welcome Back!</h2>
+                <p class="text-gray-500">Sign in to your account.</p>
+                
+                <form id="signin-form" class="mt-4 space-y-3">
+                    <div class="form-group">
+                        <input id="login-email" type="email" placeholder="Email" class="w-full border rounded px-3 py-3" required>
+                    </div>
+                    <div class="form-group">
+                        <input id="login-password" type="password" placeholder="Password" class="w-full border rounded px-3 py-3" required>
+                    </div>
+                    
+                    <button type="submit" class="w-full btn-red">Sign In</button>
+                    <button type="button" class="w-full btn-gray" onclick="goToPage('signup.html')">Sign up</button>
+                    <button type="button" class="w-full btn-gray" onclick="goToPage('../index.html')">Back</button>
+                </form>
+                
+                <div id="signin-message" class="mt-3 text-sm hidden"></div>
+            </section>
+        </div>
+    </div>
+
+    <!-- Include shared API -->
+    <script src="../shared/api.js"></script>
+    
+    <script>
+        // Handle form submission
+        document.getElementById('signin-form').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const email = document.getElementById('login-email').value;
+            const password = document.getElementById('login-password').value;
+            const messageEl = document.getElementById('signin-message');
+
+            if (!email || !password) {
+                showMessage(messageEl, 'Please enter both email and password', 'error');
+                return;
+            }
+
+            showMessage(messageEl, 'Signing in...', 'info');
+
+            try {
+                const result = await saSignIn(email, password);
+
+                if (result.success) {
+                    showMessage(messageEl, 'Signed in successfully!', 'success');
+                    console.log('✅ Signed in successfully');
+                    setTimeout(() => goToPage('../dashboard/contractor.html'), 1000);
+                } else {
+                    console.error('❌ Sign in failed:', result.error);
+                    showMessage(messageEl, 'Sign in failed: ' + result.error, 'error');
+                }
+            } catch (error) {
+                console.error('❌ Sign in error:', error);
+                showMessage(messageEl, 'Error: ' + error.message, 'error');
+            }
+        });
+    </script>
+</body>
+</html>

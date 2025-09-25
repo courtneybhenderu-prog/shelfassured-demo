@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Create Account - ShelfAssured</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <link rel="stylesheet" href="../shared/styles.css">
+</head>
+<body>
+    <div class="shell">
+        <div class="phone">
+            <section class="screen">
+                <h2 class="section-title">Create Account</h2>
+                <p class="text-gray-500">Sign up to start earning with ShelfAssured.</p>
+                
+                <form id="signup-form" class="mt-4 space-y-3">
+                    <div class="form-group">
+                        <input id="signup-email" type="email" placeholder="Email" class="w-full border rounded px-3 py-3" required>
+                    </div>
+                    <div class="form-group">
+                        <input id="signup-password" type="password" placeholder="Password" class="w-full border rounded px-3 py-3" required>
+                    </div>
+                    <div class="form-group">
+                        <input id="signup-name" type="text" placeholder="Full Name" class="w-full border rounded px-3 py-3" required>
+                    </div>
+                    <div class="form-group">
+                        <input id="signup-phone" type="tel" placeholder="Phone (optional)" class="w-full border rounded px-3 py-3">
+                    </div>
+                    <div class="form-group">
+                        <select id="signup-role" class="w-full border rounded px-3 py-3" required>
+                            <option value="">Select your role</option>
+                            <option value="contractor">Contractor (I want to do jobs)</option>
+                            <option value="client">Client (I want to post jobs)</option>
+                        </select>
+                    </div>
+                    
+                    <button type="submit" class="w-full btn-red">Create Account</button>
+                    <button type="button" class="w-full btn-gray" onclick="goToPage('../index.html')">Back</button>
+                </form>
+                
+                <div id="signup-message" class="mt-3 text-sm hidden"></div>
+            </section>
+        </div>
+    </div>
+
+    <!-- Include shared API -->
+    <script src="../shared/api.js"></script>
+    
+    <script>
+        // Handle form submission
+        document.getElementById('signup-form').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const email = document.getElementById('signup-email').value;
+            const password = document.getElementById('signup-password').value;
+            const fullName = document.getElementById('signup-name').value;
+            const phone = document.getElementById('signup-phone').value;
+            const role = document.getElementById('signup-role').value;
+            const messageEl = document.getElementById('signup-message');
+
+            // Basic validation
+            if (!email || !password || !fullName || !role) {
+                showMessage(messageEl, 'Please fill in all required fields', 'error');
+                return;
+            }
+
+            if (password.length < 6) {
+                showMessage(messageEl, 'Password must be at least 6 characters', 'error');
+                return;
+            }
+
+            showMessage(messageEl, 'Creating account...', 'info');
+
+            try {
+                console.log('🔄 Attempting to create account...', { email, role });
+                
+                const result = await saSignUp(email, password, {
+                    fullName: fullName,
+                    phone: phone,
+                    role: role
+                });
+
+                console.log('📋 Signup result:', result);
+
+                if (result.success) {
+                    showMessage(messageEl, 'Account created successfully! Please check your email to verify your account.', 'success');
+                    console.log('✅ Account created successfully');
+                    setTimeout(() => goToPage('../dashboard/contractor.html'), 2000);
+                } else {
+                    console.error('❌ Signup failed:', result.error);
+                    showMessage(messageEl, 'Error: ' + result.error, 'error');
+                }
+            } catch (error) {
+                console.error('❌ Signup error:', error);
+                showMessage(messageEl, 'Error: ' + error.message, 'error');
+            }
+        });
+    </script>
+</body>
+</html>

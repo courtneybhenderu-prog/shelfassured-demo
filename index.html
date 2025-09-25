@@ -1396,21 +1396,31 @@ function publishJob(){
 
   // Authentication functions
   window.saSignUp = async function(email, password, userData = {}) {
+    console.log('🔧 saSignUp called with:', { email, userData });
+    
     if (!supabase) {
+      console.error('❌ Supabase not available');
       return { success: false, error: 'Supabase not available' };
     }
     
     try {
+      console.log('🔄 Calling supabase.auth.signUp...');
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
         options: { data: userData }
       });
       
-      if (error) throw error;
+      console.log('📋 Auth signup response:', { data, error });
+      
+      if (error) {
+        console.error('❌ Auth signup error:', error);
+        throw error;
+      }
       
       // Create user profile
       if (data.user) {
+        console.log('🔄 Creating user profile...', data.user.id);
         const { error: profileError } = await supabase
           .from('users')
           .insert([{
@@ -1421,11 +1431,18 @@ function publishJob(){
             role: userData.role || 'contractor'
           }]);
         
-        if (profileError) console.error('Profile creation error:', profileError);
+        if (profileError) {
+          console.error('❌ Profile creation error:', profileError);
+        } else {
+          console.log('✅ User profile created successfully');
+        }
+      } else {
+        console.warn('⚠️ No user data returned from auth signup');
       }
       
       return { success: true, data };
     } catch (error) {
+      console.error('❌ saSignUp error:', error);
       return { success: false, error: error.message };
     }
   };
@@ -1493,19 +1510,26 @@ function publishJob(){
     showMessage(messageEl, 'Creating account...', 'info');
 
     try {
+      console.log('🔄 Attempting to create account...', { email, role });
+      
       const result = await saSignUp(email, password, {
         fullName: fullName,
         phone: phone,
         role: role
       });
 
+      console.log('📋 Signup result:', result);
+
       if (result.success) {
         showMessage(messageEl, 'Account created successfully! Please check your email to verify your account.', 'success');
+        console.log('✅ Account created successfully');
         setTimeout(() => go('screen4'), 2000); // Go to dashboard
       } else {
+        console.error('❌ Signup failed:', result.error);
         showMessage(messageEl, 'Error: ' + result.error, 'error');
       }
     } catch (error) {
+      console.error('❌ Signup error:', error);
       showMessage(messageEl, 'Error: ' + error.message, 'error');
     }
   };
