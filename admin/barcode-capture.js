@@ -4,45 +4,10 @@
 let scannerActive = false;
 let currentUser = null;
 
-// GS1 and Google Vision API integration
-const GS1_API_KEY = 'YOUR_GS1_API_KEY'; // You'll need to get this from GS1
+// Google Vision API integration (GS1 removed due to cost)
 const GOOGLE_VISION_API_KEY = 'YOUR_GOOGLE_VISION_API_KEY'; // You'll need to get this from Google Cloud
 
-// GS1 API lookup function
-async function lookupGS1Product(barcode) {
-    try {
-        console.log('🔍 Looking up product in GS1 database:', barcode);
-        
-        // GS1 API endpoint (you'll need to get the actual endpoint from GS1)
-        const response = await fetch(`https://api.gs1.org/v1/products/${barcode}`, {
-            headers: {
-                'Authorization': `Bearer ${GS1_API_KEY}`,
-                'Content-Type': 'application/json'
-            }
-        });
-        
-        if (!response.ok) {
-            throw new Error(`GS1 API error: ${response.status}`);
-        }
-        
-        const data = await response.json();
-        console.log('✅ GS1 lookup successful:', data);
-        
-        return {
-            success: true,
-            data: {
-                brand: data.brand || '',
-                name: data.productName || '',
-                description: data.description || '',
-                size: data.packageSize || '',
-                category: data.category || ''
-            }
-        };
-    } catch (error) {
-        console.log('⚠️ GS1 lookup failed:', error.message);
-        return { success: false, error: error.message };
-    }
-}
+// Note: GS1 API removed due to $500/month cost - using manual entry + Google Vision instead
 
 // Google Vision API function
 async function extractTextFromImage(imageFile) {
@@ -316,43 +281,11 @@ async function handleBarcodeDetected(code) {
     document.getElementById('detected-code').textContent = code;
     document.getElementById('detected-barcode').classList.remove('hidden');
     
-    // Show loading message for GS1 lookup
-    showMessage('Looking up product information...', 'info');
-    
-    // Try GS1 lookup to auto-populate fields
-    await autoPopulateFromGS1(code);
+    // Show success message
+    showMessage('Barcode detected! Please enter product details manually or upload a photo for AI text extraction.', 'success');
     
     // Focus on next field
     document.getElementById('brand').focus();
-    
-    showMessage('Barcode detected successfully!', 'success');
-}
-
-// Auto-populate form fields from GS1 lookup
-async function autoPopulateFromGS1(barcode) {
-    try {
-        const gs1Result = await lookupGS1Product(barcode);
-        
-        if (gs1Result.success) {
-            const data = gs1Result.data;
-            
-            // Auto-populate form fields
-            if (data.brand) document.getElementById('brand').value = data.brand;
-            if (data.name) document.getElementById('name').value = data.name;
-            if (data.description) document.getElementById('description').value = data.description;
-            if (data.size) document.getElementById('size').value = data.size;
-            if (data.category) document.getElementById('category').value = data.category;
-            
-            showMessage('Product information loaded from GS1 database!', 'success');
-            console.log('✅ GS1 auto-population successful');
-        } else {
-            console.log('⚠️ GS1 lookup failed, manual entry required');
-            showMessage('GS1 lookup failed - please enter product details manually', 'info');
-        }
-    } catch (error) {
-        console.error('❌ Error in GS1 auto-population:', error);
-        showMessage('Error loading product information - please enter manually', 'error');
-    }
 }
 
 // Setup photo upload functionality
