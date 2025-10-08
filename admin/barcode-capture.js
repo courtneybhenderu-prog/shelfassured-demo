@@ -4,6 +4,107 @@
 let scannerActive = false;
 let currentUser = null;
 
+// GS1 and Google Vision API integration
+const GS1_API_KEY = 'YOUR_GS1_API_KEY'; // You'll need to get this from GS1
+const GOOGLE_VISION_API_KEY = 'YOUR_GOOGLE_VISION_API_KEY'; // You'll need to get this from Google Cloud
+
+// GS1 API lookup function
+async function lookupGS1Product(barcode) {
+    try {
+        console.log('🔍 Looking up product in GS1 database:', barcode);
+        
+        // GS1 API endpoint (you'll need to get the actual endpoint from GS1)
+        const response = await fetch(`https://api.gs1.org/v1/products/${barcode}`, {
+            headers: {
+                'Authorization': `Bearer ${GS1_API_KEY}`,
+                'Content-Type': 'application/json'
+            }
+        });
+        
+        if (!response.ok) {
+            throw new Error(`GS1 API error: ${response.status}`);
+        }
+        
+        const data = await response.json();
+        console.log('✅ GS1 lookup successful:', data);
+        
+        return {
+            success: true,
+            data: {
+                brand: data.brand || '',
+                name: data.productName || '',
+                description: data.description || '',
+                size: data.packageSize || '',
+                category: data.category || ''
+            }
+        };
+    } catch (error) {
+        console.log('⚠️ GS1 lookup failed:', error.message);
+        return { success: false, error: error.message };
+    }
+}
+
+// Google Vision API function
+async function extractTextFromImage(imageFile) {
+    try {
+        console.log('📸 Extracting text from image using Google Vision API');
+        
+        // Convert image to base64
+        const base64Image = await fileToBase64(imageFile);
+        
+        const response = await fetch(`https://vision.googleapis.com/v1/images:annotate?key=${GOOGLE_VISION_API_KEY}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                requests: [{
+                    image: {
+                        content: base64Image
+                    },
+                    features: [{
+                        type: 'TEXT_DETECTION',
+                        maxResults: 1
+                    }]
+                }]
+            })
+        });
+        
+        if (!response.ok) {
+            throw new Error(`Google Vision API error: ${response.status}`);
+        }
+        
+        const data = await response.json();
+        console.log('✅ Google Vision extraction successful:', data);
+        
+        if (data.responses && data.responses[0] && data.responses[0].textAnnotations) {
+            const extractedText = data.responses[0].textAnnotations[0].description;
+            return {
+                success: true,
+                text: extractedText
+            };
+        } else {
+            return { success: false, error: 'No text found in image' };
+        }
+    } catch (error) {
+        console.log('⚠️ Google Vision extraction failed:', error.message);
+        return { success: false, error: error.message };
+    }
+}
+
+// Helper function to convert file to base64
+function fileToBase64(file) {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.readAsDataURL(file);
+        reader.onload = () => {
+            const base64 = reader.result.split(',')[1]; // Remove data:image/...;base64, prefix
+            resolve(base64);
+        };
+        reader.onerror = error => reject(error);
+    });
+}
+
 // Initialize the page
 document.addEventListener('DOMContentLoaded', async function() {
     console.log('🔧 Admin Barcode Capture initialized');
@@ -81,6 +182,9 @@ function setupEventListeners() {
     
     // GPS location button
     document.getElementById('gps-location').addEventListener('click', getCurrentLocation);
+    
+    // Photo upload functionality
+    setupPhotoUpload();
 }
 
 // Start barcode scanner
@@ -198,7 +302,7 @@ function toggleManualEntry() {
 }
 
 // Handle detected barcode
-function handleBarcodeDetected(code) {
+async function handleBarcodeDetected(code) {
     console.log('✅ Barcode detected:', code);
     
     // Stop scanner
@@ -212,10 +316,146 @@ function handleBarcodeDetected(code) {
     document.getElementById('detected-code').textContent = code;
     document.getElementById('detected-barcode').classList.remove('hidden');
     
+    // Show loading message for GS1 lookup
+    showMessage('Looking up product information...', 'info');
+    
+    // Try GS1 lookup to auto-populate fields
+    await autoPopulateFromGS1(code);
+    
     // Focus on next field
     document.getElementById('brand').focus();
     
     showMessage('Barcode detected successfully!', 'success');
+}
+
+// Auto-populate form fields from GS1 lookup
+async function autoPopulateFromGS1(barcode) {
+    try {
+        const gs1Result = await lookupGS1Product(barcode);
+        
+        if (gs1Result.success) {
+            const data = gs1Result.data;
+            
+            // Auto-populate form fields
+            if (data.brand) document.getElementById('brand').value = data.brand;
+            if (data.name) document.getElementById('name').value = data.name;
+            if (data.description) document.getElementById('description').value = data.description;
+            if (data.size) document.getElementById('size').value = data.size;
+            if (data.category) document.getElementById('category').value = data.category;
+            
+            showMessage('Product information loaded from GS1 database!', 'success');
+            console.log('✅ GS1 auto-population successful');
+        } else {
+            console.log('⚠️ GS1 lookup failed, manual entry required');
+            showMessage('GS1 lookup failed - please enter product details manually', 'info');
+        }
+    } catch (error) {
+        console.error('❌ Error in GS1 auto-population:', error);
+        showMessage('Error loading product information - please enter manually', 'error');
+    }
+}
+
+// Setup photo upload functionality
+function setupPhotoUpload() {
+    const photoInput = document.getElementById('product-photo');
+    const photoPreview = document.getElementById('photo-preview');
+    const previewImage = document.getElementById('preview-image');
+    const removePhotoBtn = document.getElementById('remove-photo');
+    const extractTextBtn = document.getElementById('extract-text');
+    
+    // Handle file selection
+    photoInput.addEventListener('change', function(e) {
+        const file = e.target.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                previewImage.src = e.target.result;
+                photoPreview.classList.remove('hidden');
+                extractTextBtn.disabled = false;
+            };
+            reader.readAsDataURL(file);
+        }
+    });
+    
+    // Remove photo
+    removePhotoBtn.addEventListener('click', function() {
+        photoInput.value = '';
+        photoPreview.classList.add('hidden');
+        extractTextBtn.disabled = true;
+    });
+    
+    // Extract text from photo
+    extractTextBtn.addEventListener('click', async function() {
+        const file = photoInput.files[0];
+        if (!file) return;
+        
+        extractTextBtn.disabled = true;
+        extractTextBtn.textContent = 'Extracting...';
+        
+        try {
+            const result = await extractTextFromImage(file);
+            
+            if (result.success) {
+                // Parse extracted text and try to populate fields
+                await parseExtractedText(result.text);
+                showMessage('Text extracted from photo successfully!', 'success');
+            } else {
+                showMessage('Could not extract text from photo: ' + result.error, 'error');
+            }
+        } catch (error) {
+            console.error('Text extraction error:', error);
+            showMessage('Error extracting text from photo', 'error');
+        } finally {
+            extractTextBtn.disabled = false;
+            extractTextBtn.textContent = 'Extract Text from Photo';
+        }
+    });
+}
+
+// Parse extracted text and populate form fields
+async function parseExtractedText(text) {
+    console.log('📝 Parsing extracted text:', text);
+    
+    // Simple text parsing - look for common patterns
+    const lines = text.split('\n').map(line => line.trim()).filter(line => line.length > 0);
+    
+    // Try to identify brand, product name, size, etc.
+    let brand = '';
+    let productName = '';
+    let size = '';
+    let description = '';
+    
+    // Look for brand patterns (usually first line or contains common brand words)
+    const brandKeywords = ['brand', 'company', 'manufacturer'];
+    for (const line of lines) {
+        if (brandKeywords.some(keyword => line.toLowerCase().includes(keyword))) {
+            brand = line;
+            break;
+        }
+    }
+    
+    // Look for size patterns (contains numbers + units)
+    const sizePattern = /(\d+(?:\.\d+)?)\s*(oz|fl oz|ml|g|kg|lbs?|lb|pound|ounce|gram|liter|gallon|quart|pint)/i;
+    for (const line of lines) {
+        const match = line.match(sizePattern);
+        if (match) {
+            size = match[0];
+            break;
+        }
+    }
+    
+    // Use first substantial line as product name if no brand found
+    if (!brand && lines.length > 0) {
+        productName = lines[0];
+    }
+    
+    // Populate form fields if we found data
+    if (brand) document.getElementById('brand').value = brand;
+    if (productName) document.getElementById('name').value = productName;
+    if (size) document.getElementById('size').value = size;
+    if (description) document.getElementById('description').value = description;
+    
+    console.log('✅ Text parsing complete:', { brand, productName, size, description });
 }
 
 // Update scanner status
