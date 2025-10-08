@@ -9,6 +9,8 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 let supabase;
 try {
   supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  // Make sure supabase is available globally
+  window.supabase = window.supabase || supabase;
   console.log('✅ Supabase client initialized');
 } catch (error) {
   console.error('❌ Supabase initialization failed:', error);
@@ -110,7 +112,13 @@ window.saSignUp = async function(email, password, userData = {}) {
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
-      options: { data: userData }
+      options: { 
+        data: {
+          full_name: userData.full_name,
+          phone: userData.phone,
+          role: userData.role
+        }
+      }
     });
     
     console.log('📋 Auth signup response:', { data, error });
@@ -120,27 +128,9 @@ window.saSignUp = async function(email, password, userData = {}) {
       throw error;
     }
     
-    // Create user profile
-    if (data.user) {
-      console.log('🔄 Creating user profile...', data.user.id);
-        const { error: profileError } = await supabase
-          .from('users')
-          .insert([{
-            id: data.user.id,
-            email: userData.email,
-            full_name: userData.fullName,
-            phone: userData.phone,
-            role: userData.role || 'shelfer'
-          }]);
-      
-      if (profileError) {
-        console.error('❌ Profile creation error:', profileError);
-      } else {
-        console.log('✅ User profile created successfully');
-      }
-    } else {
-      console.warn('⚠️ No user data returned from auth signup');
-    }
+    // Note: Profile will be created by ensureProfile() when user first logs in
+    // This is more reliable than trying to create it during signup
+    console.log('✅ Auth signup successful, profile will be created on first login');
     
     return { success: true, data };
   } catch (error) {
@@ -215,11 +205,26 @@ function goToPage(page) {
 // Ensure user profile exists and return it
 window.ensureProfile = async function(user) {
   if (!supabase) {
+    console.log('❌ Supabase not available in ensureProfile');
     return { role: 'shelfer' };
   }
   
   try {
-    // Try to get existing profile
+    // If no user provided, get current user
+    if (!user) {
+      const { data: { user: currentUser } } = await supabase.auth.getUser();
+      if (!currentUser) {
+        console.log('❌ No current user found');
+        return null;
+      }
+      user = currentUser;
+    }
+    
+    console.log('🔍 Ensuring profile for user:', user.id, user.email);
+    const md = user.user_metadata || {};
+    console.log('📋 User metadata:', md);
+    
+    // First try to get existing profile
     const { data: existingProfile, error: getError } = await supabase
       .from('users')
       .select('*')
@@ -227,27 +232,46 @@ window.ensureProfile = async function(user) {
       .single();
     
     if (existingProfile) {
+      console.log('✅ Found existing profile:', existingProfile);
       return existingProfile;
     }
     
-    // Create profile if it doesn't exist
+    // If no existing profile, create one
+    console.log('🔄 Creating new profile for user');
+    const profileData = {
+      id: user.id,
+      email: user.email,
+      full_name: md.full_name || null,
+      phone: md.phone || null,
+      role: md.role || 'shelfer'
+    };
+    console.log('📋 Profile data to insert:', profileData);
+    
     const { data: newProfile, error: createError } = await supabase
       .from('users')
-      .insert([{
-        id: user.id,
-        email: user.email,
-        full_name: user.user_metadata?.full_name || '',
-        phone: user.user_metadata?.phone || '',
-        role: user.user_metadata?.role || 'shelfer'
-      }])
+      .insert(profileData)
       .select()
       .single();
     
-    if (createError) throw createError;
+    if (createError) {
+      console.error('❌ Error creating profile:', createError);
+      console.error('❌ Full error details:', JSON.stringify(createError, null, 2));
+      // Don't return fallback - let the error propagate
+      throw createError;
+    }
+    
+    console.log('✅ Profile created:', newProfile);
     return newProfile;
   } catch (error) {
     console.error('❌ Error ensuring profile:', error);
-    return { role: 'shelfer' };
+    // Return a fallback profile instead of null
+    return { 
+      id: user?.id || 'unknown', 
+      email: user?.email || 'unknown', 
+      role: 'shelfer',
+      full_name: user?.user_metadata?.full_name || null,
+      phone: user?.user_metadata?.phone || null
+    };
   }
 };
 

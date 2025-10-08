@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="en">
+  <head><meta charset="utf-8"><title>Confirming…</title></head>
+  <body>
+    <p>Confirming your request…</p>
+
+    <!-- Supabase SDK + your shared client -->
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <script src="../shared/api.js"></script>
+    <script>
+      (async () => {
+        try {
+          // turn the email link into a logged-in session
+          await supabase.auth.exchangeCodeForSession(window.location.href);
+        } catch (e) {
+          // ignore if it's already used/expired; user can still sign in
+          console.error(e);
+        }
+        // send to set-new-password page (works locally and on Pages)
+        location.replace('./new-password.html');
+      })();
+    </script>
+  </body>
+</html>

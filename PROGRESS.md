@@ -1,208 +1,218 @@
 # ShelfAssured — Progress Log
 
-**Baseline date:** 2025-09-01
-**Owner:** Courtney B.
-**Purpose:** Single source of truth for what exists, how it works, and what’s next. Store this file in the repo root as `PROGRESS.md`.
+**Baseline date:** 2025-09-01  
+**Last updated:** 2025-01-25  
+**Owner:** Courtney B.  
+**Purpose:** Single source of truth for what exists, how it works, and what's next.
 
 ---
 
 ## 1) Repo snapshot
 
-* Repo: `shelfassured-demo`
-* Live demo: GitHub Pages
-* Primary file: `index.html` (single-file app: Tailwind CDN + vanilla JS + Inter font)
-* Supporting docs present: `CHANGELOG.md`, `SCREENS.md`, `STATE.md`, `TEST-PLAN.md`, `README*.md`, `DEPLOY.md`
-* Assets: demo images and logo
-
-> Note: Navigation uses `go('screenX')` with `scrollIntoView`. No router or build step. State is stored in `localStorage`.
+* **Repo:** `shelfassured-demo`
+* **Live demo:** GitHub Pages
+* **Architecture:** Modular HTML pages + shared JavaScript/CSS
+* **Backend:** Supabase (PostgreSQL + Auth + Storage)
+* **Primary files:** 
+  - `index-new.html` (landing page)
+  - `auth/signup.html`, `auth/signin.html` (authentication)
+  - `dashboard/shelfer.html`, `dashboard/brand-client.html` (user dashboards)
+  - `admin/barcode-capture.html` (admin tool)
+  - `shared/api.js`, `shared/utils.js`, `shared/styles.css` (shared resources)
+* **Database:** Supabase with tables: `users`, `brands`, `stores`, `skus`, `jobs`, `job_stores`, `job_skus`, `job_submissions`, `payments`, `notifications`, `products`
 
 ---
 
 ## 2) Core roles & flows (current)
 
-* **Shopper**
+### **Shelfer (Contractor)**
+* **Dashboard:** `dashboard/shelfer.html` - View available jobs, earnings tracking
+* **Job Flow:** Accept jobs → Complete audits → Submit photos → Get paid
+* **Authentication:** Sign up as "Shelfer" → Email confirmation → Login
 
-  * Dashboard (#screen4): sees jobs grouped by store (from `sa_jobs_pool`).
-  * Job Details (#screen5), Photo Capture (#screen6), Analysis (#screen7).
-  * Submission writes `sa_last_photo`, `sa_last_price`, `sa_last_submitted_at`.
-* **Client/Brand**
+### **Brand Client**
+* **Dashboard:** `dashboard/brand-client.html` - Create jobs, view results
+* **Job Creation:** Post audit requests for their products
+* **Authentication:** Sign up as "Brand Client" → Email confirmation → Login
 
-  * Dashboard (#screen8): map toggle (static image vs lightweight map iframe).
-  * Create Job Form (#screen20): writes to `sa_jobs_pool`.
-  * Snapshot (#screen19): printable report (print CSS hides everything else).
-* **Admin**
-
-  * Dashboard (#screen14) + Queues (#screen15–17).
-  * Add Client (#screen21): saves brand objects into `sa_brands` and returns to Brands (#screen10).
-
----
-
-## 3) Screens (IDs) — implemented
-
-* \#1 Splash
-* \#2 Create Account
-* \#3 Sign In
-* \#4 Shopper Dashboard
-* \#5 Job Details
-* \#6 Photo Capture
-* \#7 Analysis
-* \#8 Client Dashboard
-* \#9 My Jobs
-* \#10 Brands
-* \#11 Profile
-* \#12 Brand Bio
-* \#13 Client Job Tiers (or older Client New Job)
-* \#14 Admin Dashboard
-* \#15 Admin Users
-* \#16 Admin Jobs
-* \#17 Admin Support
-* \#19 Client Snapshot (print-only)
-* \#20 Create Job Form
-* \#21 Add Client
-
-> Keep these IDs stable; other behaviors reference them.
+### **Admin**
+* **Barcode Tool:** `admin/barcode-capture.html` - Build product database
+* **Access:** Restricted to users with `role = 'admin'` in `users` table
+* **Features:** Live barcode scanning, product data entry, database management
 
 ---
 
-## 4) LocalStorage keys — current
+## 3) Authentication System
 
-* `sa_earnings` — Shopper aggregate earnings
-* `sa_jobs_completed` — Shopper completed count
-* `sa_last_price` — Last submitted price string (validated `^[0-9]+(\.[0-9]{1,2})?$`)
-* `sa_last_store` — Last store string
-* `sa_last_brand` — Last brand string
-* `sa_last_photo` — Data URL of last uploaded/captured photo
-* `sa_last_submitted_at` — ISO timestamp of last submission
-* `sa_jobs_pool` — Array of jobs `{ id, brand, store, notes, type, payoutCents }`
-* `sa_current_job_*` — Working set for the active job detail flow
-* `sa_brands` — Array of brand objects `{ name, logoUrl, contactName, contactEmail, defaultTasks[], notes }`
+### **Supabase Integration**
+* **Auth Provider:** Supabase Auth with email/password
+* **User Roles:** `shelfer`, `brand_client`, `admin`
+* **Profile Management:** Automatic profile creation via `ensureProfile()` function
+* **Password Reset:** Email-based reset flow with confirmation pages
 
----
-
-## 5) Notable behaviors (keep)
-
-* **Create Job (#20)** builds a brand `<datalist>` from `sa_brands`.
-* **Shopper Dashboard (#4)** groups jobs by `store` and shows payout from `payoutCents` (integer cents).
-* **Client Snapshot (#19)** prints cleanly (only #19 visible in print/PDF via print CSS).
-* **Quick Nav** is a non-sticky dropdown; navigation via `scrollIntoView`.
+### **Pages**
+* `auth/signup.html` - Account creation with role selection
+* `auth/signin.html` - Login with forgot password
+* `auth/confirmed.html` - Email confirmation handler
+* `auth/new-password.html` - Password reset completion
 
 ---
 
-## 6) Constraints & guardrails
+## 4) Database Schema
 
-* Single file HTML (+ minimal assets).
-* Tailwind via CDN only; vanilla JS; Inter font.
-* No routing libraries; no heavy refactors.
-* Additive changes only; preserve screen IDs and existing layout.
-* Privacy: demo data only; no secrets; local-only storage.
+### **Core Tables**
+* **`users`** - User profiles (id, email, full_name, phone, role, created_at)
+* **`brands`** - Brand information (id, name, contact_info, is_active)
+* **`stores`** - Store locations (id, name, address, is_active)
+* **`skus`** - Product SKUs (id, name, upc, brand_id, is_active)
+* **`jobs`** - Audit jobs (id, title, brand_id, payout_per_store, total_payout, all_stores)
+* **`job_stores`** - Job-store relationships
+* **`job_skus`** - Job-SKU relationships
+* **`job_submissions`** - Completed audit submissions
+* **`payments`** - Payment tracking
+* **`notifications`** - User notifications
+* **`products`** - Product database (id, barcode, brand, name, description, size, category, store, scan_date, notes)
 
----
-
-## 7) Recent progress (today)
-
-* Pushed docs and assets to GitHub repo; enabled GitHub Pages for live demo.
-* Assembled multiple docs: CHANGELOG, SCREENS, STATE, TEST-PLAN (see repo).
-* Confirmed demo flows for Shopper and Client.
-
-> If you added more today, list bullet points here with commit short SHAs for traceability.
-
----
-
-## 8) Open questions / decisions needed
-
-* Do we standardize job **types** to: `standard` (48h), `rush` (6h), `launch` (bundle/24h)?
-* Confirm **price validation** edge cases (e.g., inputs with `$`, commas). Current regex accepts `2.99` but not `$2.99`.
-* Map toggle default state on Client Dashboard (#8)?
-* Minimal brand fields for MVP vs nice-to-have (logo optional?).
-* **Snapshot v2**: should it render dynamic data from completed jobs + analysis?
-* **Backend storage**: do we need Supabase/Airtable for multi-user persistence now, or is localStorage fine for demo?
+### **Security**
+* **Row Level Security (RLS)** enabled on all tables
+* **Policies:** Users can only access their own data, admins have full access
+* **Triggers:** Automatic `total_payout` calculation for jobs
 
 ---
 
-## 9) Next small wins (low-risk)
+## 5) Recent Progress (2025-01-25)
 
-1. **Persist Quick Nav last selection** in `localStorage` (usability).
-2. **Pre-fill Create Job** from the last used brand/store (speed to create).
-3. **Empty state cards** for #4 and #10 (clear guidance when lists are empty).
-4. **Print CSS check**: ensure only #19 prints; add a small print watermark date/time.
+### **✅ Major Accomplishments**
+* **Supabase Integration Complete** - Migrated from localStorage to Supabase backend
+* **Modular Architecture** - Split monolithic `index.html` into separate pages
+* **Authentication System** - Full signup/signin/password reset flow
+* **Admin Barcode Tool** - Created product database capture system
+* **Database Schema** - Complete schema with proper relationships and RLS policies
+* **Role-Based Access** - Shelfer, Brand Client, and Admin user types
 
----
+### **✅ Technical Fixes**
+* **RLS Policy Issues** - Fixed 403 Forbidden errors for user profile creation
+* **Profile Creation** - Improved `ensureProfile()` function for reliable user data
+* **Email Confirmation** - Working password reset and email confirmation flow
+* **Admin Access** - Role-based redirection and admin-only page protection
 
-## 10) Acceptance criteria (general)
-
-* Screen IDs unchanged; navigation works end-to-end.
-* New features store state in `localStorage` using the keys above or additive new keys.
-* No console errors on load or common flows.
-* GitHub Pages build loads and renders all sections; print-only behavior verified for #19.
-
----
-
-## 11) Morning Kick-off (9 AM)
-
-* Start with **Admin → Add Client** flow to confirm brand saving works end-to-end.
-* Next, run through **Create Job with the new brand** to verify datalist + Shopper Dashboard update.
-* Then complete the **Shopper flow (end-to-end)** including Analysis + submission.
-* Finally, open **Client Snapshot (#19)** and print/save to PDF to validate reporting.
-
-## 12) To-Do for Tomorrow
-
-### Ship the code
-
-* [ ] Replace your GitHub Pages `index.html` with the latest file (`shelfassured-prototype-add-client-your-brands.txt` contents).
-* [ ] Push/verify GitHub Pages builds successfully.
-
-### Start fresh
-
-* [ ] Clear demo state (in browser dev tools → Application/Storage → `localStorage.clear()`), then refresh.
-
-### Admin → Add Client
-
-* [ ] From Splash → Admin Login → Admin Dashboard (#14).
-* [ ] Tap Add Client → fill in a test brand (name + optional logo/contact) → Save.
-* [ ] Confirm it routes to Brands (#10) and a "Your client brands" card appears.
-
-### Create Job with the new brand
-
-* [ ] Go Client Login → Create New Job (#13 → #20).
-* [ ] In Product / Brand, type and pick your new brand from the datalist suggestions.
-* [ ] Enter a store (e.g., “H-E-B – …”), choose job type, add notes → Publish Job.
-* [ ] Confirm it shows on Shopper Dashboard (#4) under the correct store header.
-
-### Shopper flow (end-to-end)
-
-* [ ] Tap the job → Job Details (#5) → enter a valid price (e.g., 2.99).
-* [ ] Start Job (#6) → upload a photo or use Auto Demo → Use This Photo.
-* [ ] Analysis (#7) → Analyze This Photo → Submit for Review.
-* [ ] Check My Jobs (#9) shows updated statuses.
-
-### Client reporting
-
-* [ ] In Client Dashboard (#8), confirm Latest Reported Shelf Price and location updated.
-* [ ] Open Client Snapshot (#19) → brand/store/price/date/photo/analysis are present.
-* [ ] Print / Save PDF works (print CSS shows only the snapshot).
-
-### Quick regression checks
-
-* [ ] Quick Nav opens/closes without covering content while scrolling.
-* [ ] Map Toggle on #8 switches between static and live.
-* [ ] Price validation rejects bad inputs (e.g., 2.9a, \$2.999).
-
-### Parking lot / nice-to-haves (queue up next)
-
-* [ ] Add Edit/Delete for client brands + prevent duplicate names.
-* [ ] Use brand default tasks to auto-prefill job instructions.
-* [ ] Keep a history of snapshots (not just “last” values).
-* [ ] Optional receipt upload (Buy & Try) experiment.
-* [ ] Plan migration from localStorage → lightweight backend (Supabase/Airtable) so Marc & Courtney can use it across devices with real approvals.
+### **✅ New Features**
+* **Product Database** - Admin tool for scanning and cataloging products
+* **Marc's Data Requirements** - Added fields: description, size, store, scan_date, notes
+* **Barcode Scanning** - QuaggaJS integration for live barcode capture
+* **Shared Utilities** - Centralized API functions and helper utilities
 
 ---
 
-## 12) How to update this log
+## 6) Current Issues (Need Resolution)
 
-* Add a **date-stamped** entry at the top of section 7 (“Recent progress”).
-* Cross-link commits like: `2025-09-01 — Added STATE.md (commit abc123)`.
-* Keep sections 3–6 evergreen; update when you add screens/keys.
+### **❌ Phone Number Collection**
+* **Problem:** Phone numbers not being saved during signup
+* **Status:** Form field exists but data not reaching database
+* **Files to check:** `auth/signup.html`, `pages/signup.js`, `shared/api.js`
+
+### **❌ Profile Creation**
+* **Problem:** Users appear in `auth.users` but not in `public.users` table
+* **Status:** `ensureProfile()` function needs debugging
+* **Impact:** Admin access not working because profiles aren't created
+
+### **❌ Admin Access**
+* **Problem:** Cannot access admin barcode tool
+* **Status:** Depends on profile creation working
+* **Solution:** Update user role to `admin` in `public.users` table
 
 ---
 
-*End of baseline.*
+## 7) Testing Status
+
+### **✅ Working**
+* **Signup Flow** - Account creation works
+* **Email Confirmation** - Password reset emails work
+* **Database Schema** - All tables created successfully
+* **RLS Policies** - Fixed and working
+
+### **❌ Not Working**
+* **Phone Number Collection** - Data not being saved
+* **Profile Creation** - Users not appearing in `public.users`
+* **Admin Access** - Cannot access admin tools
+
+---
+
+## 8) Action Items for Next Session
+
+### **Immediate Priority**
+1. **Debug Phone Collection** - Check form field connection to JavaScript
+2. **Fix Profile Creation** - Ensure `ensureProfile()` creates `public.users` records
+3. **Test Admin Access** - Verify role-based access to barcode tool
+
+### **Testing Steps**
+1. Delete all users in Supabase
+2. Go to `http://localhost:8000/auth/signup.html`
+3. Create account with phone number
+4. Check if phone appears in `public.users` table
+5. Update role to `admin` and test admin access
+
+### **Files to Debug**
+* `auth/signup.html` - Phone input field
+* `pages/signup.js` - Phone data collection
+* `shared/api.js` - `ensureProfile()` function
+* Browser console for error messages
+
+---
+
+## 9) Next Phase (After Current Issues Resolved)
+
+### **Product Database Population**
+* **Admin Barcode Tool** - Start scanning real products
+* **GS1.org Integration** - Research free/cheap UPC lookup options
+* **Data Validation** - Ensure product data quality
+
+### **User Testing**
+* **Shelfer Onboarding** - Test complete job flow
+* **Brand Client Testing** - Test job creation and management
+* **Admin Workflow** - Test product database management
+
+### **Production Readiness**
+* **Error Handling** - Improve user feedback and error messages
+* **Data Validation** - Client-side and server-side validation
+* **Performance** - Optimize database queries and page loads
+
+---
+
+## 10) Technical Notes
+
+### **Supabase Configuration**
+* **Project URL:** `https://mlmhmzhvwtsswigfvkwx.supabase.co`
+* **Anon Key:** `eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...`
+* **Database:** PostgreSQL with extensions: `uuid-ossp`, `pgcrypto`
+
+### **Development Environment**
+* **Local Server:** `python3 -m http.server 8000`
+* **Testing URLs:**
+  - Landing: `http://localhost:8000/index-new.html`
+  - Signup: `http://localhost:8000/auth/signup.html`
+  - Signin: `http://localhost:8000/auth/signin.html`
+  - Admin Tool: `http://localhost:8000/admin/barcode-capture.html`
+
+### **Git Status**
+* **Repository:** Up to date with all changes
+* **Branch:** `main`
+* **Last Commit:** All Supabase integration and modular architecture changes
+
+---
+
+## 11) Business Context
+
+### **Revenue Model**
+* **Per-Job Fee:** $5 per audit (Brand pays $5, Shelfer gets $3, ShelfAssured keeps $2)
+* **Job Types:** Standard (48h), Launch ($10-15), Shelf Presence ($15-25)
+* **Market Focus:** Small-to-mid CPG brands in regional grocery chains
+
+### **Admin Tool Purpose**
+* **Product Database:** Build verified UPC library for future AI analysis
+* **Data Collection:** Date, store location, SKU, brand, product description, size
+* **Access:** Restricted to admin users (Courtney and Marc)
+
+---
+
+*End of progress log - Last updated: 2025-01-25*

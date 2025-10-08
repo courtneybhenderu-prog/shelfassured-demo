@@ -1,5 +1,34 @@
 // pages/signin.js - Signin page functionality
 
+// Handle forgot password
+window.handleForgotPassword = async function() {
+    const email = document.getElementById('login-email').value;
+    const messageEl = document.getElementById('signin-message');
+    
+    if (!email) {
+        showMessage(messageEl, 'Please enter your email address first', 'error');
+        return;
+    }
+    
+    showMessage(messageEl, 'Sending password reset email...', 'info');
+    
+    try {
+        const { error } = await supabase.auth.resetPasswordForEmail(email.trim().toLowerCase(), {
+            redirectTo: `${location.origin}/auth/confirmed.html`
+        });
+        
+        if (error) {
+            console.error('❌ Password reset failed:', error);
+            showMessage(messageEl, 'Error: ' + error.message, 'error');
+        } else {
+            showMessage(messageEl, 'Password reset email sent! Check your inbox.', 'success');
+        }
+    } catch (error) {
+        console.error('❌ Password reset error:', error);
+        showMessage(messageEl, 'Error: ' + error.message, 'error');
+    }
+};
+
 // Handle form submission
 document.getElementById('signin-form').addEventListener('submit', async function(e) {
     e.preventDefault();
@@ -23,7 +52,14 @@ document.getElementById('signin-form').addEventListener('submit', async function
             console.log('✅ Signed in successfully');
             
             // Ensure profile exists and get role
+            console.log('🔄 Calling ensureProfile...');
             const profile = await ensureProfile(result.data.user);
+            console.log('📋 Profile result:', profile);
+            if (!profile) {
+                showMessage(messageEl, 'Error: Could not load user profile', 'error');
+                return;
+            }
+            console.log('✅ Profile loaded successfully, redirecting...');
             const redirectPage = profile.role === 'brand_client' ? '../dashboard/brand-client.html' : '../dashboard/shelfer.html';
             setTimeout(() => goToPage(redirectPage), 1000);
         } else {

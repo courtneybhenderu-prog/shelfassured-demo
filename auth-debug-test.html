@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Auth Debug Test - ShelfAssured</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+</head>
+<body class="bg-gray-100 p-8">
+    <div class="max-w-4xl mx-auto">
+        <h1 class="text-3xl font-bold mb-8">Authentication Debug Test</h1>
+        
+        <!-- Test Results -->
+        <div id="test-results" class="bg-white rounded-lg shadow p-6 mb-8">
+            <h2 class="text-xl font-semibold mb-4">Test Results</h2>
+            <div id="results" class="space-y-2">
+                <div class="text-gray-500">Click "Run Tests" to start debugging...</div>
+            </div>
+        </div>
+        
+        <!-- Test Controls -->
+        <div class="bg-white rounded-lg shadow p-6">
+            <h2 class="text-xl font-semibold mb-4">Test Controls</h2>
+            <div class="space-y-4">
+                <button id="run-tests" class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">
+                    Run Authentication Tests
+                </button>
+                <button id="clear-results" class="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600">
+                    Clear Results
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Include shared API -->
+    <script src="shared/api.js"></script>
+    
+    <script>
+        // Test functions
+        function addResult(message, type = 'info') {
+            const results = document.getElementById('results');
+            const div = document.createElement('div');
+            div.className = `p-2 rounded ${type === 'error' ? 'bg-red-100 text-red-800' : type === 'success' ? 'bg-green-100 text-green-800' : 'bg-blue-100 text-blue-800'}`;
+            div.textContent = message;
+            results.appendChild(div);
+        }
+
+        function clearResults() {
+            document.getElementById('results').innerHTML = '<div class="text-gray-500">Click "Run Tests" to start debugging...</div>';
+        }
+
+        async function runTests() {
+            clearResults();
+            addResult('🚀 Starting authentication tests...', 'info');
+            
+            try {
+                // Test 1: Supabase connection
+                addResult('Test 1: Checking Supabase connection...', 'info');
+                if (window.supabase) {
+                    addResult('✅ Supabase client available', 'success');
+                } else {
+                    addResult('❌ Supabase client not available', 'error');
+                    return;
+                }
+
+                // Test 2: Check current user
+                addResult('Test 2: Checking current user...', 'info');
+                const { data: { user }, error: userError } = await supabase.auth.getUser();
+                if (userError) {
+                    addResult(`❌ Error getting user: ${userError.message}`, 'error');
+                } else if (user) {
+                    addResult(`✅ Current user: ${user.email}`, 'success');
+                    addResult(`📋 User metadata: ${JSON.stringify(user.user_metadata)}`, 'info');
+                } else {
+                    addResult('ℹ️ No user logged in', 'info');
+                }
+
+                // Test 3: Check users table
+                addResult('Test 3: Checking users table...', 'info');
+                const { data: users, error: usersError } = await supabase
+                    .from('users')
+                    .select('*')
+                    .limit(5);
+                
+                if (usersError) {
+                    addResult(`❌ Error querying users table: ${usersError.message}`, 'error');
+                } else {
+                    addResult(`✅ Users table accessible, found ${users.length} users`, 'success');
+                    if (users.length > 0) {
+                        addResult(`📋 Sample user: ${JSON.stringify(users[0])}`, 'info');
+                    }
+                }
+
+                // Test 4: Test ensureProfile function
+                if (user) {
+                    addResult('Test 4: Testing ensureProfile function...', 'info');
+                    try {
+                        const profile = await ensureProfile(user);
+                        if (profile) {
+                            addResult(`✅ ensureProfile successful: ${JSON.stringify(profile)}`, 'success');
+                            
+                            // Test 5: Verify profile was actually inserted
+                            addResult('Test 5: Verifying profile was inserted into database...', 'info');
+                            const { data: verifyUsers, error: verifyError } = await supabase
+                                .from('users')
+                                .select('*')
+                                .eq('id', user.id);
+                            
+                            if (verifyError) {
+                                addResult(`❌ Error verifying profile: ${verifyError.message}`, 'error');
+                            } else if (verifyUsers && verifyUsers.length > 0) {
+                                addResult(`✅ Profile verified in database: ${JSON.stringify(verifyUsers[0])}`, 'success');
+                            } else {
+                                addResult('❌ Profile NOT found in database despite ensureProfile success', 'error');
+                                addResult('This indicates a silent database insert failure', 'error');
+                            }
+                        } else {
+                            addResult('❌ ensureProfile returned null', 'error');
+                        }
+                    } catch (profileError) {
+                        addResult(`❌ ensureProfile error: ${profileError.message}`, 'error');
+                        addResult(`❌ Full error details: ${JSON.stringify(profileError, null, 2)}`, 'error');
+                    }
+                } else {
+                    addResult('Test 4: Skipped (no user logged in)', 'info');
+                }
+
+                // Test 6: Direct database insert test
+                if (user) {
+                    addResult('Test 6: Testing direct database insert...', 'info');
+                    try {
+                        const testData = {
+                            id: user.id,
+                            email: user.email,
+                            full_name: 'Test User',
+                            phone: '555-1234',
+                            role: 'shelfer'
+                        };
+                        
+                        addResult(`📋 Attempting to insert: ${JSON.stringify(testData)}`, 'info');
+                        
+                        const { data: insertResult, error: insertError } = await supabase
+                            .from('users')
+                            .insert(testData)
+                            .select()
+                            .single();
+                        
+                        if (insertError) {
+                            addResult(`❌ Direct insert failed: ${insertError.message}`, 'error');
+                            addResult(`❌ Insert error details: ${JSON.stringify(insertError, null, 2)}`, 'error');
+                        } else {
+                            addResult(`✅ Direct insert successful: ${JSON.stringify(insertResult)}`, 'success');
+                        }
+                    } catch (insertTestError) {
+                        addResult(`❌ Direct insert test error: ${insertTestError.message}`, 'error');
+                    }
+                } else {
+                    addResult('Test 6: Skipped (no user logged in)', 'info');
+                }
+
+                addResult('🏁 Tests completed!', 'success');
+                
+            } catch (error) {
+                addResult(`❌ Test error: ${error.message}`, 'error');
+            }
+        }
+
+        // Event listeners
+        document.getElementById('run-tests').addEventListener('click', runTests);
+        document.getElementById('clear-results').addEventListener('click', clearResults);
+    </script>
+</body>
+</html>

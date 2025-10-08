@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Jobs - ShelfAssured</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <link rel="stylesheet" href="../shared/styles.css">
+</head>
+<body>
+    <div class="min-h-screen bg-gray-100">
+        <!-- Header -->
+        <div class="bg-white shadow-sm border-b">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="flex justify-between items-center py-4">
+                    <div class="flex items-center">
+                        <h1 class="text-2xl font-bold text-gray-900">Jobs</h1>
+                    </div>
+                    <div class="flex items-center space-x-4">
+                        <span id="user-info" class="text-sm text-gray-600">Loading...</span>
+                        <button onclick="handleSignOut()" class="text-sm text-gray-500 hover:text-gray-700">Sign Out</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+            <!-- Jobs List -->
+            <div class="bg-white rounded-lg shadow">
+                <div class="px-6 py-4 border-b border-gray-200">
+                    <h3 class="text-lg font-medium text-gray-900">Available Jobs</h3>
+                </div>
+                <div id="jobs-list" class="p-6">
+                    <div class="text-center text-gray-500">Loading jobs...</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Include shared API -->
+    <script src="../shared/api.js"></script>
+    
+    <script>
+        // Initialize page
+        document.addEventListener('DOMContentLoaded', async function() {
+            console.log('🔧 Jobs page initialized');
+            await loadJobs();
+        });
+
+        // Load jobs
+        async function loadJobs() {
+            try {
+                const jobs = await saGet('jobs', []);
+                displayJobs(jobs);
+            } catch (error) {
+                console.error('Error loading jobs:', error);
+                document.getElementById('jobs-list').innerHTML = '<div class="text-center text-red-500">Error loading jobs</div>';
+            }
+        }
+
+        // Display jobs
+        function displayJobs(jobs) {
+            const container = document.getElementById('jobs-list');
+            
+            if (jobs.length === 0) {
+                container.innerHTML = '<div class="text-center text-gray-500">No jobs available</div>';
+                return;
+            }
+
+            const jobsHtml = jobs.map(job => `
+                <div class="py-4 border-b border-gray-200 last:border-b-0">
+                    <div class="flex items-start justify-between">
+                        <div class="flex-1">
+                            <div class="font-medium text-gray-900">${job.title}</div>
+                            <div class="text-sm text-gray-600">${job.description || 'No description'}</div>
+                            <div class="text-sm text-gray-500">Status: ${job.status}</div>
+                        </div>
+                        <div class="text-right">
+                            <div class="text-sm font-medium text-gray-900">$${job.total_payout || 0}</div>
+                            <button class="btn-red text-sm mt-2">Accept Job</button>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+
+            container.innerHTML = jobsHtml;
+        }
+
+        // Handle sign out
+        async function handleSignOut() {
+            try {
+                await supabase.auth.signOut();
+                window.location.href = '../auth/signin.html';
+            } catch (error) {
+                console.error('Error signing out:', error);
+                window.location.href = '../auth/signin.html';
+            }
+        }
+    </script>
+</body>
+</html>

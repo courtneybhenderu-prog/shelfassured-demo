@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Brands - ShelfAssured</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <link rel="stylesheet" href="../shared/styles.css">
+</head>
+<body>
+    <div class="min-h-screen bg-gray-100">
+        <!-- Header -->
+        <div class="bg-white shadow-sm border-b">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="flex justify-between items-center py-4">
+                    <div class="flex items-center">
+                        <h1 class="text-2xl font-bold text-gray-900">Brands</h1>
+                    </div>
+                    <div class="flex items-center space-x-4">
+                        <span id="user-info" class="text-sm text-gray-600">Loading...</span>
+                        <button onclick="handleSignOut()" class="text-sm text-gray-500 hover:text-gray-700">Sign Out</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+            <!-- Brands List -->
+            <div class="bg-white rounded-lg shadow">
+                <div class="px-6 py-4 border-b border-gray-200">
+                    <h3 class="text-lg font-medium text-gray-900">Available Brands</h3>
+                </div>
+                <div id="brands-list" class="p-6">
+                    <div class="text-center text-gray-500">Loading brands...</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Include shared API -->
+    <script src="../shared/api.js"></script>
+    
+    <script>
+        // Initialize page
+        document.addEventListener('DOMContentLoaded', async function() {
+            console.log('🔧 Brands page initialized');
+            await loadBrands();
+        });
+
+        // Load brands
+        async function loadBrands() {
+            try {
+                const brands = await saGet('brands', []);
+                displayBrands(brands);
+            } catch (error) {
+                console.error('Error loading brands:', error);
+                document.getElementById('brands-list').innerHTML = '<div class="text-center text-red-500">Error loading brands</div>';
+            }
+        }
+
+        // Display brands
+        function displayBrands(brands) {
+            const container = document.getElementById('brands-list');
+            
+            if (brands.length === 0) {
+                container.innerHTML = '<div class="text-center text-gray-500">No brands available</div>';
+                return;
+            }
+
+            const brandsHtml = brands.map(brand => `
+                <div class="py-4 border-b border-gray-200 last:border-b-0">
+                    <div class="flex items-start justify-between">
+                        <div class="flex-1">
+                            <div class="font-medium text-gray-900">${brand.name}</div>
+                            <div class="text-sm text-gray-600">${brand.description || 'No description'}</div>
+                            <div class="text-sm text-gray-500">Contact: ${brand.contact_email || 'No contact'}</div>
+                        </div>
+                        <div class="text-right">
+                            <button class="btn-gray text-sm">View Details</button>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+
+            container.innerHTML = brandsHtml;
+        }
+
+        // Handle sign out
+        async function handleSignOut() {
+            try {
+                await supabase.auth.signOut();
+                window.location.href = '../auth/signin.html';
+            } catch (error) {
+                console.error('Error signing out:', error);
+                window.location.href = '../auth/signin.html';
+            }
+        }
+    </script>
+</body>
+</html>

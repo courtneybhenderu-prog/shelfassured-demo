@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Brand Client Dashboard - ShelfAssured</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <link rel="stylesheet" href="../shared/styles.css">
+</head>
+<body>
+    <div class="min-h-screen bg-gray-100">
+        <!-- Header -->
+        <div class="bg-white shadow-sm border-b">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="flex justify-between items-center py-4">
+                    <div class="flex items-center">
+                        <h1 class="text-2xl font-bold text-gray-900">Brand Client Dashboard</h1>
+                    </div>
+                    <div class="flex items-center space-x-4">
+                        <span id="client-user" class="text-sm text-gray-600">Loading...</span>
+                        <button onclick="handleSignOut()" class="text-sm text-gray-500 hover:text-gray-700">Sign Out</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+            <!-- Welcome Section -->
+            <div class="mb-8">
+                <h2 class="text-3xl font-bold text-gray-900">Hello, Brand Client!</h2>
+                <p class="text-gray-600 mt-2">Manage your brand's shelf presence and audit jobs.</p>
+            </div>
+
+            <!-- Stats Cards -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                <div class="bg-white rounded-lg shadow p-6">
+                    <h3 class="text-lg font-semibold text-gray-900">Active Jobs</h3>
+                    <p class="text-3xl font-bold text-blue-600 mt-2" id="active-jobs">0</p>
+                </div>
+                <div class="bg-white rounded-lg shadow p-6">
+                    <h3 class="text-lg font-semibold text-gray-900">Completed Audits</h3>
+                    <p class="text-3xl font-bold text-green-600 mt-2" id="completed-audits">0</p>
+                </div>
+                <div class="bg-white rounded-lg shadow p-6">
+                    <h3 class="text-lg font-semibold text-gray-900">Total Spent</h3>
+                    <p class="text-3xl font-bold text-purple-600 mt-2" id="total-spent">$0.00</p>
+                </div>
+            </div>
+
+            <!-- Quick Actions -->
+            <div class="bg-white rounded-lg shadow p-6 mb-8">
+                <h3 class="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h3>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <button onclick="goToPage('create-job.html')" class="btn-red">
+                        Create New Job
+                    </button>
+                    <button onclick="goToPage('brands.html')" class="btn-gray">
+                        Manage Brands
+                    </button>
+                </div>
+            </div>
+
+            <!-- Recent Jobs -->
+            <div class="bg-white rounded-lg shadow">
+                <div class="px-6 py-4 border-b border-gray-200">
+                    <h3 class="text-lg font-medium text-gray-900">Recent Jobs</h3>
+                </div>
+                <div id="recent-jobs" class="p-6">
+                    <div class="text-center text-gray-500">No jobs created yet</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Include shared API -->
+    <script src="../shared/api.js"></script>
+    
+    <script>
+        // Initialize dashboard
+        document.addEventListener('DOMContentLoaded', async function() {
+            console.log('🔧 Brand Client Dashboard initialized');
+            
+            // Check if user is logged in and has correct role
+            await checkClientAccess();
+            
+            // Load dashboard data
+            await loadDashboardData();
+        });
+
+        // Check if user has brand client access
+        async function checkClientAccess() {
+            try {
+                const { data: { user } } = await supabase.auth.getUser();
+                
+                if (!user) {
+                    alert('Please sign in to access this page');
+                    window.location.href = '../auth/signin.html';
+                    return;
+                }
+
+                // Get user profile to check role
+                const { data: profile, error } = await supabase
+                    .from('users')
+                    .select('role, full_name')
+                    .eq('id', user.id)
+                    .single();
+
+                if (error || !profile) {
+                    console.error('Error fetching user profile:', error);
+                    alert('Error loading user profile');
+                    window.location.href = '../auth/signin.html';
+                    return;
+                }
+
+                if (profile.role !== 'brand_client') {
+                    alert('Access denied. Brand client privileges required.');
+                    window.location.href = '../dashboard/shelfer.html';
+                    return;
+                }
+
+                document.getElementById('client-user').textContent = `Welcome, ${profile.full_name || user.email}`;
+                console.log('✅ Brand client access confirmed');
+                
+            } catch (error) {
+                console.error('Error checking client access:', error);
+                alert('Error checking permissions');
+                window.location.href = '../auth/signin.html';
+            }
+        }
+
+        // Load dashboard data
+        async function loadDashboardData() {
+            try {
+                // Load jobs data
+                const jobs = await saGet('jobs', []);
+                
+                // Filter jobs for this client
+                const { data: { user } } = await supabase.auth.getUser();
+                const clientJobs = jobs.filter(job => job.client_id === user.id);
+                
+                // Update stats
+                document.getElementById('active-jobs').textContent = clientJobs.filter(job => job.status === 'pending' || job.status === 'assigned').length;
+                document.getElementById('completed-audits').textContent = clientJobs.filter(job => job.status === 'completed').length;
+                
+                // Calculate total spent
+                const totalSpent = clientJobs.reduce((sum, job) => sum + (job.total_payout || 0), 0);
+                document.getElementById('total-spent').textContent = `$${totalSpent.toFixed(2)}`;
+                
+                // Display recent jobs
+                displayRecentJobs(clientJobs.slice(0, 5));
+                
+            } catch (error) {
+                console.error('Error loading dashboard data:', error);
+            }
+        }
+
+        // Display recent jobs
+        function displayRecentJobs(jobs) {
+            const container = document.getElementById('recent-jobs');
+            
+            if (jobs.length === 0) {
+                container.innerHTML = '<div class="text-center text-gray-500">No jobs created yet</div>';
+                return;
+            }
+
+            const jobsHtml = jobs.map(job => `
+                <div class="py-3 border-b border-gray-200 last:border-b-0">
+                    <div class="flex items-start justify-between">
+                        <div class="flex-1">
+                            <div class="font-medium text-gray-900">${job.title}</div>
+                            <div class="text-sm text-gray-600">Status: ${job.status}</div>
+                            <div class="text-sm text-gray-500">Created: ${new Date(job.created_at).toLocaleDateString()}</div>
+                        </div>
+                        <div class="text-right">
+                            <div class="text-sm font-medium text-gray-900">$${job.total_payout || 0}</div>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+
+            container.innerHTML = jobsHtml;
+        }
+
+        // Handle sign out
+        async function handleSignOut() {
+            try {
+                await supabase.auth.signOut();
+                window.location.href = '../auth/signin.html';
+            } catch (error) {
+                console.error('Error signing out:', error);
+                window.location.href = '../auth/signin.html';
+            }
+        }
+    </script>
+</body>
+</html>
