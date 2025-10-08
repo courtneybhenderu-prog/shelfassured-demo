@@ -212,6 +212,45 @@ function goToPage(page) {
   window.location.href = page;
 }
 
+// Ensure user profile exists and return it
+window.ensureProfile = async function(user) {
+  if (!supabase) {
+    return { role: 'shelfer' };
+  }
+  
+  try {
+    // Try to get existing profile
+    const { data: existingProfile, error: getError } = await supabase
+      .from('users')
+      .select('*')
+      .eq('id', user.id)
+      .single();
+    
+    if (existingProfile) {
+      return existingProfile;
+    }
+    
+    // Create profile if it doesn't exist
+    const { data: newProfile, error: createError } = await supabase
+      .from('users')
+      .insert([{
+        id: user.id,
+        email: user.email,
+        full_name: user.user_metadata?.full_name || '',
+        phone: user.user_metadata?.phone || '',
+        role: user.user_metadata?.role || 'shelfer'
+      }])
+      .select()
+      .single();
+    
+    if (createError) throw createError;
+    return newProfile;
+  } catch (error) {
+    console.error('❌ Error ensuring profile:', error);
+    return { role: 'shelfer' };
+  }
+};
+
 // Initialize app with Supabase
 document.addEventListener('DOMContentLoaded', async function() {
   console.log('🚀 ShelfAssured API initialized with Supabase!');

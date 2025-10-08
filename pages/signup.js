@@ -28,7 +28,7 @@ document.getElementById('signup-form').addEventListener('submit', async function
         console.log('🔄 Attempting to create account...', { email, role });
         
         const result = await saSignUp(email, password, {
-            fullName: fullName,
+            full_name: fullName,
             phone: phone,
             role: role
         });

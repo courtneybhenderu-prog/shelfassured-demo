@@ -22,8 +22,10 @@ document.getElementById('signin-form').addEventListener('submit', async function
             showMessage(messageEl, 'Signed in successfully!', 'success');
             console.log('✅ Signed in successfully');
             
-            // For now, redirect to shelfer dashboard (we'll add role detection later)
-            setTimeout(() => goToPage('../dashboard/shelfer.html'), 1000);
+            // Ensure profile exists and get role
+            const profile = await ensureProfile(result.data.user);
+            const redirectPage = profile.role === 'brand_client' ? '../dashboard/brand-client.html' : '../dashboard/shelfer.html';
+            setTimeout(() => goToPage(redirectPage), 1000);
         } else {
             console.error('❌ Sign in failed:', result.error);
             showMessage(messageEl, 'Sign in failed: ' + result.error, 'error');
