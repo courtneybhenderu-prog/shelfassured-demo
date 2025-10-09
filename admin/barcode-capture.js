@@ -5,7 +5,7 @@ let scannerActive = false;
 let currentUser = null;
 
 // Google Vision API integration (GS1 removed due to cost)
-const GOOGLE_VISION_API_KEY = 'YOUR_GOOGLE_VISION_API_KEY'; // You'll need to get this from Google Cloud
+const GOOGLE_VISION_API_KEY = 'AIzaSyAQw980fBtj_RTYnLjssAWAM1fbugj9RMU';
 
 // Note: GS1 API removed due to $500/month cost - using manual entry + Google Vision instead
 
