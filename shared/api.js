@@ -292,6 +292,8 @@ window.ensureProfile = async function(user) {
     
     if (existingProfile) {
       console.log('✅ Found existing profile:', existingProfile);
+      console.log('🔍 Existing profile role:', existingProfile.role);
+      console.log('🔍 Existing profile data:', JSON.stringify(existingProfile, null, 2));
       return existingProfile;
     }
     
