@@ -1,108 +1,50 @@
-<!doctype html>
-<html lang="en">
-  <head><meta charset="utf-8"><title>Confirming…</title></head>
-  <body>
-    <p>Confirming your request…</p>
-
-    <!-- Supabase SDK + your shared client -->
-    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
-    <script>
-      // Initialize Supabase client
-      const SUPABASE_URL = 'https://mlmhmzhvwtsswigfvkwx.supabase.co';
-      const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1sbWhtemh2d3Rzc3dpZ2Z2a3d4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTg3NTYwNDQsImV4cCI6MjA3NDMzMjA0NH0.sr3x6TkgXlK4Nc8SHPwoS6q5TDGXeExfFK2vPoOTPYk';
-      const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-    <script>
-      // Ensure user profile exists and return it
-      async function ensureProfile(user) {
+<!doctype html><html><head>
+  <meta charset="utf-8" />
+  <title>Confirming…</title>
+</head><body>
+  <p>Confirming your request…</p>
+  <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+  <script src="../shared/api.js"></script>
+  <script>
+  (async () => {
+    // guard against loops: process once per unique URL
+    const onceKey = 'sa_confirmed_once';
+    const sig = location.href.split(/[?#]/)[1] || '';
+    if (localStorage.getItem(onceKey) === sig) {
+      // already processed this URL
+    } else {
+      localStorage.setItem(onceKey, sig);
+      try {
+        // v2 primary path (PKCE): ?code=...&type=...
+        await supabase.auth.exchangeCodeForSession(location.href);
+      } catch (e) {
+        // fallback for legacy hash links: #access_token=...
         try {
-          // If no user provided, get current user
-          if (!user) {
-            const { data: { user: currentUser } } = await supabase.auth.getUser();
-            if (!currentUser) {
-              console.log('❌ No current user found');
-              return null;
-            }
-            user = currentUser;
+          if (location.hash && location.hash.includes('access_token')) {
+            // older method supported by v2 for hash fragments
+            await supabase.auth.getSessionFromUrl({ storeSession: true });
+            // clean the hash so refreshes don't reprocess
+            history.replaceState(null, '', location.pathname);
           }
-          
-          console.log('🔍 Ensuring profile for user:', user.id, user.email);
-          const md = user.user_metadata || {};
-          console.log('📋 User metadata:', md);
-          
-          // First try to get existing profile
-          const { data: existingProfile, error: getError } = await supabase
-            .from('users')
-            .select('*')
-            .eq('id', user.id)
-            .single();
-          
-          if (existingProfile) {
-            console.log('✅ Found existing profile:', existingProfile);
-            return existingProfile;
-          }
-          
-          // If no existing profile, create one
-          console.log('🔄 Creating new profile for user');
-          const profileData = {
-            id: user.id,
-            email: user.email,
-            full_name: md.full_name || null,
-            phone: md.phone || null,
-            role: md.role || 'shelfer'
-          };
-          console.log('📋 Profile data to insert:', profileData);
-          
-          const { data: newProfile, error: createError } = await supabase
-            .from('users')
-            .insert(profileData)
-            .select()
-            .single();
-          
-          if (createError) {
-            console.error('❌ Error creating profile:', createError);
-            throw createError;
-          }
-          
-          console.log('✅ Profile created:', newProfile);
-          return newProfile;
-        } catch (error) {
-          console.error('❌ Error ensuring profile:', error);
-          return { 
-            id: user?.id || 'unknown', 
-            email: user?.email || 'unknown', 
-            role: 'shelfer',
-            full_name: user?.user_metadata?.full_name || null,
-            phone: user?.user_metadata?.phone || null
-          };
+        } catch (e2) {
+          console.error('Confirm fallback failed', e2);
         }
       }
+    }
 
-      (async () => {
-        try {
-          // turn the email link into a logged-in session
-          const { data, error } = await supabase.auth.exchangeCodeForSession(window.location.href);
-          
-          if (error) {
-            console.error('Confirmation error:', error);
-            // Still redirect to signin page
-            location.replace('./signin.html');
-            return;
-          }
-          
-          console.log('✅ Email confirmed successfully');
-          
-          // Ensure profile is created
-          if (data.user) {
-            await ensureProfile(data.user);
-          }
-          
-        } catch (e) {
-          // ignore if it's already used/expired; user can still sign in
-          console.error(e);
-        }
-        // send to signin page after confirmation
-        location.replace('./signin.html');
-      })();
-    </script>
-  </body>
-</html>
+    // route by role (safe fallback to shelfer)
+    const { data: { user } } = await supabase.auth.getUser();
+    const mdRole = user?.user_metadata?.role || 'shelfer';
+    const role = mdRole === 'brand' || mdRole === 'brand_client' ? 'brand_client' : 'shelfer';
+    const base = location.origin.includes('localhost')
+      ? 'http://localhost:8000'
+      : 'https://courtneybhenderu-prog.github.io/shelfassured-demo';
+
+    location.replace(
+      role === 'brand_client'
+        ? `${base}/dashboard/brand-client.html`
+        : `${base}/dashboard/shelfer.html`
+    );
+  })();
+  </script>
+</body></html>

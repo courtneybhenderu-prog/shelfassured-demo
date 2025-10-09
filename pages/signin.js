@@ -13,8 +13,13 @@ window.handleForgotPassword = async function() {
     showMessage(messageEl, 'Sending password reset email...', 'info');
     
     try {
+        // Pick base depending on where the app is running
+        const SA_BASE = location.origin.includes('localhost')
+            ? 'http://localhost:8000'
+            : 'https://courtneybhenderu-prog.github.io/shelfassured-demo';
+            
         const { error } = await supabase.auth.resetPasswordForEmail(email.trim().toLowerCase(), {
-            redirectTo: `${location.origin}/auth/confirmed.html`
+            redirectTo: `${SA_BASE}/auth/confirmed.html`
         });
         
         if (error) {

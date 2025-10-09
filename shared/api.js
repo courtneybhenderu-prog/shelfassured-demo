@@ -108,6 +108,11 @@ window.saSignUp = async function(email, password, userData = {}) {
   }
   
   try {
+    // Pick base depending on where the app is running
+    const SA_BASE = location.origin.includes('localhost')
+      ? 'http://localhost:8000'
+      : 'https://courtneybhenderu-prog.github.io/shelfassured-demo';
+    
     console.log('🔄 Calling supabase.auth.signUp...');
     const { data, error } = await supabase.auth.signUp({
       email,
@@ -117,7 +122,8 @@ window.saSignUp = async function(email, password, userData = {}) {
           full_name: userData.full_name,
           phone: userData.phone,
           role: userData.role
-        }
+        },
+        emailRedirectTo: `${SA_BASE}/auth/confirmed.html`
       }
     });
     
