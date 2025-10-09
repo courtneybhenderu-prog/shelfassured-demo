@@ -1,35 +1,20 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ShelfAssured — Helping Brands See Their Products</title>
-    <!-- Updated: Supabase version with Shelfer/Brand Client roles -->
-<script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <link rel="stylesheet" href="shared/styles.css">
+    <meta charset="utf-8">
+    <title>Redirecting...</title>
 </head>
 <body>
-<div class="shell">
-  <div class="phone">
-            <!-- Landing Page -->
-            <section class="screen">
-                <div class="text-center">
-      <div class="mb-3">
-        <h1 class="text-4xl font-extrabold text-[#424242]">Shelf<span class="text-[#F9A825]">Assured</span></h1>
-      </div>
-      <p class="text-lg text-gray-600 max-w-xs mx-auto">Helping emerging brands see their products on shelves in real time.</p>
-                    <div class="mt-10 space-y-3 px-6">
-                        <button class="w-full btn-red" onclick="goToPage('auth/signup.html')">Create Account</button>
-                        <button class="w-full btn-gray" onclick="goToPage('auth/signin.html')">Sign In</button>
-                    </div>
-      <p class="text-xs text-gray-500 mt-6">By continuing, you agree to our <a class="underline">Terms</a>.</p>
-      </div>
-    </section>
-        </div>
-    </div>
-
-    <!-- Include shared API -->
-    <script src="shared/api.js"></script>
+    <script>
+        // Check if this is a Supabase confirmation link
+        if (window.location.hash && window.location.hash.includes('access_token')) {
+            // Redirect to the proper confirmation page
+            window.location.href = '/shelfassured-demo/auth/confirmed.html' + window.location.hash;
+        } else {
+            // Redirect to main app
+            window.location.href = '/shelfassured-demo/';
+        }
+    </script>
+    <p>Redirecting...</p>
 </body>
 </html>
