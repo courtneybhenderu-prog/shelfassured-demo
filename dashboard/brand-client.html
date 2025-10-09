@@ -113,7 +113,7 @@
                     return;
                 }
 
-                if (profile.role !== 'brand_client') {
+                if (profile.role !== 'brand_client' && profile.role !== 'admin') {
                     alert('Access denied. Brand client privileges required.');
                     window.location.href = '../dashboard/shelfer.html';
                     return;
