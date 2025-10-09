@@ -6,13 +6,16 @@
 </head>
 <body>
     <script>
-        // Check if this is a Supabase confirmation link
-        if (window.location.hash && window.location.hash.includes('access_token')) {
-            // Redirect to the proper confirmation page
-            window.location.href = '/shelfassured-demo/auth/confirmed.html' + window.location.hash;
-        } else if (window.location.pathname === '/' || window.location.pathname === '/index.html') {
-            // Only redirect if we're at the root, not if we're already in the app
-            window.location.href = '/shelfassured-demo/';
+        // Only redirect if we're at the exact root domain
+        if (window.location.pathname === '/' && window.location.hostname === 'courtneybhenderu-prog.github.io') {
+            // Check if this is a Supabase confirmation link
+            if (window.location.hash && window.location.hash.includes('access_token')) {
+                // Redirect to the proper confirmation page
+                window.location.href = '/shelfassured-demo/auth/confirmed.html' + window.location.hash;
+            } else {
+                // Redirect to main app
+                window.location.href = '/shelfassured-demo/';
+            }
         }
     </script>
     <p>Redirecting...</p>
