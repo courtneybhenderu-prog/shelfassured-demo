@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Create New Job - ShelfAssured</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <link rel="stylesheet" href="../shared/styles.css">
+</head>
+<body>
+    <div class="min-h-screen bg-gray-100">
+        <!-- Header -->
+        <div class="bg-white shadow-sm border-b">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="flex justify-between items-center py-4">
+                    <div class="flex items-center">
+                        <h1 class="text-2xl font-bold text-gray-900">Create New Job</h1>
+                    </div>
+                    <div class="flex items-center space-x-4">
+                        <span id="user-info" class="text-sm text-gray-600">Loading...</span>
+                        <button onclick="handleSignOut()" class="text-sm text-gray-500 hover:text-gray-700">Sign Out</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+            <!-- Job Creation Form -->
+            <div class="bg-white rounded-lg shadow">
+                <div class="px-6 py-4 border-b border-gray-200">
+                    <h2 class="text-lg font-medium text-gray-900">Job Details</h2>
+                    <p class="text-sm text-gray-600 mt-1">Create a new shelf audit job for shelfers to complete</p>
+                </div>
+
+                <form id="create-job-form" class="p-6 space-y-6">
+                    <!-- Job Title -->
+                    <div>
+                        <label for="title" class="block text-sm font-medium text-gray-700">Job Title *</label>
+                        <input type="text" id="title" name="title" required 
+                               class="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2" 
+                               placeholder="e.g., Whole Foods Shelf Check - Q4 2024">
+                    </div>
+
+                    <!-- Job Description -->
+                    <div>
+                        <label for="description" class="block text-sm font-medium text-gray-700">Job Description *</label>
+                        <textarea id="description" name="description" required rows="3"
+                                  class="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2"
+                                  placeholder="Describe what shelfers need to do..."></textarea>
+                    </div>
+
+                    <!-- SKUs Section -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Products to Check *</label>
+                        <div class="mt-2 space-y-2">
+                            <div id="sku-list" class="space-y-2">
+                                <!-- SKU inputs will be added here -->
+                            </div>
+                            <button type="button" id="add-sku" class="btn-gray text-sm">+ Add Product</button>
+                        </div>
+                    </div>
+
+                    <!-- Store Selection -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Store Locations *</label>
+                        <div class="mt-2 space-y-2">
+                            <div class="flex items-center">
+                                <input type="checkbox" id="all-stores" class="rounded border-gray-300">
+                                <label for="all-stores" class="ml-2 text-sm text-gray-700">All active stores</label>
+                            </div>
+                            <div id="store-list" class="space-y-2">
+                                <!-- Store checkboxes will be added here -->
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Payout Settings -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                            <label for="payout-per-store" class="block text-sm font-medium text-gray-700">Payout per Store *</label>
+                            <div class="mt-1 relative">
+                                <span class="absolute left-3 top-2 text-gray-500">$</span>
+                                <input type="number" id="payout-per-store" name="payout-per-store" required min="1" step="0.01"
+                                       class="pl-8 block w-full border border-gray-300 rounded-md px-3 py-2"
+                                       placeholder="5.00" value="5.00">
+                            </div>
+                            <p class="text-xs text-gray-500 mt-1">Amount paid to shelfer per store</p>
+                        </div>
+                        <div>
+                            <label for="total-payout" class="block text-sm font-medium text-gray-700">Total Payout</label>
+                            <div class="mt-1 relative">
+                                <span class="absolute left-3 top-2 text-gray-500">$</span>
+                                <input type="text" id="total-payout" name="total-payout" readonly
+                                       class="pl-8 block w-full border border-gray-300 rounded-md px-3 py-2 bg-gray-50"
+                                       placeholder="0.00">
+                            </div>
+                            <p class="text-xs text-gray-500 mt-1">Calculated automatically</p>
+                        </div>
+                    </div>
+
+                    <!-- Instructions -->
+                    <div>
+                        <label for="instructions" class="block text-sm font-medium text-gray-700">Special Instructions</label>
+                        <textarea id="instructions" name="instructions" rows="3"
+                                  class="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2"
+                                  placeholder="Any specific requirements or notes for shelfers..."></textarea>
+                    </div>
+
+                    <!-- Form Actions -->
+                    <div class="flex space-x-4 pt-6 border-t border-gray-200">
+                        <button type="submit" class="btn-red flex-1">Create Job</button>
+                        <button type="button" id="cancel-job" class="btn-gray flex-1">Cancel</button>
+                    </div>
+                </form>
+
+                <!-- Success/Error Messages -->
+                <div id="message" class="px-6 pb-6 hidden"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Include shared API -->
+    <script src="../shared/api.js"></script>
+    
+    <!-- Job creation script -->
+    <script src="../pages/create-job.js"></script>
+
+    <!-- Navigation -->
+    <div class="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200">
+        <div class="flex justify-around py-3">
+            <button onclick="goToPage('brand-client.html')" class="text-gray-500 hover:text-gray-700">Dashboard</button>
+            <button class="font-bold text-[#C62828]">Create Job</button>
+            <button onclick="goToPage('jobs.html')" class="text-gray-500 hover:text-gray-700">Jobs</button>
+            <button onclick="goToPage('brands.html')" class="text-gray-500 hover:text-gray-700">Brands</button>
+            <button onclick="goToPage('profile.html')" class="text-gray-500 hover:text-gray-700">Profile</button>
+        </div>
+    </div>
+</body>
+</html>
