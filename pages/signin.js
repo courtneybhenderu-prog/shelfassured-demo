@@ -65,7 +65,18 @@ document.getElementById('signin-form').addEventListener('submit', async function
                 return;
             }
             console.log('✅ Profile loaded successfully, redirecting...');
-            const redirectPage = profile.role === 'brand_client' ? '../dashboard/brand-client.html' : '../dashboard/shelfer.html';
+            
+            // Role-based redirection
+            let redirectPage;
+            if (profile.role === 'admin') {
+                redirectPage = '../admin/barcode-capture.html';
+            } else if (profile.role === 'brand_client') {
+                redirectPage = '../dashboard/brand-client.html';
+            } else {
+                redirectPage = '../dashboard/shelfer.html';
+            }
+            
+            console.log(`🎯 Redirecting ${profile.role} user to:`, redirectPage);
             setTimeout(() => goToPage(redirectPage), 1000);
         } else if (result.needsConfirmation) {
             showMessage(messageEl, result.error, 'error');

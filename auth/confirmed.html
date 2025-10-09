@@ -45,16 +45,28 @@
 
     // route by role (safe fallback to shelfer)
     const mdRole = user?.user_metadata?.role || 'shelfer';
-    const role = mdRole === 'brand' || mdRole === 'brand_client' ? 'brand_client' : 'shelfer';
+    let role = 'shelfer'; // default
+    
+    if (mdRole === 'admin') {
+      role = 'admin';
+    } else if (mdRole === 'brand' || mdRole === 'brand_client') {
+      role = 'brand_client';
+    }
+    
     const base = location.origin.includes('localhost')
       ? 'http://localhost:8000'
       : 'https://courtneybhenderu-prog.github.io/shelfassured-demo';
 
-    location.replace(
-      role === 'brand_client'
-        ? `${base}/dashboard/brand-client.html`
-        : `${base}/dashboard/shelfer.html`
-    );
+    let redirectUrl;
+    if (role === 'admin') {
+      redirectUrl = `${base}/admin/barcode-capture.html`;
+    } else if (role === 'brand_client') {
+      redirectUrl = `${base}/dashboard/brand-client.html`;
+    } else {
+      redirectUrl = `${base}/dashboard/shelfer.html`;
+    }
+
+    location.replace(redirectUrl);
   })();
   </script>
 </body></html>
