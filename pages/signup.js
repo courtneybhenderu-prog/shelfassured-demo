@@ -39,9 +39,8 @@ document.getElementById('signup-form').addEventListener('submit', async function
             showMessage(messageEl, 'Account created successfully! Please check your email to verify your account.', 'success');
             console.log('✅ Account created successfully');
             
-            // Redirect based on role
-            const redirectPage = role === 'brand_client' ? '../dashboard/brand-client.html' : '../dashboard/shelfer.html';
-            setTimeout(() => goToPage(redirectPage), 2000);
+            // Redirect to email confirmation page instead of dashboard
+            setTimeout(() => goToPage('../auth/email-confirmation-sent.html'), 2000);
         } else {
             console.error('❌ Signup failed:', result.error);
             showMessage(messageEl, 'Error: ' + result.error, 'error');

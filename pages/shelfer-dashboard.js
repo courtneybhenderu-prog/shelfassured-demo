@@ -1,5 +1,14 @@
 // pages/shelfer-dashboard.js - Shelfer dashboard functionality
 
+// Check email confirmation before loading dashboard
+async function checkAccess() {
+    const isConfirmed = await requireEmailConfirmation();
+    if (!isConfirmed) {
+        return false; // User will be redirected
+    }
+    return true;
+}
+
 // Load dashboard data
 async function loadDashboard() {
     try {
@@ -40,4 +49,9 @@ function viewJob(jobId) {
 }
 
 // Load dashboard when page loads
-document.addEventListener('DOMContentLoaded', loadDashboard);
+document.addEventListener('DOMContentLoaded', async function() {
+    const hasAccess = await checkAccess();
+    if (hasAccess) {
+        loadDashboard();
+    }
+});

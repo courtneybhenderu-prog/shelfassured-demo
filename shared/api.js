@@ -151,6 +151,16 @@ window.saSignIn = async function(email, password) {
     });
     
     if (error) throw error;
+    
+    // Check if email is confirmed
+    if (data.user && !data.user.email_confirmed_at) {
+      return { 
+        success: false, 
+        error: 'Please check your email and click the confirmation link before signing in.',
+        needsConfirmation: true 
+      };
+    }
+    
     return { success: true, data };
   } catch (error) {
     return { success: false, error: error.message };
@@ -201,6 +211,29 @@ function showMessage(element, message, type) {
 function goToPage(page) {
   window.location.href = page;
 }
+
+// Check if current user's email is confirmed
+window.isEmailConfirmed = async function() {
+  if (!supabase) return false;
+  
+  try {
+    const { data: { user } } = await supabase.auth.getUser();
+    return user && user.email_confirmed_at;
+  } catch (error) {
+    console.error('❌ Error checking email confirmation:', error);
+    return false;
+  }
+};
+
+// Redirect unconfirmed users to email confirmation page
+window.requireEmailConfirmation = async function() {
+  const isConfirmed = await isEmailConfirmed();
+  if (!isConfirmed) {
+    window.location.href = '../auth/email-confirmation-required.html';
+    return false;
+  }
+  return true;
+};
 
 // Ensure user profile exists and return it
 window.ensureProfile = async function(user) {

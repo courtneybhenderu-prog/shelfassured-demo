@@ -62,6 +62,9 @@ document.getElementById('signin-form').addEventListener('submit', async function
             console.log('✅ Profile loaded successfully, redirecting...');
             const redirectPage = profile.role === 'brand_client' ? '../dashboard/brand-client.html' : '../dashboard/shelfer.html';
             setTimeout(() => goToPage(redirectPage), 1000);
+        } else if (result.needsConfirmation) {
+            showMessage(messageEl, result.error, 'error');
+            console.log('❌ Email confirmation required');
         } else {
             console.error('❌ Sign in failed:', result.error);
             showMessage(messageEl, 'Sign in failed: ' + result.error, 'error');
