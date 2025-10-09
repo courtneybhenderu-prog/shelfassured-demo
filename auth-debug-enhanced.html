@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Enhanced Auth Debug - ShelfAssured</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <script src="../shared/api.js"></script>
+</head>
+<body class="bg-gray-100 p-8">
+    <div class="max-w-4xl mx-auto">
+        <h1 class="text-3xl font-bold mb-6">Enhanced Authentication Debug</h1>
+        
+        <div class="bg-white rounded-lg shadow p-6 mb-6">
+            <h2 class="text-xl font-semibold mb-4">Test Authentication Flow</h2>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <!-- Signup Test -->
+                <div class="border rounded-lg p-4">
+                    <h3 class="font-semibold mb-3">Test Signup</h3>
+                    <div class="space-y-3">
+                        <input type="email" id="signup-email" placeholder="Email" class="w-full p-2 border rounded">
+                        <input type="password" id="signup-password" placeholder="Password" class="w-full p-2 border rounded">
+                        <input type="text" id="signup-name" placeholder="Full Name" class="w-full p-2 border rounded">
+                        <input type="text" id="signup-phone" placeholder="Phone" class="w-full p-2 border rounded">
+                        <select id="signup-role" class="w-full p-2 border rounded">
+                            <option value="shelfer">Shelfer</option>
+                            <option value="brand_client">Brand Client</option>
+                            <option value="admin">Admin</option>
+                        </select>
+                        <button onclick="testSignup()" class="w-full bg-blue-500 text-white p-2 rounded hover:bg-blue-600">Test Signup</button>
+                    </div>
+                </div>
+                
+                <!-- Signin Test -->
+                <div class="border rounded-lg p-4">
+                    <h3 class="font-semibold mb-3">Test Signin</h3>
+                    <div class="space-y-3">
+                        <input type="email" id="signin-email" placeholder="Email" class="w-full p-2 border rounded">
+                        <input type="password" id="signin-password" placeholder="Password" class="w-full p-2 border rounded">
+                        <button onclick="testSignin()" class="w-full bg-green-500 text-white p-2 rounded hover:bg-green-600">Test Signin</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Results Display -->
+        <div class="bg-white rounded-lg shadow p-6">
+            <h2 class="text-xl font-semibold mb-4">Debug Results</h2>
+            <div id="results" class="space-y-2 max-h-96 overflow-y-auto">
+                <p class="text-gray-500">Click "Run Tests" to start debugging...</p>
+            </div>
+            <button onclick="runAllTests()" class="mt-4 bg-purple-500 text-white px-4 py-2 rounded hover:bg-purple-600">Run All Tests</button>
+        </div>
+    </div>
+
+    <script>
+        function addResult(message, type = 'info') {
+            const resultsDiv = document.getElementById('results');
+            const div = document.createElement('div');
+            div.className = `p-2 rounded text-sm ${
+                type === 'success' ? 'bg-green-100 text-green-800' :
+                type === 'error' ? 'bg-red-100 text-red-800' :
+                type === 'warning' ? 'bg-yellow-100 text-yellow-800' :
+                'bg-blue-100 text-blue-800'
+            }`;
+            div.textContent = message;
+            resultsDiv.appendChild(div);
+            resultsDiv.scrollTop = resultsDiv.scrollHeight;
+        }
+
+        async function testSignup() {
+            const email = document.getElementById('signup-email').value;
+            const password = document.getElementById('signup-password').value;
+            const fullName = document.getElementById('signup-name').value;
+            const phone = document.getElementById('signup-phone').value;
+            const role = document.getElementById('signup-role').value;
+            
+            if (!email || !password || !fullName || !role) {
+                addResult('❌ Please fill in all required fields', 'error');
+                return;
+            }
+            
+            addResult('🔄 Testing signup...', 'info');
+            
+            try {
+                const result = await saSignUp(email, password, {
+                    full_name: fullName,
+                    phone: phone,
+                    role: role
+                });
+                
+                if (result.success) {
+                    addResult('✅ Signup successful!', 'success');
+                    addResult(`📧 User ID: ${result.data.user?.id}`, 'info');
+                    addResult(`📧 Email: ${result.data.user?.email}`, 'info');
+                    addResult(`📧 Email confirmed: ${result.data.user?.email_confirmed_at ? 'Yes' : 'No'}`, 'info');
+                    addResult(`📧 User metadata: ${JSON.stringify(result.data.user?.user_metadata)}`, 'info');
+                    
+                    // Check if user appears in auth.users
+                    setTimeout(async () => {
+                        await checkUserInAuth(email);
+                    }, 2000);
+                } else {
+                    addResult(`❌ Signup failed: ${result.error}`, 'error');
+                }
+            } catch (error) {
+                addResult(`❌ Signup error: ${error.message}`, 'error');
+            }
+        }
+
+        async function testSignin() {
+            const email = document.getElementById('signin-email').value;
+            const password = document.getElementById('signin-password').value;
+            
+            if (!email || !password) {
+                addResult('❌ Please enter email and password', 'error');
+                return;
+            }
+            
+            addResult('🔄 Testing signin...', 'info');
+            
+            try {
+                const result = await saSignIn(email, password);
+                
+                if (result.success) {
+                    addResult('✅ Signin successful!', 'success');
+                    addResult(`👤 User ID: ${result.data.user?.id}`, 'info');
+                    addResult(`👤 Email: ${result.data.user?.email}`, 'info');
+                    addResult(`👤 Session: ${result.data.session ? 'Active' : 'None'}`, 'info');
+                    
+                    // Test ensureProfile
+                    addResult('🔄 Testing ensureProfile...', 'info');
+                    const profile = await ensureProfile(result.data.user);
+                    
+                    if (profile) {
+                        addResult('✅ Profile loaded successfully!', 'success');
+                        addResult(`👤 Profile data: ${JSON.stringify(profile)}`, 'info');
+                    } else {
+                        addResult('❌ Profile loading failed', 'error');
+                    }
+                } else {
+                    addResult(`❌ Signin failed: ${result.error}`, 'error');
+                }
+            } catch (error) {
+                addResult(`❌ Signin error: ${error.message}`, 'error');
+            }
+        }
+
+        async function checkUserInAuth(email) {
+            addResult('🔍 Checking if user appears in auth.users...', 'info');
+            
+            try {
+                const { data: { user } } = await supabase.auth.getUser();
+                if (user && user.email === email) {
+                    addResult('✅ User found in auth session', 'success');
+                } else {
+                    addResult('⚠️ User not found in current auth session', 'warning');
+                }
+            } catch (error) {
+                addResult(`❌ Error checking auth: ${error.message}`, 'error');
+            }
+        }
+
+        async function runAllTests() {
+            addResult('🚀 Starting comprehensive authentication tests...', 'info');
+            
+            // Test 1: Supabase connection
+            addResult('Test 1: Checking Supabase connection...', 'info');
+            if (window.supabase) {
+                addResult('✅ Supabase client available', 'success');
+            } else {
+                addResult('❌ Supabase client not available', 'error');
+                return;
+            }
+            
+            // Test 2: Check current user
+            addResult('Test 2: Checking current user...', 'info');
+            try {
+                const { data: { user }, error } = await supabase.auth.getUser();
+                if (error) {
+                    addResult(`❌ Error getting user: ${error.message}`, 'error');
+                } else if (user) {
+                    addResult(`✅ Current user: ${user.email}`, 'success');
+                    addResult(`📋 User metadata: ${JSON.stringify(user.user_metadata)}`, 'info');
+                } else {
+                    addResult('ℹ️ No current user (not signed in)', 'info');
+                }
+            } catch (error) {
+                addResult(`❌ Error in user check: ${error.message}`, 'error');
+            }
+            
+            // Test 3: Check users table access
+            addResult('Test 3: Checking users table access...', 'info');
+            try {
+                const { data, error } = await supabase
+                    .from('users')
+                    .select('*')
+                    .limit(5);
+                
+                if (error) {
+                    addResult(`❌ Users table error: ${error.message}`, 'error');
+                } else {
+                    addResult(`✅ Users table accessible, found ${data.length} users`, 'success');
+                    if (data.length > 0) {
+                        addResult(`📋 Sample user: ${JSON.stringify(data[0])}`, 'info');
+                    }
+                }
+            } catch (error) {
+                addResult(`❌ Users table access error: ${error.message}`, 'error');
+            }
+            
+            addResult('🏁 Tests completed!', 'info');
+        }
+    </script>
+</body>
+</html>
