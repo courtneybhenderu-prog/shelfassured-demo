@@ -76,6 +76,9 @@
         if (window.location.hash && window.location.hash.includes('access_token')) {
             // Redirect to the proper confirmation page
             window.location.href = 'auth/confirmed.html' + window.location.hash;
+        } else if (window.location.search.includes('token=') && window.location.search.includes('type=signup')) {
+            // Handle Supabase email confirmation redirects
+            window.location.href = 'auth/confirmed.html' + window.location.search + window.location.hash;
         }
     </script>
 </body>
