@@ -2,22 +2,51 @@
 <html>
 <head>
     <meta charset="utf-8">
-    <title>Redirecting...</title>
+    <title>ShelfAssured</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body>
+<body class="bg-gray-50 min-h-screen">
+    <div class="min-h-screen flex flex-col">
+        <!-- Header -->
+        <header class="bg-white shadow-sm">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="flex justify-between items-center py-6">
+                    <div class="flex items-center">
+                        <img src="logo_shelfassured.png" alt="ShelfAssured" class="h-8 w-auto">
+                        <span class="ml-2 text-xl font-bold text-gray-900">ShelfAssured</span>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <main class="flex-1">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+                <div class="text-center">
+                    <h1 class="text-4xl font-bold text-gray-900 mb-4">
+                        Welcome to ShelfAssured
+                    </h1>
+                    <p class="text-xl text-gray-600 mb-8">
+                        The platform connecting brands with shelf auditors
+                    </p>
+                    
+                    <div class="mt-10 space-y-3 px-6">
+                        <button class="w-full btn-red" onclick="goToPage('auth/signup.html')">Create Account</button>
+                        <button class="w-full btn-gray" onclick="goToPage('auth/signin.html')">Sign In</button>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="shared/api.js"></script>
     <script>
-        // Only redirect if we're at the exact root domain
-        if (window.location.pathname === '/' && window.location.hostname === 'courtneybhenderu-prog.github.io') {
-            // Check if this is a Supabase confirmation link
-            if (window.location.hash && window.location.hash.includes('access_token')) {
-                // Redirect to the proper confirmation page
-                window.location.href = '/shelfassured-demo/auth/confirmed.html' + window.location.hash;
-            } else {
-                // Redirect to main app
-                window.location.href = '/shelfassured-demo/';
-            }
+        // Handle Supabase confirmation links
+        if (window.location.hash && window.location.hash.includes('access_token')) {
+            // Redirect to the proper confirmation page
+            window.location.href = 'auth/confirmed.html' + window.location.hash;
         }
     </script>
-    <p>Redirecting...</p>
 </body>
 </html>
