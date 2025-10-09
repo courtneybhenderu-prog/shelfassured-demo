@@ -112,12 +112,12 @@ function setupFormHandlers() {
     // Store checkboxes
     document.addEventListener('change', function(e) {
         if (e.target.classList.contains('store-checkbox')) {
-            updateTotalPayout();
+            updateTotalCost();
         }
     });
     
-    // Payout per store input
-    document.getElementById('payout-per-store').addEventListener('input', updateTotalPayout);
+    // Cost per job input
+    document.getElementById('cost-per-job').addEventListener('input', updateTotalCost);
     
     // Form submission
     document.getElementById('create-job-form').addEventListener('submit', handleFormSubmit);
@@ -177,12 +177,12 @@ function toggleAllStores() {
         checkbox.checked = allStoresCheckbox.checked;
     });
     
-    updateTotalPayout();
+    updateTotalCost();
 }
 
-// Update total payout calculation
-function updateTotalPayout() {
-    const payoutPerStore = parseFloat(document.getElementById('payout-per-store').value) || 0;
+// Update total cost calculation
+function updateTotalCost() {
+    const costPerJob = parseFloat(document.getElementById('cost-per-job').value) || 0;
     const selectedStores = document.querySelectorAll('.store-checkbox:checked').length;
     const allStoresChecked = document.getElementById('all-stores').checked;
     
@@ -193,8 +193,8 @@ function updateTotalPayout() {
         totalStores = allStores;
     }
     
-    const totalPayout = payoutPerStore * totalStores;
-    document.getElementById('total-payout').value = totalPayout.toFixed(2);
+    const totalCost = costPerJob * totalStores;
+    document.getElementById('total-job-cost').value = totalCost.toFixed(2);
 }
 
 // Handle form submission
@@ -210,10 +210,10 @@ async function handleFormSubmit(event) {
         const title = formData.get('title').trim();
         const description = formData.get('description').trim();
         const instructions = formData.get('instructions').trim();
-        const payoutPerStore = parseFloat(formData.get('payout-per-store'));
+        const costPerJob = parseFloat(formData.get('cost-per-job'));
         
         // Validate required fields
-        if (!title || !description || payoutPerStore <= 0) {
+        if (!title || !description || costPerJob <= 0) {
             showMessage(messageEl, 'Please fill in all required fields', 'error');
             return;
         }
@@ -257,8 +257,8 @@ async function handleFormSubmit(event) {
             description,
             instructions: instructions || null,
             client_id: user.id,
-            payout_per_store: payoutPerStore,
-            total_payout: payoutPerStore * storeIds.length,
+            cost_per_job: costPerJob,
+            total_cost: costPerJob * storeIds.length,
             status: 'pending',
             created_at: new Date().toISOString(),
             store_ids: storeIds,
