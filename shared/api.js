@@ -7,14 +7,34 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 
 // Initialize Supabase
 let supabase;
-try {
-  supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-  // Make sure supabase is available globally
-  window.supabase = window.supabase || supabase;
-  console.log('✅ Supabase client initialized');
-} catch (error) {
-  console.error('❌ Supabase initialization failed:', error);
-  supabase = null;
+
+// Function to initialize Supabase when ready
+function initializeSupabase() {
+  try {
+    if (typeof window.supabase !== 'undefined' && window.supabase.createClient) {
+      supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+      // Make sure supabase is available globally
+      window.supabase = window.supabase || supabase;
+      console.log('✅ Supabase client initialized');
+      return true;
+    } else {
+      console.error('❌ Supabase library not loaded yet');
+      return false;
+    }
+  } catch (error) {
+    console.error('❌ Supabase initialization failed:', error);
+    return false;
+  }
+}
+
+// Try to initialize immediately, or wait for DOM
+if (!initializeSupabase()) {
+  // If not ready, wait for DOM and try again
+  document.addEventListener('DOMContentLoaded', function() {
+    if (!initializeSupabase()) {
+      console.error('❌ Supabase still not available after DOM load');
+    }
+  });
 }
 
 // Store original saGet/saSet functions as fallback
