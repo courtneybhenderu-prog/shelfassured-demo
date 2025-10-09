@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Request New Audit - ShelfAssured</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <link rel="stylesheet" href="../shared/styles.css">
+</head>
+<body>
+    <div class="min-h-screen bg-gray-100">
+        <!-- Header -->
+        <div class="bg-white shadow-sm border-b">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="flex justify-between items-center py-4">
+                    <div class="flex items-center">
+                        <h1 class="text-2xl font-bold text-gray-900">Request New Audit</h1>
+                    </div>
+                    <div class="flex items-center space-x-4">
+                        <span id="user-info" class="text-sm text-gray-600">Loading...</span>
+                        <button onclick="handleSignOut()" class="text-sm text-gray-500 hover:text-gray-700">Sign Out</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+            <!-- Audit Request Form -->
+            <div class="bg-white rounded-lg shadow">
+                <div class="px-6 py-4 border-b border-gray-200">
+                    <h2 class="text-lg font-medium text-gray-900">Custom Audit Request</h2>
+                    <p class="text-sm text-gray-600 mt-1">Tell us what problem you're trying to solve. We'll reach out with custom pricing.</p>
+                </div>
+
+                <form id="audit-request-form" class="p-6 space-y-6">
+                    <!-- Audit Type -->
+                    <div>
+                        <label for="audit-type" class="block text-sm font-medium text-gray-700">Audit Type *</label>
+                        <select id="audit-type" name="audit-type" required 
+                                class="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2">
+                            <option value="">Select audit type...</option>
+                            <option value="launch-day">Launch Day Monitoring</option>
+                            <option value="competitive-analysis">Competitive Analysis</option>
+                            <option value="store-sampling">Store Sampling</option>
+                            <option value="compliance">Compliance Audit</option>
+                            <option value="market-research">Market Research</option>
+                            <option value="shelf-presence">Shelf Presence Analysis</option>
+                            <option value="pricing-analysis">Pricing Analysis</option>
+                            <option value="other">Other (specify in description)</option>
+                        </select>
+                    </div>
+
+                    <!-- Job Title -->
+                    <div>
+                        <label for="title" class="block text-sm font-medium text-gray-700">Audit Title *</label>
+                        <input type="text" id="title" name="title" required 
+                               class="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2" 
+                               placeholder="e.g., Q4 2024 Launch Day Audit - New Energy Drink">
+                    </div>
+
+                    <!-- Job Description -->
+                    <div>
+                        <label for="description" class="block text-sm font-medium text-gray-700">What problem are you trying to solve? *</label>
+                        <textarea id="description" name="description" required rows="4"
+                                  class="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2"
+                                  placeholder="Describe your goals, challenges, and what insights you're looking for..."></textarea>
+                    </div>
+
+                    <!-- Products Section -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Products to Check *</label>
+                        <div class="mt-2 space-y-2">
+                            <div id="product-list" class="space-y-2">
+                                <!-- Product inputs will be added here -->
+                            </div>
+                            <button type="button" id="add-product" class="btn-gray text-sm">+ Add Product</button>
+                        </div>
+                    </div>
+
+                    <!-- Store Selection -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Store Locations *</label>
+                        <div class="mt-2 space-y-4">
+                            <div class="flex items-center">
+                                <input type="checkbox" id="all-stores" class="rounded border-gray-300">
+                                <label for="all-stores" class="ml-2 text-sm text-gray-700">All active stores</label>
+                            </div>
+                            
+                            <div>
+                                <label for="store-requirements" class="block text-sm font-medium text-gray-700">Store Location Details</label>
+                                <textarea id="store-requirements" name="store-requirements" rows="3"
+                                          class="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2"
+                                          placeholder="Describe your store selection requirements, geographic preferences, store types, or any specific locations..."></textarea>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Timeline -->
+                    <div>
+                        <label for="timeline" class="block text-sm font-medium text-gray-700">Timeline *</label>
+                        <select id="timeline" name="timeline" required 
+                                class="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2">
+                            <option value="">Select timeline...</option>
+                            <option value="urgent">Urgent (within 24-48 hours)</option>
+                            <option value="week">Within 1 week</option>
+                            <option value="two-weeks">Within 2 weeks</option>
+                            <option value="month">Within 1 month</option>
+                            <option value="flexible">Flexible timing</option>
+                        </select>
+                    </div>
+
+                    <!-- Special Requirements -->
+                    <div>
+                        <label for="special-requirements" class="block text-sm font-medium text-gray-700">Special Requirements</label>
+                        <textarea id="special-requirements" name="special-requirements" rows="3"
+                                  class="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2"
+                                  placeholder="Any specific requirements, constraints, or additional services needed..."></textarea>
+                    </div>
+
+                    <!-- Contact Information -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                            <label for="contact-phone" class="block text-sm font-medium text-gray-700">Phone Number</label>
+                            <input type="tel" id="contact-phone" name="contact-phone"
+                                   class="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2"
+                                   placeholder="(555) 123-4567">
+                        </div>
+                        <div>
+                            <label for="preferred-contact" class="block text-sm font-medium text-gray-700">Preferred Contact Method</label>
+                            <select id="preferred-contact" name="preferred-contact"
+                                    class="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2">
+                                <option value="email">Email</option>
+                                <option value="phone">Phone Call</option>
+                                <option value="text">Text Message</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Additional Notes -->
+                    <div>
+                        <label for="additional-notes" class="block text-sm font-medium text-gray-700">Additional Notes</label>
+                        <textarea id="additional-notes" name="additional-notes" rows="3"
+                                  class="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2"
+                                  placeholder="Any other information that would help us provide the best service..."></textarea>
+                    </div>
+
+                    <!-- Form Actions -->
+                    <div class="flex space-x-4 pt-6 border-t border-gray-200">
+                        <button type="submit" class="btn-red flex-1">Submit Audit Request</button>
+                        <button type="button" id="cancel-audit" class="btn-gray flex-1">Cancel</button>
+                    </div>
+                </form>
+
+                <!-- Success/Error Messages -->
+                <div id="message" class="px-6 pb-6 hidden"></div>
+            </div>
+
+            <!-- Information Box -->
+            <div class="mt-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <div class="flex">
+                    <div class="flex-shrink-0">
+                        <svg class="h-5 w-5 text-blue-400" viewBox="0 0 20 20" fill="currentColor">
+                            <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd" />
+                        </svg>
+                    </div>
+                    <div class="ml-3">
+                        <h3 class="text-sm font-medium text-blue-800">What happens next?</h3>
+                        <div class="mt-2 text-sm text-blue-700">
+                            <ul class="list-disc pl-5 space-y-1">
+                                <li>We'll review your audit request within 24 hours</li>
+                                <li>Our team will reach out with custom pricing and timeline</li>
+                                <li>Once approved, we'll assign shelfers and begin your audit</li>
+                                <li>You'll receive detailed reports and insights</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Include shared API -->
+    <script src="../shared/api.js"></script>
+    
+    <!-- Audit request script -->
+    <script src="../pages/audit-request.js"></script>
+
+    <!-- Navigation -->
+    <div class="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200">
+        <div class="flex justify-around py-3">
+            <button onclick="goToPage('brand-client.html')" class="text-gray-500 hover:text-gray-700">Dashboard</button>
+            <button onclick="goToPage('create-job.html')" class="text-gray-500 hover:text-gray-700">Create Job</button>
+            <button class="font-bold text-[#C62828]">Request Audit</button>
+            <button onclick="goToPage('jobs.html')" class="text-gray-500 hover:text-gray-700">Jobs</button>
+            <button onclick="goToPage('profile.html')" class="text-gray-500 hover:text-gray-700">Profile</button>
+        </div>
+    </div>
+</body>
+</html>
