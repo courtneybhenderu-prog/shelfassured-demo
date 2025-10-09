@@ -32,8 +32,18 @@
       }
     }
 
-    // route by role (safe fallback to shelfer)
+    // Ensure user profile exists in public.users table
     const { data: { user } } = await supabase.auth.getUser();
+    if (user) {
+      try {
+        await ensureProfile(user);
+        console.log('✅ Profile created/updated in public.users');
+      } catch (error) {
+        console.error('❌ Error creating profile:', error);
+      }
+    }
+
+    // route by role (safe fallback to shelfer)
     const mdRole = user?.user_metadata?.role || 'shelfer';
     const role = mdRole === 'brand' || mdRole === 'brand_client' ? 'brand_client' : 'shelfer';
     const base = location.origin.includes('localhost')
