@@ -16,6 +16,7 @@
             transition: background-color 0.2s;
             border: none;
             cursor: pointer;
+            width: 100%;
         }
         .btn-red:hover {
             background-color: #b91c1c;
@@ -30,44 +31,65 @@
             transition: background-color 0.2s;
             border: none;
             cursor: pointer;
+            width: 100%;
         }
         .btn-gray:hover {
             background-color: #4b5563;
         }
+        .brand-name {
+            font-size: 2rem;
+            font-weight: bold;
+            text-align: center;
+            margin-bottom: 1rem;
+        }
+        .brand-shelf {
+            color: #374151;
+        }
+        .brand-assured {
+            color: #f97316;
+        }
+        .tagline {
+            color: #374151;
+            font-size: 1rem;
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+        .terms-text {
+            color: #374151;
+            font-size: 0.875rem;
+            text-align: center;
+            margin-top: 1rem;
+        }
+        .terms-link {
+            color: #374151;
+            text-decoration: underline;
+        }
     </style>
 </head>
-<body class="bg-gray-50 min-h-screen">
-    <div class="min-h-screen flex flex-col">
-        <!-- Header -->
-        <header class="bg-white shadow-sm">
-            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                <div class="flex justify-between items-center py-6">
-                    <div class="flex items-center">
-                        <img src="logo_shelfassured.png" alt="ShelfAssured" class="h-8 w-auto">
-                        <span class="ml-2 text-xl font-bold text-gray-900">ShelfAssured</span>
-                    </div>
-                </div>
-            </div>
-        </header>
-
-        <!-- Main Content -->
-        <main class="flex-1">
-            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-                <div class="text-center">
-                    <h1 class="text-4xl font-bold text-gray-900 mb-4">
-                        Welcome to ShelfAssured
-                    </h1>
-                    <p class="text-xl text-gray-600 mb-8">
-                        The platform connecting brands with shelf auditors
-                    </p>
-                    
-                    <div class="mt-10 space-y-3 px-6">
-                        <button class="w-full btn-red" onclick="goToPage('auth/signup.html')">Create Account</button>
-                        <button class="w-full btn-gray" onclick="goToPage('auth/signin.html')">Sign In</button>
-                    </div>
-                </div>
-            </div>
-        </main>
+<body class="bg-gray-50 min-h-screen flex items-center justify-center p-4">
+    <div class="bg-white rounded-lg shadow-md p-8 max-w-md w-full">
+        <!-- Brand Name -->
+        <div class="brand-name">
+            <span class="brand-shelf">Shelf</span><span class="brand-assured">Assured</span>
+        </div>
+        
+        <!-- Tagline -->
+        <div class="tagline">
+            Helping emerging brands see their products on shelves in real time.
+        </div>
+        
+        <!-- Buttons -->
+        <div class="space-y-3">
+            <button class="btn-red" onclick="goToPage('auth/signup.html')">Create Account</button>
+            <button class="btn-gray" onclick="goToPage('auth/signin.html')">Sign In</button>
+            <button class="btn-gray" onclick="goToPage('auth/signin.html')">Client Login</button>
+            <button class="btn-gray" onclick="goToPage('auth/signin.html')">Admin Login</button>
+        </div>
+        
+        <!-- Terms -->
+        <div class="terms-text">
+            By continuing, you agree to our <a href="#" class="terms-link">Terms.</a>
+        </div>
     </div>
 
     <script src="shared/api.js"></script>
