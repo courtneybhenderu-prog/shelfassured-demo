@@ -329,6 +329,13 @@ function setupPhotoUpload() {
             const result = await extractTextFromImage(file);
             
             if (result.success) {
+                // Display the raw extracted text
+                const extractedTextDisplay = document.getElementById('extracted-text-display');
+                const extractedTextContent = document.getElementById('extracted-text-content');
+                
+                extractedTextContent.textContent = result.text;
+                extractedTextDisplay.classList.remove('hidden');
+                
                 // Parse extracted text and try to populate fields
                 await parseExtractedText(result.text);
                 showMessage('Text extracted from photo successfully!', 'success');
