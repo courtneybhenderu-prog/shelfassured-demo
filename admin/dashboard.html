@@ -207,11 +207,18 @@
                 }
 
                 // Check admin access
+                console.log('🔍 Checking admin access. userProfile:', userProfile);
+                console.log('🔍 userProfile.role:', userProfile.role);
+                
                 if (userProfile.role !== 'admin') {
+                    console.log('❌ Access denied. User role:', userProfile.role);
                     alert('Access denied. Admin privileges required.');
                     window.location.href = '../dashboard/shelfer.html';
                     return;
                 }
+
+                // PAUSE HERE FOR DEBUGGING
+                debugger;
 
                 console.log('✅ Admin access confirmed for:', userProfile.email);
 
