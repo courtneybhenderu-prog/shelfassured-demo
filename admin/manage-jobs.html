@@ -4,14 +4,15 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Manage Jobs - Admin Dashboard</title>
+    <script>
+        // CRITICAL: Disable global guard BEFORE any other scripts load
+        window.SA_DISABLE_GLOBAL_GUARD = true;
+        window.SA_PAGE_ROLE = 'admin';
+        console.log('🔒 Global guard disabled for Manage Jobs page');
+    </script>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.47.5/dist/umd/supabase.min.js"></script>
     <link rel="stylesheet" href="../shared/styles.css">
-    <script>
-        // Declare page role to prevent global guard redirect
-        window.SA_PAGE_ROLE = 'admin';
-        window.SA_DISABLE_GLOBAL_GUARD = true;
-    </script>
 </head>
 <body>
     <div class="min-h-screen bg-gray-100">
