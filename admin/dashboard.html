@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard - ShelfAssured</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <link rel="stylesheet" href="../shared/styles.css">
+</head>
+<body>
+    <div class="min-h-screen bg-gray-100">
+        <!-- Header -->
+        <div class="bg-white shadow-sm border-b">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="flex justify-between items-center py-4">
+                    <div class="flex items-center">
+                        <h1 class="text-2xl font-bold text-gray-900">Admin Dashboard</h1>
+                        <div class="ml-4 flex items-center space-x-2">
+                            <span class="px-2 py-1 bg-red-100 text-red-800 text-xs font-medium rounded-full">ADMIN</span>
+                        </div>
+                    </div>
+                    <div class="flex items-center space-x-4">
+                        <span id="admin-user" class="text-sm text-gray-600">Loading...</span>
+                        <button onclick="handleSignOut()" class="text-sm text-gray-500 hover:text-gray-700">Sign Out</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+            <!-- Key Metrics -->
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+                <div class="bg-white rounded-lg shadow p-6">
+                    <h3 class="text-lg font-semibold text-gray-900">Total Jobs</h3>
+                    <p class="text-3xl font-bold text-blue-600 mt-2" id="total-jobs">0</p>
+                    <p class="text-sm text-gray-500 mt-1">All time</p>
+                </div>
+                <div class="bg-white rounded-lg shadow p-6">
+                    <h3 class="text-lg font-semibold text-gray-900">Active Users</h3>
+                    <p class="text-3xl font-bold text-green-600 mt-2" id="active-users">0</p>
+                    <p class="text-sm text-gray-500 mt-1">Shelfers + Clients</p>
+                </div>
+                <div class="bg-white rounded-lg shadow p-6">
+                    <h3 class="text-lg font-semibold text-gray-900">Pending Reviews</h3>
+                    <p class="text-3xl font-bold text-orange-600 mt-2" id="pending-reviews">0</p>
+                    <p class="text-sm text-gray-500 mt-1">Awaiting approval</p>
+                </div>
+                <div class="bg-white rounded-lg shadow p-6">
+                    <h3 class="text-lg font-semibold text-gray-900">Help Requests</h3>
+                    <p class="text-3xl font-bold text-red-600 mt-2" id="help-requests">0</p>
+                    <p class="text-sm text-gray-500 mt-1">Unread messages</p>
+                </div>
+            </div>
+
+            <!-- Quick Actions -->
+            <div class="bg-white rounded-lg shadow p-6 mb-8">
+                <h3 class="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h3>
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                    <button onclick="goToPage('jobs.html')" class="btn-red">
+                        Manage Jobs
+                    </button>
+                    <button onclick="goToPage('submissions.html')" class="btn-red">
+                        Review Submissions
+                    </button>
+                    <button onclick="goToPage('help-support.html')" class="btn-red">
+                        Help & Support
+                    </button>
+                    <button onclick="goToPage('barcode-capture.html')" class="btn-gray">
+                        Barcode Scanner
+                    </button>
+                </div>
+            </div>
+
+            <!-- Recent Activity -->
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                <!-- Recent Jobs -->
+                <div class="bg-white rounded-lg shadow">
+                    <div class="px-6 py-4 border-b border-gray-200">
+                        <h3 class="text-lg font-medium text-gray-900">Recent Jobs</h3>
+                    </div>
+                    <div id="recent-jobs" class="p-6">
+                        <div class="text-center text-gray-500">Loading...</div>
+                    </div>
+                </div>
+
+                <!-- Recent Users -->
+                <div class="bg-white rounded-lg shadow">
+                    <div class="px-6 py-4 border-b border-gray-200">
+                        <h3 class="text-lg font-medium text-gray-900">Recent Users</h3>
+                    </div>
+                    <div id="recent-users" class="p-6">
+                        <div class="text-center text-gray-500">Loading...</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- System Status -->
+            <div class="mt-8 bg-white rounded-lg shadow">
+                <div class="px-6 py-4 border-b border-gray-200">
+                    <h3 class="text-lg font-medium text-gray-900">System Status</h3>
+                </div>
+                <div class="p-6">
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        <div class="flex items-center">
+                            <div class="w-3 h-3 bg-green-400 rounded-full mr-3"></div>
+                            <span class="text-sm text-gray-600">Database: Online</span>
+                        </div>
+                        <div class="flex items-center">
+                            <div class="w-3 h-3 bg-green-400 rounded-full mr-3"></div>
+                            <span class="text-sm text-gray-600">Storage: Healthy</span>
+                        </div>
+                        <div class="flex items-center">
+                            <div class="w-3 h-3 bg-green-400 rounded-full mr-3"></div>
+                            <span class="text-sm text-gray-600">API: Responsive</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Include shared API -->
+    <script src="../shared/api.js"></script>
+    
+    <script>
+        let currentUser = null;
+        let userProfile = null;
+
+        // Initialize dashboard
+        document.addEventListener('DOMContentLoaded', async function() {
+            console.log('🔧 Admin Dashboard initialized');
+            await initializeDashboard();
+        });
+
+        // Initialize dashboard with admin access check
+        async function initializeDashboard() {
+            try {
+                // Get current user
+                const { data: { user } } = await supabase.auth.getUser();
+                if (!user) {
+                    window.location.href = '../auth/signin.html';
+                    return;
+                }
+                currentUser = user;
+
+                // Get user profile
+                const { data: profile, error } = await supabase
+                    .from('users')
+                    .select('role, full_name')
+                    .eq('id', user.id)
+                    .single();
+
+                if (error || !profile) {
+                    console.error('Error fetching user profile:', error);
+                    window.location.href = '../auth/signin.html';
+                    return;
+                }
+                userProfile = profile;
+
+                // Check admin access
+                if (profile.role !== 'admin') {
+                    alert('Access denied. Admin privileges required.');
+                    window.location.href = '../dashboard/shelfer.html';
+                    return;
+                }
+
+                // Update UI
+                document.getElementById('admin-user').textContent = `Welcome, ${profile.full_name || user.email}`;
+                
+                // Load dashboard data
+                await loadDashboardData();
+
+            } catch (error) {
+                console.error('Error initializing dashboard:', error);
+                window.location.href = '../auth/signin.html';
+            }
+        }
+
+        // Load dashboard data
+        async function loadDashboardData() {
+            try {
+                // Load all data in parallel
+                const [jobs, users, submissions, helpRequests] = await Promise.all([
+                    saGet('jobs', []),
+                    saGet('users', []),
+                    saGet('job_submissions', []),
+                    saGet('help_requests', [])
+                ]);
+
+                // Update metrics
+                updateMetrics(jobs, users, submissions, helpRequests);
+                
+                // Display recent activity
+                displayRecentJobs(jobs.slice(0, 5));
+                displayRecentUsers(users.slice(0, 5));
+
+            } catch (error) {
+                console.error('Error loading dashboard data:', error);
+            }
+        }
+
+        // Update key metrics
+        function updateMetrics(jobs, users, submissions, helpRequests) {
+            // Total jobs
+            document.getElementById('total-jobs').textContent = jobs.length;
+            
+            // Active users (exclude admins)
+            const activeUsers = users.filter(user => user.role !== 'admin').length;
+            document.getElementById('active-users').textContent = activeUsers;
+            
+            // Pending reviews
+            const pendingReviews = submissions.filter(sub => sub.status === 'pending_review').length;
+            document.getElementById('pending-reviews').textContent = pendingReviews;
+            
+            // Help requests (unread)
+            const unreadHelp = helpRequests.filter(req => !req.is_read).length;
+            document.getElementById('help-requests').textContent = unreadHelp;
+        }
+
+        // Display recent jobs
+        function displayRecentJobs(jobs) {
+            const container = document.getElementById('recent-jobs');
+            
+            if (jobs.length === 0) {
+                container.innerHTML = '<div class="text-center text-gray-500">No jobs created yet</div>';
+                return;
+            }
+
+            const jobsHtml = jobs.map(job => `
+                <div class="py-3 border-b border-gray-200 last:border-b-0">
+                    <div class="flex items-start justify-between">
+                        <div class="flex-1">
+                            <div class="font-medium text-gray-900">${job.title}</div>
+                            <div class="text-sm text-gray-600">Status: <span class="font-medium ${job.status === 'completed' ? 'text-green-600' : job.status === 'pending' ? 'text-blue-600' : 'text-gray-600'}">${job.status}</span></div>
+                            <div class="text-sm text-gray-500">Created: ${new Date(job.created_at).toLocaleDateString()}</div>
+                        </div>
+                        <div class="text-right">
+                            <div class="text-sm font-medium text-gray-900">$${job.total_cost || 0}</div>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+
+            container.innerHTML = jobsHtml;
+        }
+
+        // Display recent users
+        function displayRecentUsers(users) {
+            const container = document.getElementById('recent-users');
+            
+            if (users.length === 0) {
+                container.innerHTML = '<div class="text-center text-gray-500">No users yet</div>';
+                return;
+            }
+
+            const usersHtml = users.map(user => `
+                <div class="py-3 border-b border-gray-200 last:border-b-0">
+                    <div class="flex items-start justify-between">
+                        <div class="flex-1">
+                            <div class="font-medium text-gray-900">${user.full_name || user.email}</div>
+                            <div class="text-sm text-gray-600">Role: <span class="font-medium ${user.role === 'admin' ? 'text-red-600' : user.role === 'brand_client' ? 'text-blue-600' : 'text-green-600'}">${user.role}</span></div>
+                            <div class="text-sm text-gray-500">Joined: ${new Date(user.created_at).toLocaleDateString()}</div>
+                        </div>
+                        <div class="text-right">
+                            <div class="text-sm font-medium text-gray-900">${user.is_active ? 'Active' : 'Inactive'}</div>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+
+            container.innerHTML = usersHtml;
+        }
+
+        // Handle sign out
+        async function handleSignOut() {
+            try {
+                await supabase.auth.signOut();
+                window.location.href = '../auth/signin.html';
+            } catch (error) {
+                console.error('Error signing out:', error);
+                window.location.href = '../auth/signin.html';
+            }
+        }
+    </script>
+
+    <!-- Navigation -->
+    <div class="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200">
+        <div class="flex justify-around py-3">
+            <button onclick="goToPage('dashboard.html')" class="font-bold text-[#C62828]">Dashboard</button>
+            <button onclick="goToPage('jobs.html')" class="text-gray-500 hover:text-gray-700">Jobs</button>
+            <button onclick="goToPage('submissions.html')" class="text-gray-500 hover:text-gray-700">Submissions</button>
+            <button onclick="goToPage('help-support.html')" class="text-gray-500 hover:text-gray-700">Help</button>
+            <button onclick="goToPage('barcode-capture.html')" class="text-gray-500 hover:text-gray-700">Scanner</button>
+        </div>
+    </div>
+</body>
+</html>
