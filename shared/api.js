@@ -7,10 +7,13 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 
 // Initialize Supabase
 let supabase;
+let supabaseRetryCount = 0;
+const MAX_RETRIES = 5;
 
 // Function to initialize Supabase when ready
 function initializeSupabase() {
   try {
+    // Check if Supabase is available globally
     if (typeof window.supabase !== 'undefined' && window.supabase.createClient) {
       supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
       // Make sure supabase is available globally
@@ -18,7 +21,7 @@ function initializeSupabase() {
       console.log('✅ Supabase client initialized');
       return true;
     } else {
-      console.error('❌ Supabase library not loaded yet');
+      console.log('⏳ Supabase library not loaded yet, waiting...');
       return false;
     }
   } catch (error) {
@@ -31,10 +34,25 @@ function initializeSupabase() {
 if (!initializeSupabase()) {
   // If not ready, wait for DOM and try again
   document.addEventListener('DOMContentLoaded', function() {
-    if (!initializeSupabase()) {
-      console.error('❌ Supabase still not available after DOM load');
-    }
+    retrySupabaseInit();
   });
+}
+
+// Retry Supabase initialization with exponential backoff
+function retrySupabaseInit() {
+  if (supabaseRetryCount >= MAX_RETRIES) {
+    console.error('❌ Supabase failed to load after', MAX_RETRIES, 'attempts');
+    return;
+  }
+  
+  supabaseRetryCount++;
+  console.log(`⏳ Retry ${supabaseRetryCount}/${MAX_RETRIES}: Checking for Supabase...`);
+  
+  if (!initializeSupabase()) {
+    const delay = Math.pow(2, supabaseRetryCount) * 500; // Exponential backoff
+    console.log(`⏳ Retrying in ${delay}ms...`);
+    setTimeout(retrySupabaseInit, delay);
+  }
 }
 
 // Store original saGet/saSet functions as fallback
@@ -340,12 +358,22 @@ window.ensureProfile = async function(user) {
 document.addEventListener('DOMContentLoaded', async function() {
   console.log('🚀 ShelfAssured API initialized with Supabase!');
   
+  // Wait for Supabase to be available
+  if (!supabase) {
+    console.log('⏳ Waiting for Supabase to initialize...');
+    return;
+  }
+  
   // Check if user is logged in
-  const { data: { user } } = await supabase.auth.getUser();
-  if (user) {
-    console.log('✅ User logged in:', user.email);
-  } else {
-    console.log('ℹ️ No user logged in');
+  try {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user) {
+      console.log('✅ User logged in:', user.email);
+    } else {
+      console.log('ℹ️ No user logged in');
+    }
+  } catch (error) {
+    console.error('❌ Error checking user auth:', error);
   }
   
   // Load data from Supabase
