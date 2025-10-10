@@ -99,16 +99,29 @@ function updateMetrics(jobs, users, auditRequests) {
     const pendingReviews = jobs.filter(job => job.status === 'pending').length;
     const helpRequests = auditRequests.filter(req => req.status === 'pending_review').length;
 
-    document.getElementById('total-jobs').textContent = totalJobs;
-    document.getElementById('active-jobs').textContent = activeJobs;
-    document.getElementById('active-users').textContent = activeUsers;
-    document.getElementById('pending-reviews').textContent = pendingReviews;
-    document.getElementById('help-requests').textContent = helpRequests;
+    // Update elements only if they exist
+    const totalJobsEl = document.getElementById('total-jobs');
+    const activeJobsEl = document.getElementById('active-jobs');
+    const activeUsersEl = document.getElementById('active-users');
+    const pendingReviewsEl = document.getElementById('pending-reviews');
+    const helpRequestsEl = document.getElementById('help-requests');
+
+    if (totalJobsEl) totalJobsEl.textContent = totalJobs;
+    if (activeJobsEl) activeJobsEl.textContent = activeJobs;
+    if (activeUsersEl) activeUsersEl.textContent = activeUsers;
+    if (pendingReviewsEl) pendingReviewsEl.textContent = pendingReviews;
+    if (helpRequestsEl) helpRequestsEl.textContent = helpRequests;
 }
 
 // Update recent activity
 function updateRecentActivity(jobs, users) {
     const container = document.getElementById('recent-activity');
+    
+    // Return early if container doesn't exist
+    if (!container) {
+        console.log('⚠️ recent-activity container not found, skipping update');
+        return;
+    }
     
     // Get recent jobs (last 5)
     const recentJobs = jobs
@@ -141,6 +154,12 @@ function updateRecentActivity(jobs, users) {
 // Update user management
 function updateUserManagement(users) {
     const container = document.getElementById('user-management');
+    
+    // Return early if container doesn't exist
+    if (!container) {
+        console.log('⚠️ user-management container not found, skipping update');
+        return;
+    }
     
     // Get users needing approval
     const pendingUsers = users.filter(user => user.approval_status === 'pending');
