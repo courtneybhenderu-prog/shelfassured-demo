@@ -1,147 +1,369 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <meta charset="utf-8">
-    <title>ShelfAssured</title>
+    <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Shelf Assured - Real-Time Retail Assurance</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Supabase SDK (UMD build, reliable CDN) -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.47.5/dist/umd/supabase.min.js"></script>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
-        body {
-            font-family: 'Inter', sans-serif;
+        .gradient-bg {
+            background: #0f172a;
+            position: relative;
         }
-        .btn-red {
-            background-color: #C62828;
-            color: white;
-            padding: 12px 24px;
-            border-radius: 9999px;
-            font-weight: 600;
-            text-align: center;
-            transition: background-color 0.2s;
-            border: none;
-            cursor: pointer;
-            width: 100%;
+        .gradient-bg::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(135deg, rgba(0, 0, 0, 0.8) 0%, rgba(0, 0, 0, 0.6) 100%);
+            z-index: 1;
         }
-        .btn-red:hover {
-            background-color: #B71C1C;
+        .hero-pattern {
+            background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.05'%3E%3Ccircle cx='30' cy='30' r='2'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
         }
-        .btn-gray {
-            background-color: #6B7280;
-            color: white;
-            padding: 12px 24px;
-            border-radius: 9999px;
-            font-weight: 600;
-            text-align: center;
-            transition: background-color 0.2s;
-            border: none;
-            cursor: pointer;
-            width: 100%;
+        .hero-content {
+            position: relative;
+            z-index: 2;
         }
-        .btn-gray:hover {
-            background-color: #4B5563;
+        .floating {
+            animation: floating 3s ease-in-out infinite;
         }
-        .brand-name {
-            font-size: 2rem;
-            font-weight: 800;
-            text-align: center;
-            margin-bottom: 1rem;
+        @keyframes floating {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-10px); }
         }
-        .brand-shelf {
-            color: #3D342F;
-        }
-        .brand-assured {
-            color: #F9A825;
-        }
-        .tagline {
-            color: #3D342F;
-            font-size: 1rem;
-            text-align: center;
-            margin-bottom: 2rem;
-        }
-        .terms-text {
-            color: #3D342F;
-            font-size: 0.875rem;
-            text-align: center;
-            margin-top: 1rem;
-        }
-        .terms-link {
-            color: #3D342F;
-            text-decoration: underline;
-        }
-        .card-container {
-            background-color: #FCFBF9;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-        }
-        .page-background {
-            background-color: #F7F3F0;
+        .text-shadow {
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
         }
     </style>
 </head>
-<body class="page-background min-h-screen flex items-center justify-center p-4">
-    <div class="card-container rounded-lg p-8 max-w-md w-full">
-        <!-- Brand Name -->
-        <div class="brand-name">
-            <span class="brand-shelf">Shelf</span><span class="brand-assured">Assured</span>
-        </div>
-        
-        <!-- Tagline -->
-        <div class="tagline">
-            Helping emerging brands see their products on shelves in real time.
-        </div>
-        
-                <!-- Buttons -->
-                <div class="space-y-3">
-                    <button class="btn-red" onclick="goToPage('auth/signup.html')">Create Account</button>
-                    <button class="btn-gray" onclick="goToPage('auth/signin.html')">Sign In</button>
+<body class="bg-gray-50">
+    <!-- Navigation -->
+    <nav class="bg-white shadow-sm">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center py-4">
+                <div class="flex items-center">
+                    <h1 class="text-2xl font-bold text-gray-900">Shelf Assured</h1>
                 </div>
-        
-        <!-- Terms -->
-        <div class="terms-text">
-            By continuing, you agree to our <a href="#" class="terms-link">Terms.</a>
+                <div class="hidden md:flex items-center space-x-8">
+                    <a href="#about" class="text-gray-600 hover:text-gray-900">About</a>
+                    <a href="#contact" class="text-gray-600 hover:text-gray-900">Contact</a>
+                    <button onclick="scrollToForm()" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors">
+                        Request Pilot Access
+                    </button>
+                </div>
+            </div>
         </div>
-    </div>
+    </nav>
 
-    <script src="shared/api.js"></script>
+    <!-- Hero Section -->
+    <section class="gradient-bg hero-pattern py-20 min-h-screen flex items-center">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center w-full hero-content">
+            <div class="floating">
+                <h1 class="text-5xl md:text-6xl font-bold text-white mb-6 text-shadow">
+                    The Shelf You Can't See<br>
+                    <span class="text-yellow-300">Is Costing You Sales</span>
+                </h1>
+                <p class="text-xl text-white mb-8 max-w-3xl mx-auto text-shadow">
+                    Emerging brands fight for every inch of shelf space. We're building something revolutionary 
+                    to give you the visibility you need to win.
+                </p>
+                <div class="flex flex-col sm:flex-row gap-4 justify-center">
+                    <button onclick="scrollToForm()" class="bg-yellow-400 text-gray-900 px-8 py-4 rounded-lg text-lg font-semibold hover:bg-yellow-300 transition-colors">
+                        Request Pilot Access
+                    </button>
+                    <button onclick="scrollToAbout()" class="border-2 border-white text-white px-8 py-4 rounded-lg text-lg font-semibold hover:bg-white hover:text-blue-600 transition-colors">
+                        Learn More
+                    </button>
+                </div>
+                
+                <!-- Scroll Indicator -->
+                <div class="mt-16 flex justify-center">
+                    <div class="animate-bounce">
+                        <div class="flex flex-col items-center text-white opacity-70">
+                            <span class="text-sm mb-2">Scroll to learn more</span>
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 14l-7 7m0 0l-7-7m7 7V3"></path>
+                            </svg>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Value Proposition -->
+    <section id="about" class="py-20 bg-white">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="text-center mb-16">
+                <h2 class="text-4xl font-bold text-gray-900 mb-6">
+                    Built for Emerging Brands
+                </h2>
+                <p class="text-xl text-gray-600 max-w-3xl mx-auto">
+                    New and emerging grocery brands lack the resources to monitor what's happening 
+                    in stores. We're solving this problem in a way that's accessible and affordable.
+                </p>
+            </div>
+
+            <div class="grid md:grid-cols-3 gap-8">
+                <div class="text-center p-6">
+                    <div class="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <i class="fas fa-chart-line text-red-600 text-2xl"></i>
+                    </div>
+                    <h3 class="text-xl font-semibold text-gray-900 mb-3">Real-Time Visibility</h3>
+                    <p class="text-gray-600">See what's happening with your products when you can't be there.</p>
+                </div>
+
+                <div class="text-center p-6">
+                    <div class="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <i class="fas fa-eye text-blue-600 text-2xl"></i>
+                    </div>
+                    <h3 class="text-xl font-semibold text-gray-900 mb-3">Competitive Intelligence</h3>
+                    <p class="text-gray-600">Understand how you stack up against competitors in real stores.</p>
+                </div>
+
+                <div class="text-center p-6">
+                    <div class="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <i class="fas fa-rocket text-green-600 text-2xl"></i>
+                    </div>
+                    <h3 class="text-xl font-semibold text-gray-900 mb-3">Fast & Affordable</h3>
+                    <p class="text-gray-600">Get insights quickly without breaking the bank or long contracts.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Launch Info -->
+    <section class="py-16 bg-gray-100">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+            <div class="bg-white rounded-lg shadow-lg p-8 max-w-2xl mx-auto">
+                <h3 class="text-2xl font-bold text-gray-900 mb-4">Coming Soon to Major Markets</h3>
+                <p class="text-gray-600 mb-6">
+                    We're launching in select markets first, then expanding nationally. 
+                    Get early access to the retail visibility solution that's changing the game.
+                </p>
+                <div class="flex items-center justify-center space-x-4 text-sm text-gray-500">
+                    <span class="flex items-center">
+                        <i class="fas fa-map-marker-alt mr-2"></i>
+                        Select Markets First
+                    </span>
+                    <span class="flex items-center">
+                        <i class="fas fa-expand-arrows-alt mr-2"></i>
+                        Expanding Nationally
+                    </span>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Contact Form -->
+    <section id="contact" class="py-20 bg-white">
+        <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="text-center mb-12">
+                <h2 class="text-4xl font-bold text-gray-900 mb-4">Request Pilot Access</h2>
+                <p class="text-xl text-gray-600">
+                    Get early access to the retail visibility solution that's changing the game
+                </p>
+            </div>
+
+            <div class="bg-gray-50 rounded-lg shadow-lg p-8">
+                <form id="pilotForm" class="space-y-6">
+                    <div class="grid md:grid-cols-2 gap-6">
+                        <div>
+                            <label for="name" class="block text-sm font-medium text-gray-700 mb-2">Full Name *</label>
+                            <input type="text" id="name" name="name" required 
+                                   class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                        </div>
+                        <div>
+                            <label for="email" class="block text-sm font-medium text-gray-700 mb-2">Email Address *</label>
+                            <input type="email" id="email" name="email" required 
+                                   class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                        </div>
+                    </div>
+
+                    <div class="grid md:grid-cols-2 gap-6">
+                        <div>
+                            <label for="company" class="block text-sm font-medium text-gray-700 mb-2">Company Name *</label>
+                            <input type="text" id="company" name="company" required 
+                                   class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                        </div>
+                        <div>
+                            <label for="role" class="block text-sm font-medium text-gray-700 mb-2">Role/Title *</label>
+                            <input type="text" id="role" name="role" required 
+                                   class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                        </div>
+                    </div>
+
+                    <div class="grid md:grid-cols-2 gap-6">
+                        <div>
+                            <label for="phone" class="block text-sm font-medium text-gray-700 mb-2">Phone Number</label>
+                            <input type="tel" id="phone" name="phone" 
+                                   class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                        </div>
+                        <div>
+                            <label for="problem" class="block text-sm font-medium text-gray-700 mb-2">What problem are you trying to solve? *</label>
+                            <select id="problem" name="problem" required 
+                                    class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                                <option value="">Select a problem...</option>
+                                <option value="out-of-stocks">Out-of-stock issues</option>
+                                <option value="shelf-organization">Shelf organization problems</option>
+                                <option value="pricing-errors">Pricing errors</option>
+                                <option value="competitor-monitoring">Competitor monitoring</option>
+                                <option value="retail-execution">Poor retail execution</option>
+                                <option value="data-visibility">Lack of retail data visibility</option>
+                                <option value="other">Other</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label for="storeCount" class="block text-sm font-medium text-gray-700 mb-2">How many stores do you currently sell in?</label>
+                        <select id="storeCount" name="storeCount" required 
+                                class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                            <option value="">Select range...</option>
+                            <option value="1-10">1-10 stores</option>
+                            <option value="11-50">11-50 stores</option>
+                            <option value="51-200">51-200 stores</option>
+                            <option value="201-500">201-500 stores</option>
+                            <option value="500+">500+ stores</option>
+                            <option value="planning">Planning to launch in stores</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label for="biggestChallenge" class="block text-sm font-medium text-gray-700 mb-2">What's your biggest retail challenge?</label>
+                        <textarea id="biggestChallenge" name="biggestChallenge" rows="3" required
+                                  class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                  placeholder="Tell us about your biggest retail challenge..."></textarea>
+                    </div>
+
+                    <div>
+                        <label for="message" class="block text-sm font-medium text-gray-700 mb-2">Additional Information</label>
+                        <textarea id="message" name="message" rows="3" 
+                                  class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                  placeholder="Anything else you'd like us to know?"></textarea>
+                    </div>
+
+                    <div class="text-center">
+                        <button type="submit" id="submitBtn" 
+                                class="bg-blue-600 text-white px-8 py-4 rounded-lg text-lg font-semibold hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+                            <span id="submitText">Request Pilot Access</span>
+                            <span id="submitLoading" class="hidden">
+                                <i class="fas fa-spinner fa-spin mr-2"></i>Submitting...
+                            </span>
+                        </button>
+                    </div>
+                </form>
+
+                <div id="successMessage" class="hidden mt-6 p-4 bg-green-100 border border-green-400 text-green-700 rounded-lg text-center">
+                    <i class="fas fa-check-circle text-2xl mb-2"></i>
+                    <h3 class="text-lg font-semibold">Thank you for your interest!</h3>
+                    <p>We'll be in touch soon with pilot access details.</p>
+                </div>
+
+                <div id="errorMessage" class="hidden mt-6 p-4 bg-red-100 border border-red-400 text-red-700 rounded-lg text-center">
+                    <i class="fas fa-exclamation-circle text-2xl mb-2"></i>
+                    <h3 class="text-lg font-semibold">Something went wrong</h3>
+                    <p>Please try again or contact us directly.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="bg-gray-900 text-white py-12">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="text-center">
+                <h3 class="text-2xl font-bold mb-4">Shelf Assured</h3>
+                <p class="text-gray-400 mb-6">Real-Time Retail Assurance for Emerging CPG Brands</p>
+                <div class="flex justify-center space-x-6">
+                    <a href="mailto:info@beshelfassured.com" class="text-gray-400 hover:text-white transition-colors">
+                        <i class="fas fa-envelope mr-2"></i>info@beshelfassured.com
+                    </a>
+                </div>
+                <div class="mt-8 pt-8 border-t border-gray-800">
+                    <p class="text-gray-400 text-sm">&copy; 2025 Shelf Assured. All rights reserved.</p>
+                </div>
+            </div>
+        </div>
+    </footer>
+
     <script>
-        // Debug script to check if goToPage is available
-        document.addEventListener('DOMContentLoaded', function() {
-            console.log('🔍 Debug: DOM loaded');
-            console.log('🔍 Debug: goToPage function available?', typeof window.goToPage);
+        // Initialize Supabase
+        const supabaseUrl = 'https://mlmhmzhvwtsswigfvkwx.supabase.co';
+        const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1sbWhtemh2d3Rzc3dpZ2Z2a3d4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTg3NTYwNDQsImV4cCI6MjA3NDMzMjA0NH0.sr3x6TkgXlK4Nc8SHPwoS6q5TDGXeExfFK2vPoOTPYk';
+        const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
+
+        // Smooth scrolling
+        function scrollToForm() {
+            document.getElementById('contact').scrollIntoView({ behavior: 'smooth' });
+        }
+
+        function scrollToAbout() {
+            document.getElementById('about').scrollIntoView({ behavior: 'smooth' });
+        }
+
+        // Form submission
+        document.getElementById('pilotForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
             
-            // Test the buttons
-            const createBtn = document.querySelector('button[onclick*="signup"]');
-            const signinBtn = document.querySelector('button[onclick*="signin"]');
+            const submitBtn = document.getElementById('submitBtn');
+            const submitText = document.getElementById('submitText');
+            const submitLoading = document.getElementById('submitLoading');
+            const successMessage = document.getElementById('successMessage');
+            const errorMessage = document.getElementById('errorMessage');
             
-            console.log('🔍 Debug: Create Account button found?', !!createBtn);
-            console.log('🔍 Debug: Sign In button found?', !!signinBtn);
+            // Show loading state
+            submitBtn.disabled = true;
+            submitText.classList.add('hidden');
+            submitLoading.classList.remove('hidden');
             
-            // Add click listeners as backup
-            if (createBtn) {
-                createBtn.addEventListener('click', function() {
-                    console.log('🔍 Debug: Create Account clicked');
-                    if (typeof window.goToPage === 'function') {
-                        window.goToPage('auth/signup.html');
-                    } else {
-                        console.error('❌ goToPage function not available');
-                        window.location.href = 'auth/signup.html';
-                    }
-                });
-            }
+            // Hide previous messages
+            successMessage.classList.add('hidden');
+            errorMessage.classList.add('hidden');
             
-            if (signinBtn) {
-                signinBtn.addEventListener('click', function() {
-                    console.log('🔍 Debug: Sign In clicked');
-                    if (typeof window.goToPage === 'function') {
-                        window.goToPage('auth/signin.html');
-                    } else {
-                        console.error('❌ goToPage function not available');
-                        window.location.href = 'auth/signin.html';
-                    }
-                });
+            try {
+                // Get form data
+                const formData = new FormData(e.target);
+                const data = {
+                    name: formData.get('name'),
+                    email: formData.get('email'),
+                    company: formData.get('company'),
+                    role: formData.get('role'),
+                    phone: formData.get('phone'),
+                    problem: formData.get('problem'),
+                    store_count: formData.get('storeCount'),
+                    biggest_challenge: formData.get('biggestChallenge'),
+                    message: formData.get('message'),
+                    created_at: new Date().toISOString(),
+                    status: 'new'
+                };
+                
+                // Insert into Supabase
+                const { data: result, error } = await supabase
+                    .from('pilot_leads')
+                    .insert([data]);
+                
+                if (error) {
+                    throw error;
+                }
+                
+                // Show success message
+                successMessage.classList.remove('hidden');
+                e.target.reset();
+                
+            } catch (error) {
+                console.error('Error submitting form:', error);
+                errorMessage.classList.remove('hidden');
+            } finally {
+                // Reset button state
+                submitBtn.disabled = false;
+                submitText.classList.remove('hidden');
+                submitLoading.classList.add('hidden');
             }
         });
     </script>

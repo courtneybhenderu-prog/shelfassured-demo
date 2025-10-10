@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>ShelfAssured</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Supabase SDK (UMD build, reliable CDN) -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.47.5/dist/umd/supabase.min.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        .btn-red {
+            background-color: #C62828;
+            color: white;
+            padding: 12px 24px;
+            border-radius: 9999px;
+            font-weight: 600;
+            text-align: center;
+            transition: background-color 0.2s;
+            border: none;
+            cursor: pointer;
+            width: 100%;
+        }
+        .btn-red:hover {
+            background-color: #B71C1C;
+        }
+        .btn-gray {
+            background-color: #6B7280;
+            color: white;
+            padding: 12px 24px;
+            border-radius: 9999px;
+            font-weight: 600;
+            text-align: center;
+            transition: background-color 0.2s;
+            border: none;
+            cursor: pointer;
+            width: 100%;
+        }
+        .btn-gray:hover {
+            background-color: #4B5563;
+        }
+        .brand-name {
+            font-size: 2rem;
+            font-weight: 800;
+            text-align: center;
+            margin-bottom: 1rem;
+        }
+        .brand-shelf {
+            color: #3D342F;
+        }
+        .brand-assured {
+            color: #F9A825;
+        }
+        .tagline {
+            color: #3D342F;
+            font-size: 1rem;
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+        .terms-text {
+            color: #3D342F;
+            font-size: 0.875rem;
+            text-align: center;
+            margin-top: 1rem;
+        }
+        .terms-link {
+            color: #3D342F;
+            text-decoration: underline;
+        }
+        .card-container {
+            background-color: #FCFBF9;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        }
+        .page-background {
+            background-color: #F7F3F0;
+        }
+    </style>
+</head>
+<body class="page-background min-h-screen flex items-center justify-center p-4">
+    <div class="card-container rounded-lg p-8 max-w-md w-full">
+        <!-- Brand Name -->
+        <div class="brand-name">
+            <span class="brand-shelf">Shelf</span><span class="brand-assured">Assured</span>
+        </div>
+        
+        <!-- Tagline -->
+        <div class="tagline">
+            Helping emerging brands see their products on shelves in real time.
+        </div>
+        
+                <!-- Buttons -->
+                <div class="space-y-3">
+                    <button class="btn-red" onclick="goToPage('auth/signup.html')">Create Account</button>
+                    <button class="btn-gray" onclick="goToPage('auth/signin.html')">Sign In</button>
+                </div>
+        
+        <!-- Terms -->
+        <div class="terms-text">
+            By continuing, you agree to our <a href="#" class="terms-link">Terms.</a>
+        </div>
+    </div>
+
+    <script src="shared/api.js"></script>
+    <script>
+        // Debug script to check if goToPage is available
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('🔍 Debug: DOM loaded');
+            console.log('🔍 Debug: goToPage function available?', typeof window.goToPage);
+            
+            // Test the buttons
+            const createBtn = document.querySelector('button[onclick*="signup"]');
+            const signinBtn = document.querySelector('button[onclick*="signin"]');
+            
+            console.log('🔍 Debug: Create Account button found?', !!createBtn);
+            console.log('🔍 Debug: Sign In button found?', !!signinBtn);
+            
+            // Add click listeners as backup
+            if (createBtn) {
+                createBtn.addEventListener('click', function() {
+                    console.log('🔍 Debug: Create Account clicked');
+                    if (typeof window.goToPage === 'function') {
+                        window.goToPage('auth/signup.html');
+                    } else {
+                        console.error('❌ goToPage function not available');
+                        window.location.href = 'auth/signup.html';
+                    }
+                });
+            }
+            
+            if (signinBtn) {
+                signinBtn.addEventListener('click', function() {
+                    console.log('🔍 Debug: Sign In clicked');
+                    if (typeof window.goToPage === 'function') {
+                        window.goToPage('auth/signin.html');
+                    } else {
+                        console.error('❌ goToPage function not available');
+                        window.location.href = 'auth/signin.html';
+                    }
+                });
+            }
+        });
+    </script>
+</body>
+</html>
