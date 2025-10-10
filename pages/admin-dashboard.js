@@ -115,76 +115,70 @@ function updateMetrics(jobs, users, auditRequests) {
 
 // Update recent activity
 function updateRecentActivity(jobs, users) {
-    const container = document.getElementById('recent-activity');
-    
-    // Return early if container doesn't exist
-    if (!container) {
-        console.log('⚠️ recent-activity container not found, skipping update');
-        return;
+    // Update Recent Jobs section
+    const recentJobsContainer = document.getElementById('recent-jobs');
+    if (recentJobsContainer) {
+        const recentJobs = jobs
+            .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+            .slice(0, 5);
+        
+        if (recentJobs.length === 0) {
+            recentJobsContainer.innerHTML = '<div class="text-center text-gray-500">No recent jobs</div>';
+        } else {
+            const jobsHtml = recentJobs.map(job => `
+                <div class="py-3 border-b border-gray-200 last:border-b-0">
+                    <div class="flex items-start justify-between">
+                        <div class="flex-1">
+                            <div class="font-medium text-gray-900">${job.title || 'Untitled Job'}</div>
+                            <div class="text-sm text-gray-600">Status: <span class="font-medium ${job.status === 'completed' ? 'text-green-600' : job.status === 'pending' ? 'text-blue-600' : 'text-gray-600'}">${job.status || 'unknown'}</span></div>
+                            <div class="text-sm text-gray-500">Created: ${new Date(job.created_at).toLocaleDateString()}</div>
+                        </div>
+                        <div class="text-right">
+                            <div class="text-sm font-medium text-gray-900">$${job.total_cost || 0}</div>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+            recentJobsContainer.innerHTML = jobsHtml;
+        }
     }
     
-    // Get recent jobs (last 5)
-    const recentJobs = jobs
-        .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
-        .slice(0, 5);
-    
-    if (recentJobs.length === 0) {
-        container.innerHTML = '<div class="text-center text-gray-500">No recent activity</div>';
-        return;
+    // Update Recent Users section
+    const recentUsersContainer = document.getElementById('recent-users');
+    if (recentUsersContainer) {
+        const recentUsers = users
+            .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+            .slice(0, 5);
+        
+        if (recentUsers.length === 0) {
+            recentUsersContainer.innerHTML = '<div class="text-center text-gray-500">No recent users</div>';
+        } else {
+            const usersHtml = recentUsers.map(user => `
+                <div class="py-3 border-b border-gray-200 last:border-b-0">
+                    <div class="flex items-start justify-between">
+                        <div class="flex-1">
+                            <div class="font-medium text-gray-900">${user.full_name || 'No name'}</div>
+                            <div class="text-sm text-gray-600">${user.email}</div>
+                            <div class="text-sm text-gray-500">Role: ${user.role}</div>
+                        </div>
+                        <div class="text-right">
+                            <span class="px-2 py-1 text-xs font-semibold rounded-full ${user.is_active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}">
+                                ${user.is_active ? 'Active' : 'Inactive'}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+            recentUsersContainer.innerHTML = usersHtml;
+        }
     }
-    
-    const activityHtml = recentJobs.map(job => `
-        <div class="py-3 border-b border-gray-200 last:border-b-0">
-            <div class="flex items-start justify-between">
-                <div class="flex-1">
-                    <div class="font-medium text-gray-900">${job.title}</div>
-                    <div class="text-sm text-gray-600">Status: <span class="font-medium ${job.status === 'completed' ? 'text-green-600' : job.status === 'pending' ? 'text-blue-600' : 'text-gray-600'}">${job.status}</span></div>
-                    <div class="text-sm text-gray-500">Created: ${new Date(job.created_at).toLocaleDateString()}</div>
-                </div>
-                <div class="text-right">
-                    <div class="text-sm font-medium text-gray-900">$${job.total_cost || 0}</div>
-                </div>
-            </div>
-        </div>
-    `).join('');
-    
-    container.innerHTML = activityHtml;
 }
 
-// Update user management
+// Update user management (this function is called but the container doesn't exist in current HTML)
 function updateUserManagement(users) {
-    const container = document.getElementById('user-management');
-    
-    // Return early if container doesn't exist
-    if (!container) {
-        console.log('⚠️ user-management container not found, skipping update');
-        return;
-    }
-    
-    // Get users needing approval
-    const pendingUsers = users.filter(user => user.approval_status === 'pending');
-    
-    if (pendingUsers.length === 0) {
-        container.innerHTML = '<div class="text-center text-gray-500">No users pending approval</div>';
-        return;
-    }
-    
-    const usersHtml = pendingUsers.map(user => `
-        <div class="py-3 border-b border-gray-200 last:border-b-0">
-            <div class="flex items-start justify-between">
-                <div class="flex-1">
-                    <div class="font-medium text-gray-900">${user.full_name || 'No name'}</div>
-                    <div class="text-sm text-gray-600">${user.email}</div>
-                    <div class="text-sm text-gray-500">Role: ${user.role}</div>
-                </div>
-                <div class="text-right">
-                    <div class="text-sm font-medium text-gray-900">${user.is_active ? 'Active' : 'Inactive'}</div>
-                </div>
-            </div>
-        </div>
-    `).join('');
-    
-    container.innerHTML = usersHtml;
+    // This function is kept for compatibility but the user management
+    // is now handled by the dedicated user-management.html page
+    console.log('📊 User management data loaded:', users.length, 'users');
 }
 
 // Handle sign out
