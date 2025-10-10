@@ -126,6 +126,39 @@
     <!-- Include shared API -->
     <script src="../shared/api.js"></script>
     
+    <!-- Inline admin guard - runs immediately after api.js -->
+    <script>
+    (async () => {
+        // Avoid any global guard race conditions
+        window.SA_PAGE_ROLE = 'admin';
+
+        // Ensure session
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) { 
+            location.replace('../auth/signin.html'); 
+            return; 
+        }
+
+        // Ensure profile + role
+        const prof = await (window.ensureProfile ? window.ensureProfile(user) : null);
+        const role = prof?.role ?? user?.user_metadata?.role ?? 'shelfer';
+
+        if (role !== 'admin') {
+            // Not an admin → send to their dashboard instead of sign-in
+            const base = location.origin.includes('localhost')
+                ? 'http://localhost:8000'
+                : 'https://courtneybhenderu-prog.github.io/shelfassured-demo';
+            location.replace(role === 'brand_client'
+                ? `${base}/dashboard/brand-client.html`
+                : `${base}/dashboard/shelfer.html`);
+            return;
+        }
+
+        // Expose a flag so any global guard knows we've passed admin checks
+        window.SA_ADMIN_READY = true;
+    })();
+    </script>
+    
     <script>
         let currentUser = null;
         let userProfile = null;
@@ -148,22 +181,30 @@
                 return;
             }
             
-            console.log('✅ Supabase loaded, initializing dashboard');
+            console.log('✅ Supabase loaded, checking admin access first...');
+            
+            // GLOBAL GUARD: Check admin access immediately
+            const isAdmin = await checkAdminAccess();
+            if (!isAdmin) {
+                console.log('❌ Admin access denied, redirecting...');
+                return; // checkAdminAccess handles the redirect
+            }
+            
+            console.log('✅ Admin access confirmed, initializing dashboard');
             await initializeDashboard();
         });
 
-        // Initialize dashboard with admin access check
-        async function initializeDashboard() {
+        // GLOBAL GUARD: Check admin access immediately
+        async function checkAdminAccess() {
             try {
-                console.log('🚀 Starting initializeDashboard...');
+                console.log('🔍 GLOBAL GUARD: Checking admin access...');
                 
                 // Get current user
-                console.log('🔍 Getting current user...');
                 const { data: { user } } = await supabase.auth.getUser();
                 if (!user) {
                     console.log('❌ No user found, redirecting to signin');
                     window.location.href = '../auth/signin.html';
-                    return;
+                    return false;
                 }
                 console.log('✅ User found:', user.email);
                 currentUser = user;
@@ -191,21 +232,21 @@
                             } else {
                                 console.error('❌ Created profile is not admin:', newProfile);
                                 window.location.href = '../auth/signin.html';
-                                return;
+                                return false;
                             }
                         } catch (createError) {
                             console.error('❌ Error creating profile:', createError);
                             window.location.href = '../auth/signin.html';
-                            return;
+                            return false;
                         }
                     } else {
                         window.location.href = '../auth/signin.html';
-                        return;
+                        return false;
                     }
                 } else if (!profile) {
                     console.error('❌ No profile data returned');
                     window.location.href = '../auth/signin.html';
-                    return;
+                    return false;
                 } else {
                     console.log('✅ Profile loaded:', profile);
                     userProfile = profile;
@@ -215,7 +256,7 @@
                 if (!userProfile) {
                     console.error('❌ userProfile is still undefined after profile loading');
                     window.location.href = '../auth/signin.html';
-                    return;
+                    return false;
                 }
 
                 // Check admin access
@@ -226,16 +267,26 @@
                     console.log('❌ Access denied. User role:', userProfile.role);
                     alert('Access denied. Admin privileges required.');
                     window.location.href = '../dashboard/shelfer.html';
-                    return;
+                    return false;
                 }
 
-                // PAUSE HERE FOR DEBUGGING
-                debugger;
-
                 console.log('✅ Admin access confirmed for:', userProfile.email);
+                return true;
 
+            } catch (error) {
+                console.error('❌ Error in checkAdminAccess:', error);
+                window.location.href = '../auth/signin.html';
+                return false;
+            }
+        }
+
+        // Initialize dashboard (admin access already checked by global guard)
+        async function initializeDashboard() {
+            try {
+                console.log('🚀 Starting initializeDashboard...');
+                
                 // Update UI
-                document.getElementById('admin-user').textContent = `Welcome, ${userProfile.full_name || user.email}`;
+                document.getElementById('admin-user').textContent = `Welcome, ${userProfile.full_name || currentUser.email}`;
                 
                 // Load dashboard data
                 await loadDashboardData();
