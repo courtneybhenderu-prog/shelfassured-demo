@@ -4,6 +4,13 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Admin Dashboard - ShelfAssured</title>
+    
+    <!-- Set flags in HTML before any scripts -->
+    <script>
+        window.SA_PAGE_ROLE = 'admin';
+        window.SA_DISABLE_GLOBAL_GUARD = true;
+        window.SA_ADMIN_READY = true;
+    </script>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
     <link rel="stylesheet" href="../shared/styles.css">
