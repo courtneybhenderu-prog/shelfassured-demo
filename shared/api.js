@@ -342,12 +342,62 @@ window.ensureProfile = async function(user) {
 document.addEventListener('DOMContentLoaded', async function() {
   console.log('🚀 ShelfAssured API initialized with Supabase!');
   
+  // Cooperative global guard - respects per-page overrides
+  if (window.SA_DISABLE_GLOBAL_GUARD === true) {
+    console.log('🔒 Global guard disabled by page');
+    return;
+  }
+  
   // Check if user is logged in
   const { data: { user } } = await supabase.auth.getUser();
-  if (user) {
-    console.log('✅ User logged in:', user.email);
-  } else {
+  if (!user) {
     console.log('ℹ️ No user logged in');
+    // Only redirect if no page role is declared
+    if (!window.SA_PAGE_ROLE) {
+      console.log('🔄 No page role declared, redirecting to signin');
+      window.location.href = '../auth/signin.html';
+    }
+    return;
+  }
+  
+  console.log('✅ User logged in:', user.email);
+  
+  // If page has declared a role, check if user matches
+  if (window.SA_PAGE_ROLE) {
+    console.log('🔍 Page role declared:', window.SA_PAGE_ROLE);
+    
+    // If admin page and already passed admin check, do nothing
+    if (window.SA_PAGE_ROLE === 'admin' && window.SA_ADMIN_READY === true) {
+      console.log('✅ Admin page already passed checks, skipping global guard');
+      return;
+    }
+    
+    // Get user profile to check role
+    try {
+      const prof = await ensureProfile(user);
+      const role = prof?.role ?? user?.user_metadata?.role ?? 'shelfer';
+      
+      if (role !== window.SA_PAGE_ROLE) {
+        console.log('❌ Role mismatch:', role, 'vs', window.SA_PAGE_ROLE);
+        // Redirect to correct dashboard
+        const base = location.origin.includes('localhost')
+          ? 'http://localhost:8000'
+          : 'https://courtneybhenderu-prog.github.io/shelfassured-demo';
+        
+        if (role === 'admin') {
+          window.location.href = `${base}/admin/dashboard.html`;
+        } else if (role === 'brand_client') {
+          window.location.href = `${base}/dashboard/brand-client.html`;
+        } else {
+          window.location.href = `${base}/dashboard/shelfer.html`;
+        }
+        return;
+      }
+      
+      console.log('✅ Role matches page requirement:', role);
+    } catch (error) {
+      console.error('❌ Error checking role:', error);
+    }
   }
   
   // Load data from Supabase
