@@ -106,6 +106,9 @@ function setupFormHandlers() {
     // Add SKU button
     document.getElementById('add-sku').addEventListener('click', addSkuInput);
     
+    // Add store button
+    document.getElementById('add-store').addEventListener('click', addNewStore);
+    
     // All stores checkbox
     document.getElementById('all-stores').addEventListener('change', toggleAllStores);
     
@@ -166,6 +169,69 @@ function updateSkuRemoveButtons() {
         const removeBtn = input.querySelector('.remove-sku');
         removeBtn.style.display = skuInputs.length > 1 ? 'block' : 'none';
     });
+}
+
+// Add new store
+async function addNewStore() {
+    const storeName = document.getElementById('new-store-name').value.trim();
+    const storeLocation = document.getElementById('new-store-location').value.trim();
+    
+    if (!storeName || !storeLocation) {
+        alert('Please enter both store name and location');
+        return;
+    }
+    
+    try {
+        // Create new store in database
+        const newStore = {
+            name: storeName,
+            location: storeLocation,
+            is_active: true,
+            created_at: new Date().toISOString()
+        };
+        
+        console.log('📝 Creating new store:', newStore);
+        
+        // Save store to database
+        const result = await saSet('stores', newStore);
+        
+        if (result.success) {
+            // Add store to the list
+            addStoreToList(result.data);
+            
+            // Clear the form
+            document.getElementById('new-store-name').value = '';
+            document.getElementById('new-store-location').value = '';
+            
+            console.log('✅ Store created successfully');
+        } else {
+            alert('Error creating store: ' + result.error);
+        }
+        
+    } catch (error) {
+        console.error('Error creating store:', error);
+        alert('Error creating store: ' + error.message);
+    }
+}
+
+// Add store to the checkbox list
+function addStoreToList(store) {
+    const storeList = document.getElementById('store-list');
+    
+    const storeHtml = `
+        <div class="flex items-center">
+            <input type="checkbox" id="store-${store.id}" name="stores" value="${store.id}" 
+                   class="rounded border-gray-300 store-checkbox">
+            <label for="store-${store.id}" class="ml-2 text-sm text-gray-700">
+                ${store.name} - ${store.location}
+            </label>
+        </div>
+    `;
+    
+    storeList.insertAdjacentHTML('beforeend', storeHtml);
+    
+    // Update total cost
+    updateTotalCost();
 }
 
 // Toggle all stores selection
