@@ -11,21 +11,28 @@
     <!-- Inline admin guard - runs first -->
     <script>
     (async () => {
+        console.log('🔍 INLINE GUARD: Starting admin check...');
+        
         // Avoid any global guard race conditions
         window.SA_PAGE_ROLE = 'admin';
+        console.log('🔍 INLINE GUARD: Set SA_PAGE_ROLE = admin');
 
         // Ensure session
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) { 
+            console.log('❌ INLINE GUARD: No user, redirecting to signin');
             location.replace('../auth/signin.html'); 
             return; 
         }
+        console.log('✅ INLINE GUARD: User found:', user.email);
 
         // Ensure profile + role
         const prof = await (window.ensureProfile ? window.ensureProfile(user) : null);
         const role = prof?.role ?? user?.user_metadata?.role ?? 'shelfer';
+        console.log('🔍 INLINE GUARD: Role determined:', role);
 
         if (role !== 'admin') {
+            console.log('❌ INLINE GUARD: Not admin, redirecting to dashboard');
             // Not an admin → send to their dashboard instead of sign-in
             const base = location.origin.includes('localhost')
                 ? 'http://localhost:8000'
@@ -38,6 +45,7 @@
 
         // Expose a flag so any global guard knows we've passed admin checks
         window.SA_ADMIN_READY = true;
+        console.log('✅ INLINE GUARD: Admin access confirmed, set SA_ADMIN_READY = true');
     })();
     </script>
 </head>
