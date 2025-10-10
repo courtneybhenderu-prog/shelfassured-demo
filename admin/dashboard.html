@@ -8,60 +8,19 @@
     <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
     <link rel="stylesheet" href="../shared/styles.css">
     
-    <!-- Inline admin guard - runs first -->
+    <!-- Simple test script -->
     <script>
-    (async () => {
-        console.log('🔍 INLINE GUARD: Starting admin check...');
+        console.log('🧪 TEST: Script is running!');
+        console.log('🧪 TEST: Current URL:', window.location.href);
+        console.log('🧪 TEST: Supabase available:', !!window.supabase);
         
-        // Wait for Supabase to be available
-        let attempts = 0;
-        while (!window.supabase && attempts < 20) {
-            console.log('⏳ INLINE GUARD: Waiting for Supabase...', attempts);
-            await new Promise(resolve => setTimeout(resolve, 100));
-            attempts++;
-        }
-        
-        if (!window.supabase) {
-            console.error('❌ INLINE GUARD: Supabase not available');
-            return;
-        }
-        
-        console.log('✅ INLINE GUARD: Supabase loaded');
-        
-        // Avoid any global guard race conditions
+        // Set the page role immediately
         window.SA_PAGE_ROLE = 'admin';
-        console.log('🔍 INLINE GUARD: Set SA_PAGE_ROLE = admin');
-
-        // Ensure session
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) { 
-            console.log('❌ INLINE GUARD: No user, redirecting to signin');
-            location.replace('../auth/signin.html'); 
-            return; 
-        }
-        console.log('✅ INLINE GUARD: User found:', user.email);
-
-        // Ensure profile + role
-        const prof = await (window.ensureProfile ? window.ensureProfile(user) : null);
-        const role = prof?.role ?? user?.user_metadata?.role ?? 'shelfer';
-        console.log('🔍 INLINE GUARD: Role determined:', role);
-
-        if (role !== 'admin') {
-            console.log('❌ INLINE GUARD: Not admin, redirecting to dashboard');
-            // Not an admin → send to their dashboard instead of sign-in
-            const base = location.origin.includes('localhost')
-                ? 'http://localhost:8000'
-                : 'https://courtneybhenderu-prog.github.io/shelfassured-demo';
-            location.replace(role === 'brand_client'
-                ? `${base}/dashboard/brand-client.html`
-                : `${base}/dashboard/shelfer.html`);
-            return;
-        }
-
-        // Expose a flag so any global guard knows we've passed admin checks
-        window.SA_ADMIN_READY = true;
-        console.log('✅ INLINE GUARD: Admin access confirmed, set SA_ADMIN_READY = true');
-    })();
+        console.log('🧪 TEST: Set SA_PAGE_ROLE = admin');
+        
+        // Disable global guard temporarily
+        window.SA_DISABLE_GLOBAL_GUARD = true;
+        console.log('🧪 TEST: Disabled global guard');
     </script>
 </head>
 <body>
