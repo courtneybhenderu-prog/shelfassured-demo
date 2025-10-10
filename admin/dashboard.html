@@ -7,6 +7,39 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
     <link rel="stylesheet" href="../shared/styles.css">
+    
+    <!-- Inline admin guard - runs first -->
+    <script>
+    (async () => {
+        // Avoid any global guard race conditions
+        window.SA_PAGE_ROLE = 'admin';
+
+        // Ensure session
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) { 
+            location.replace('../auth/signin.html'); 
+            return; 
+        }
+
+        // Ensure profile + role
+        const prof = await (window.ensureProfile ? window.ensureProfile(user) : null);
+        const role = prof?.role ?? user?.user_metadata?.role ?? 'shelfer';
+
+        if (role !== 'admin') {
+            // Not an admin → send to their dashboard instead of sign-in
+            const base = location.origin.includes('localhost')
+                ? 'http://localhost:8000'
+                : 'https://courtneybhenderu-prog.github.io/shelfassured-demo';
+            location.replace(role === 'brand_client'
+                ? `${base}/dashboard/brand-client.html`
+                : `${base}/dashboard/shelfer.html`);
+            return;
+        }
+
+        // Expose a flag so any global guard knows we've passed admin checks
+        window.SA_ADMIN_READY = true;
+    })();
+    </script>
 </head>
 <body>
     <div class="min-h-screen bg-gray-100">
@@ -123,291 +156,12 @@
         </div>
     </div>
 
-    <!-- Include shared API -->
-    <script src="../shared/api.js"></script>
+    <!-- Include shared API with cache busting -->
+    <script src="../shared/api.js?v=20250110"></script>
     
-    <!-- Inline admin guard - runs immediately after api.js -->
-    <script>
-    (async () => {
-        // Avoid any global guard race conditions
-        window.SA_PAGE_ROLE = 'admin';
-
-        // Ensure session
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) { 
-            location.replace('../auth/signin.html'); 
-            return; 
-        }
-
-        // Ensure profile + role
-        const prof = await (window.ensureProfile ? window.ensureProfile(user) : null);
-        const role = prof?.role ?? user?.user_metadata?.role ?? 'shelfer';
-
-        if (role !== 'admin') {
-            // Not an admin → send to their dashboard instead of sign-in
-            const base = location.origin.includes('localhost')
-                ? 'http://localhost:8000'
-                : 'https://courtneybhenderu-prog.github.io/shelfassured-demo';
-            location.replace(role === 'brand_client'
-                ? `${base}/dashboard/brand-client.html`
-                : `${base}/dashboard/shelfer.html`);
-            return;
-        }
-
-        // Expose a flag so any global guard knows we've passed admin checks
-        window.SA_ADMIN_READY = true;
-    })();
-    </script>
+    <!-- Include admin dashboard logic with cache busting -->
+    <script src="../pages/admin-dashboard.js?v=20250110"></script>
     
-    <script>
-        let currentUser = null;
-        let userProfile = null;
-
-        // Initialize dashboard
-        document.addEventListener('DOMContentLoaded', async function() {
-            console.log('🔧 Admin Dashboard initialized');
-            
-            // Wait for Supabase to be available
-            let attempts = 0;
-            while (!window.supabase && attempts < 10) {
-                console.log('⏳ Waiting for Supabase to load...', attempts);
-                await new Promise(resolve => setTimeout(resolve, 100));
-                attempts++;
-            }
-            
-            if (!window.supabase) {
-                console.error('❌ Supabase failed to load');
-                window.location.href = '../auth/signin.html';
-                return;
-            }
-            
-            console.log('✅ Supabase loaded, checking admin access first...');
-            
-            // GLOBAL GUARD: Check admin access immediately
-            const isAdmin = await checkAdminAccess();
-            if (!isAdmin) {
-                console.log('❌ Admin access denied, redirecting...');
-                return; // checkAdminAccess handles the redirect
-            }
-            
-            console.log('✅ Admin access confirmed, initializing dashboard');
-            await initializeDashboard();
-        });
-
-        // GLOBAL GUARD: Check admin access immediately
-        async function checkAdminAccess() {
-            try {
-                console.log('🔍 GLOBAL GUARD: Checking admin access...');
-                
-                // Get current user
-                const { data: { user } } = await supabase.auth.getUser();
-                if (!user) {
-                    console.log('❌ No user found, redirecting to signin');
-                    window.location.href = '../auth/signin.html';
-                    return false;
-                }
-                console.log('✅ User found:', user.email);
-                currentUser = user;
-
-                // Get user profile
-                console.log('🔍 Fetching profile for user:', user.id, user.email);
-                const { data: profile, error } = await supabase
-                    .from('users')
-                    .select('role, full_name, approval_status')
-                    .eq('id', user.id)
-                    .single();
-
-                if (error) {
-                    console.error('❌ Error fetching user profile:', error);
-                    console.error('❌ Error details:', JSON.stringify(error, null, 2));
-                    
-                    // If it's a "not found" error, try to create the profile
-                    if (error.code === 'PGRST116' || error.message.includes('No rows found')) {
-                        console.log('🔄 Profile not found, attempting to create...');
-                        try {
-                            const newProfile = await ensureProfile(user);
-                            if (newProfile && newProfile.role === 'admin') {
-                                console.log('✅ Profile created successfully:', newProfile);
-                                userProfile = newProfile;
-                            } else {
-                                console.error('❌ Created profile is not admin:', newProfile);
-                                window.location.href = '../auth/signin.html';
-                                return false;
-                            }
-                        } catch (createError) {
-                            console.error('❌ Error creating profile:', createError);
-                            window.location.href = '../auth/signin.html';
-                            return false;
-                        }
-                    } else {
-                        window.location.href = '../auth/signin.html';
-                        return false;
-                    }
-                } else if (!profile) {
-                    console.error('❌ No profile data returned');
-                    window.location.href = '../auth/signin.html';
-                    return false;
-                } else {
-                    console.log('✅ Profile loaded:', profile);
-                    userProfile = profile;
-                }
-                
-                // Ensure userProfile is set before proceeding
-                if (!userProfile) {
-                    console.error('❌ userProfile is still undefined after profile loading');
-                    window.location.href = '../auth/signin.html';
-                    return false;
-                }
-
-                // Check admin access
-                console.log('🔍 Checking admin access. userProfile:', userProfile);
-                console.log('🔍 userProfile.role:', userProfile.role);
-                
-                if (userProfile.role !== 'admin') {
-                    console.log('❌ Access denied. User role:', userProfile.role);
-                    alert('Access denied. Admin privileges required.');
-                    window.location.href = '../dashboard/shelfer.html';
-                    return false;
-                }
-
-                console.log('✅ Admin access confirmed for:', userProfile.email);
-                return true;
-
-            } catch (error) {
-                console.error('❌ Error in checkAdminAccess:', error);
-                window.location.href = '../auth/signin.html';
-                return false;
-            }
-        }
-
-        // Initialize dashboard (admin access already checked by global guard)
-        async function initializeDashboard() {
-            try {
-                console.log('🚀 Starting initializeDashboard...');
-                
-                // Update UI
-                document.getElementById('admin-user').textContent = `Welcome, ${userProfile.full_name || currentUser.email}`;
-                
-                // Load dashboard data
-                await loadDashboardData();
-
-            } catch (error) {
-                console.error('Error initializing dashboard:', error);
-                window.location.href = '../auth/signin.html';
-            }
-        }
-
-        // Load dashboard data
-        async function loadDashboardData() {
-            try {
-                // Load all data in parallel
-                const [jobs, users, submissions, helpRequests] = await Promise.all([
-                    saGet('jobs', []),
-                    saGet('users', []),
-                    saGet('job_submissions', []),
-                    saGet('help_requests', [])
-                ]);
-
-                // Update metrics
-                updateMetrics(jobs, users, submissions, helpRequests);
-                
-                // Display recent activity
-                displayRecentJobs(jobs.slice(0, 5));
-                displayRecentUsers(users.slice(0, 5));
-
-            } catch (error) {
-                console.error('Error loading dashboard data:', error);
-            }
-        }
-
-        // Update key metrics
-        function updateMetrics(jobs, users, submissions, helpRequests) {
-            // Total jobs
-            document.getElementById('total-jobs').textContent = jobs.length;
-            
-            // Active users (exclude admins)
-            const activeUsers = users.filter(user => user.role !== 'admin').length;
-            document.getElementById('active-users').textContent = activeUsers;
-            
-            // Pending reviews
-            const pendingReviews = submissions.filter(sub => sub.status === 'pending_review').length;
-            document.getElementById('pending-reviews').textContent = pendingReviews;
-            
-            // Help requests (unread)
-            const unreadHelp = helpRequests.filter(req => !req.is_read).length;
-            document.getElementById('help-requests').textContent = unreadHelp;
-        }
-
-        // Display recent jobs
-        function displayRecentJobs(jobs) {
-            const container = document.getElementById('recent-jobs');
-            
-            if (jobs.length === 0) {
-                container.innerHTML = '<div class="text-center text-gray-500">No jobs created yet</div>';
-                return;
-            }
-
-            const jobsHtml = jobs.map(job => `
-                <div class="py-3 border-b border-gray-200 last:border-b-0">
-                    <div class="flex items-start justify-between">
-                        <div class="flex-1">
-                            <div class="font-medium text-gray-900">${job.title}</div>
-                            <div class="text-sm text-gray-600">Status: <span class="font-medium ${job.status === 'completed' ? 'text-green-600' : job.status === 'pending' ? 'text-blue-600' : 'text-gray-600'}">${job.status}</span></div>
-                            <div class="text-sm text-gray-500">Created: ${new Date(job.created_at).toLocaleDateString()}</div>
-                        </div>
-                        <div class="text-right">
-                            <div class="text-sm font-medium text-gray-900">$${job.total_cost || 0}</div>
-                        </div>
-                    </div>
-                </div>
-            `).join('');
-
-            container.innerHTML = jobsHtml;
-        }
-
-        // Display recent users
-        function displayRecentUsers(users) {
-            const container = document.getElementById('recent-users');
-            
-            if (users.length === 0) {
-                container.innerHTML = '<div class="text-center text-gray-500">No users yet</div>';
-                return;
-            }
-
-            const usersHtml = users.map(user => `
-                <div class="py-3 border-b border-gray-200 last:border-b-0">
-                    <div class="flex items-start justify-between">
-                        <div class="flex-1">
-                            <div class="font-medium text-gray-900">${user.full_name || user.email}</div>
-                            <div class="text-sm text-gray-600">Role: <span class="font-medium ${user.role === 'admin' ? 'text-red-600' : user.role === 'brand_client' ? 'text-blue-600' : 'text-green-600'}">${user.role}</span></div>
-                            <div class="text-sm text-gray-500">Joined: ${new Date(user.created_at).toLocaleDateString()}</div>
-                        </div>
-                        <div class="text-right">
-                            <div class="text-sm font-medium text-gray-900">${user.is_active ? 'Active' : 'Inactive'}</div>
-                        </div>
-                    </div>
-                </div>
-            `).join('');
-
-            container.innerHTML = usersHtml;
-        }
-
-        // Handle sign out
-        async function handleSignOut() {
-            try {
-                await supabase.auth.signOut();
-                window.location.href = '../auth/signin.html';
-            } catch (error) {
-                console.error('Error signing out:', error);
-                window.location.href = '../auth/signin.html';
-            }
-        }
-
-        // Navigation helper
-        function goToPage(page) {
-            window.location.href = page;
-        }
-    </script>
 
     <!-- Navigation -->
     <div class="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200">
