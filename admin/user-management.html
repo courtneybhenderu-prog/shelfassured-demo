@@ -235,7 +235,9 @@
                 updateStats(allUsers);
                 
                 // Display users
+                console.log('🔍 Debug: About to call displayUsers with', allUsers.length, 'users');
                 displayUsers(allUsers);
+                console.log('🔍 Debug: displayUsers call completed');
 
             } catch (error) {
                 console.error('Error loading data:', error);
@@ -257,9 +259,10 @@
 
         // Display users in table
         function displayUsers(users) {
-            console.log('🔍 Debug: displayUsers called with:', users.length, 'users');
-            const tbody = document.getElementById('users-table-body');
-            console.log('🔍 Debug: tbody element found:', !!tbody);
+            try {
+                console.log('🔍 Debug: displayUsers called with:', users.length, 'users');
+                const tbody = document.getElementById('users-table-body');
+                console.log('🔍 Debug: tbody element found:', !!tbody);
             
             if (users.length === 0) {
                 tbody.innerHTML = '<tr><td colspan="6" class="px-6 py-4 text-center text-gray-500">No users found</td></tr>';
@@ -312,6 +315,10 @@
             console.log('🔍 Debug: Setting innerHTML with', usersHtml.length, 'characters');
             tbody.innerHTML = usersHtml;
             console.log('🔍 Debug: Display complete');
+            } catch (error) {
+                console.error('❌ Error in displayUsers:', error);
+                console.error('❌ Users data:', users);
+            }
         }
 
         // Get role color class
