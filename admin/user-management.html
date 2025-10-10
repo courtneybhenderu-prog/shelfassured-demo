@@ -190,15 +190,32 @@
         // Load all data
         async function loadData() {
             try {
-                // Load users
-                const users = await saGet('users', []);
-                allUsers = users;
+                // Load users with debugging
+                console.log('🔍 Debug: Attempting to load users...');
+                try {
+                    const users = await saGet('users', []);
+                    console.log('🔍 Debug: Users loaded successfully:', users);
+                    allUsers = users;
+                } catch (error) {
+                    console.error('❌ Error loading users:', error);
+                    // Try direct Supabase query as fallback
+                    try {
+                        const { data: directUsers, error: directError } = await supabase
+                            .from('users')
+                            .select('*');
+                        console.log('🔍 Debug: Direct query result:', directUsers, directError);
+                        allUsers = directUsers || [];
+                    } catch (directError) {
+                        console.error('❌ Direct query also failed:', directError);
+                        allUsers = [];
+                    }
+                }
                 
                 // Update stats
-                updateStats(users);
+                updateStats(allUsers);
                 
                 // Display users
-                displayUsers(users);
+                displayUsers(allUsers);
 
             } catch (error) {
                 console.error('Error loading data:', error);
