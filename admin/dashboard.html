@@ -133,6 +133,22 @@
         // Initialize dashboard
         document.addEventListener('DOMContentLoaded', async function() {
             console.log('🔧 Admin Dashboard initialized');
+            
+            // Wait for Supabase to be available
+            let attempts = 0;
+            while (!window.supabase && attempts < 10) {
+                console.log('⏳ Waiting for Supabase to load...', attempts);
+                await new Promise(resolve => setTimeout(resolve, 100));
+                attempts++;
+            }
+            
+            if (!window.supabase) {
+                console.error('❌ Supabase failed to load');
+                window.location.href = '../auth/signin.html';
+                return;
+            }
+            
+            console.log('✅ Supabase loaded, initializing dashboard');
             await initializeDashboard();
         });
 
@@ -155,27 +171,52 @@
                     .eq('id', user.id)
                     .single();
 
-                if (error || !profile) {
+                if (error) {
                     console.error('❌ Error fetching user profile:', error);
-                    console.error('❌ Profile data:', profile);
+                    console.error('❌ Error details:', JSON.stringify(error, null, 2));
+                    
+                    // If it's a "not found" error, try to create the profile
+                    if (error.code === 'PGRST116' || error.message.includes('No rows found')) {
+                        console.log('🔄 Profile not found, attempting to create...');
+                        try {
+                            const newProfile = await ensureProfile(user);
+                            if (newProfile && newProfile.role === 'admin') {
+                                console.log('✅ Profile created successfully:', newProfile);
+                                userProfile = newProfile;
+                            } else {
+                                console.error('❌ Created profile is not admin:', newProfile);
+                                window.location.href = '../auth/signin.html';
+                                return;
+                            }
+                        } catch (createError) {
+                            console.error('❌ Error creating profile:', createError);
+                            window.location.href = '../auth/signin.html';
+                            return;
+                        }
+                    } else {
+                        window.location.href = '../auth/signin.html';
+                        return;
+                    }
+                } else if (!profile) {
+                    console.error('❌ No profile data returned');
                     window.location.href = '../auth/signin.html';
                     return;
+                } else {
+                    console.log('✅ Profile loaded:', profile);
+                    userProfile = profile;
                 }
-                
-                console.log('✅ Profile loaded:', profile);
-                userProfile = profile;
 
                 // Check admin access
-                if (profile.role !== 'admin') {
+                if (userProfile.role !== 'admin') {
                     alert('Access denied. Admin privileges required.');
                     window.location.href = '../dashboard/shelfer.html';
                     return;
                 }
 
-                console.log('✅ Admin access confirmed for:', profile.email);
+                console.log('✅ Admin access confirmed for:', userProfile.email);
 
                 // Update UI
-                document.getElementById('admin-user').textContent = `Welcome, ${profile.full_name || user.email}`;
+                document.getElementById('admin-user').textContent = `Welcome, ${userProfile.full_name || user.email}`;
                 
                 // Load dashboard data
                 await loadDashboardData();
