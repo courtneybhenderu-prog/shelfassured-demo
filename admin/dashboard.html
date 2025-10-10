@@ -13,6 +13,21 @@
     (async () => {
         console.log('🔍 INLINE GUARD: Starting admin check...');
         
+        // Wait for Supabase to be available
+        let attempts = 0;
+        while (!window.supabase && attempts < 20) {
+            console.log('⏳ INLINE GUARD: Waiting for Supabase...', attempts);
+            await new Promise(resolve => setTimeout(resolve, 100));
+            attempts++;
+        }
+        
+        if (!window.supabase) {
+            console.error('❌ INLINE GUARD: Supabase not available');
+            return;
+        }
+        
+        console.log('✅ INLINE GUARD: Supabase loaded');
+        
         // Avoid any global guard race conditions
         window.SA_PAGE_ROLE = 'admin';
         console.log('🔍 INLINE GUARD: Set SA_PAGE_ROLE = admin');
