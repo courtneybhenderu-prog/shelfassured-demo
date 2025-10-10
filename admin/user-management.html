@@ -194,6 +194,16 @@
         // Load all data
         async function loadData() {
             try {
+                // Test admin function first
+                console.log('🔍 Debug: Testing admin function...');
+                try {
+                    const { data: adminTest, error: adminError } = await supabase
+                        .rpc('is_admin');
+                    console.log('🔍 Debug: Admin test result:', adminTest, adminError);
+                } catch (adminTestError) {
+                    console.log('🔍 Debug: Admin test error:', adminTestError);
+                }
+                
                 // Load users with debugging
                 console.log('🔍 Debug: Attempting to load users...');
                 try {
@@ -206,10 +216,14 @@
                     console.error('❌ Error loading users:', error);
                     // Try direct Supabase query as fallback
                     try {
+                        console.log('🔍 Debug: Trying direct Supabase query...');
                         const { data: directUsers, error: directError } = await supabase
                             .from('users')
-                            .select('*');
-                        console.log('🔍 Debug: Direct query result:', directUsers, directError);
+                            .select('*')
+                            .order('created_at', { ascending: false });
+                        console.log('🔍 Debug: Direct query result:', directUsers);
+                        console.log('🔍 Debug: Direct query error:', directError);
+                        console.log('🔍 Debug: Direct query count:', directUsers?.length || 0);
                         allUsers = directUsers || [];
                     } catch (directError) {
                         console.error('❌ Direct query also failed:', directError);
