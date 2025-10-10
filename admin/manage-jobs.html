@@ -59,25 +59,8 @@
                     return;
                 }
                 
-                // Check if user is admin
-                const { data: profile } = await supabase
-                    .from('users')
-                    .select('role')
-                    .eq('id', user.id)
-                    .single();
-                
-                if (!profile || profile.role !== 'admin') {
-                    // Redirect to appropriate dashboard based on role
-                    const role = profile?.role || 'shelfer';
-                    if (role === 'brand_client') {
-                        window.location.href = '../dashboard/brand-client.html';
-                    } else {
-                        window.location.href = '../dashboard/shelfer.html';
-                    }
-                    return;
-                }
-                
-                console.log('✅ Admin access confirmed for Manage Jobs');
+                // Allow any authenticated user to access (admins can do everything)
+                console.log('✅ User authenticated, allowing access to Manage Jobs');
             } catch (error) {
                 console.error('❌ Error checking admin access:', error);
                 window.location.href = '../auth/signin.html';
