@@ -9,6 +9,8 @@ CREATE TABLE IF NOT EXISTS public.pilot_leads (
     role TEXT NOT NULL,
     phone TEXT,
     problem TEXT NOT NULL,
+    store_count TEXT,
+    biggest_challenge TEXT,
     message TEXT,
     status TEXT DEFAULT 'new' CHECK (status IN ('new', 'contacted', 'qualified', 'converted', 'closed')),
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
