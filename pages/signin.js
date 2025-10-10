@@ -35,7 +35,8 @@ window.handleForgotPassword = async function() {
 };
 
 // Handle form submission
-document.getElementById('signin-form').addEventListener('submit', async function(e) {
+document.addEventListener('DOMContentLoaded', function() {
+    document.getElementById('signin-form').addEventListener('submit', async function(e) {
     e.preventDefault();
     
     const email = document.getElementById('login-email').value;
@@ -89,4 +90,5 @@ document.getElementById('signin-form').addEventListener('submit', async function
         console.error('❌ Sign in error:', error);
         showMessage(messageEl, 'Error: ' + error.message, 'error');
     }
+    });
 });
