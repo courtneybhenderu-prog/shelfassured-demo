@@ -363,11 +363,12 @@ window.ensureProfile = async function(user) {
 document.addEventListener('DOMContentLoaded', async function() {
   console.log('🚀 ShelfAssured API initialized with Supabase!');
   
-<<<<<<< HEAD
   // Wait for Supabase to be available
   if (!supabase) {
     console.log('⏳ Waiting for Supabase to initialize...');
-=======
+    return;
+  }
+  
   // Cooperative global guard - respects per-page overrides
   console.log('🔍 GLOBAL GUARD: Checking flags...');
   console.log('🔍 GLOBAL GUARD: SA_DISABLE_GLOBAL_GUARD =', window.SA_DISABLE_GLOBAL_GUARD);
@@ -375,22 +376,10 @@ document.addEventListener('DOMContentLoaded', async function() {
   
   if (window.SA_DISABLE_GLOBAL_GUARD === true) {
     console.log('🔒 Global guard disabled by page');
->>>>>>> 5297ed5ddd26304acbf8ba2cbb1a8905818fa0d0
     return;
   }
   
   // Check if user is logged in
-<<<<<<< HEAD
-  try {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (user) {
-      console.log('✅ User logged in:', user.email);
-    } else {
-      console.log('ℹ️ No user logged in');
-    }
-  } catch (error) {
-    console.error('❌ Error checking user auth:', error);
-=======
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) {
     console.log('ℹ️ No user logged in');
@@ -440,7 +429,6 @@ document.addEventListener('DOMContentLoaded', async function() {
     } catch (error) {
       console.error('❌ Error checking role:', error);
     }
->>>>>>> 5297ed5ddd26304acbf8ba2cbb1a8905818fa0d0
   }
   
   // Load data from Supabase
