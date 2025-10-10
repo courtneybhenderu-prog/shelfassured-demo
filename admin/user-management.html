@@ -86,10 +86,10 @@
                     </div>
                     <div>
                         <label class="block text-sm font-medium text-gray-700">Date Range</label>
-                        <div class="mt-1 flex space-x-2">
-                            <input type="date" id="date-start" placeholder="Start Date" class="block w-full border border-gray-300 rounded-md px-3 py-2">
-                            <span class="flex items-center text-gray-500">to</span>
-                            <input type="date" id="date-end" placeholder="End Date" class="block w-full border border-gray-300 rounded-md px-3 py-2">
+                        <div class="mt-1 flex space-x-2 items-center">
+                            <input type="date" id="date-start" class="block w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:border-indigo-500 focus:ring-indigo-500">
+                            <span class="text-gray-500 text-sm">to</span>
+                            <input type="date" id="date-end" class="block w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:border-indigo-500 focus:ring-indigo-500">
                         </div>
                     </div>
                 </div>
@@ -199,6 +199,8 @@
                 try {
                     const users = await saGet('users', []);
                     console.log('🔍 Debug: Users loaded successfully:', users);
+                    console.log('🔍 Debug: Number of users:', users.length);
+                    console.log('🔍 Debug: User details:', users.map(u => ({ id: u.id, email: u.email, role: u.role, is_active: u.is_active })));
                     allUsers = users;
                 } catch (error) {
                     console.error('❌ Error loading users:', error);
