@@ -60,16 +60,26 @@ document.getElementById('signin-form').addEventListener('submit', async function
             console.log('🔄 Calling ensureProfile...');
             const profile = await ensureProfile(result.data.user);
             console.log('📋 Profile result:', profile);
+            console.log('🔍 Profile role:', profile.role);
+            console.log('🔍 Profile data:', JSON.stringify(profile, null, 2));
+            
             if (!profile) {
                 showMessage(messageEl, 'Error: Could not load user profile', 'error');
                 return;
             }
-            console.log('✅ Profile loaded successfully, redirecting...');
+            console.log('✅ Profile loaded successfully, checking approval status...');
+            
+            // Check approval status for shelfers
+            if (profile.role === 'shelfer' && profile.approval_status !== 'approved') {
+                console.log('⏳ Shelfer account pending approval, redirecting to pending page');
+                setTimeout(() => goToPage('../auth/pending-approval.html'), 1000);
+                return;
+            }
             
             // Role-based redirection
             let redirectPage;
             if (profile.role === 'admin') {
-                redirectPage = '../admin/barcode-capture.html';
+                redirectPage = '../admin/dashboard.html';
             } else if (profile.role === 'brand_client') {
                 redirectPage = '../dashboard/brand-client.html';
             } else {

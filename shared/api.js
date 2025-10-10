@@ -299,12 +299,14 @@ window.ensureProfile = async function(user) {
     
     // If no existing profile, create one
     console.log('🔄 Creating new profile for user');
+    const role = md.role || 'shelfer';
     const profileData = {
       id: user.id,
       email: user.email,
       full_name: md.full_name || null,
       phone: md.phone || null,
-      role: md.role || 'shelfer'
+      role: role,
+      approval_status: role === 'shelfer' ? 'pending' : 'approved'
     };
     console.log('📋 Profile data to insert:', profileData);
     
