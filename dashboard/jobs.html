@@ -15,7 +15,11 @@
             <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 <div class="flex justify-between items-center py-4">
                     <div class="flex items-center">
-                        <h1 class="text-2xl font-bold text-gray-900">Jobs</h1>
+                        <h1 class="text-2xl font-bold text-gray-900" id="page-title">Jobs</h1>
+                        <div id="view-toggle" class="ml-4 hidden">
+                            <button id="local-view" class="px-3 py-1 text-sm bg-blue-100 text-blue-700 rounded-md mr-2">Local Jobs</button>
+                            <button id="global-view" class="px-3 py-1 text-sm text-gray-600 hover:text-gray-800">All Jobs</button>
+                        </div>
                     </div>
                     <div class="flex items-center space-x-4">
                         <span id="user-info" class="text-sm text-gray-600">Loading...</span>
@@ -26,10 +30,15 @@
         </div>
 
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+            <!-- View Description -->
+            <div id="view-description" class="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                <p class="text-blue-800" id="description-text">Loading...</p>
+            </div>
+
             <!-- Jobs List -->
             <div class="bg-white rounded-lg shadow">
                 <div class="px-6 py-4 border-b border-gray-200">
-                    <h3 class="text-lg font-medium text-gray-900">Available Jobs</h3>
+                    <h3 class="text-lg font-medium text-gray-900" id="jobs-title">Available Jobs</h3>
                 </div>
                 <div id="jobs-list" class="p-6">
                     <div class="text-center text-gray-500">Loading jobs...</div>
@@ -42,49 +51,204 @@
     <script src="../shared/api.js"></script>
     
     <script>
+        let currentUser = null;
+        let userProfile = null;
+        let allJobs = [];
+        let isLocalView = true;
+
         // Initialize page
         document.addEventListener('DOMContentLoaded', async function() {
             console.log('🔧 Jobs page initialized');
-            await loadJobs();
+            await initializePage();
         });
 
-        // Load jobs
+        // Initialize page with user context
+        async function initializePage() {
+            try {
+                // Get current user
+                const { data: { user } } = await supabase.auth.getUser();
+                if (!user) {
+                    window.location.href = '../auth/signin.html';
+                    return;
+                }
+                currentUser = user;
+
+                // Get user profile
+                const { data: profile, error } = await supabase
+                    .from('users')
+                    .select('role, full_name, location')
+                    .eq('id', user.id)
+                    .single();
+
+                if (error || !profile) {
+                    console.error('Error fetching user profile:', error);
+                    window.location.href = '../auth/signin.html';
+                    return;
+                }
+                userProfile = profile;
+
+                // Update UI based on role
+                updateUIForRole();
+                
+                // Load jobs
+                await loadJobs();
+
+            } catch (error) {
+                console.error('Error initializing page:', error);
+                window.location.href = '../auth/signin.html';
+            }
+        }
+
+        // Update UI based on user role
+        function updateUIForRole() {
+            const userInfoEl = document.getElementById('user-info');
+            const pageTitleEl = document.getElementById('page-title');
+            const viewToggleEl = document.getElementById('view-toggle');
+            const descriptionEl = document.getElementById('description-text');
+            const jobsTitleEl = document.getElementById('jobs-title');
+
+            userInfoEl.textContent = `Welcome, ${userProfile.full_name || currentUser.email}`;
+
+            if (userProfile.role === 'brand_client' || userProfile.role === 'admin') {
+                // Brand client view - only their jobs
+                pageTitleEl.textContent = 'My Jobs';
+                jobsTitleEl.textContent = 'Your Jobs';
+                descriptionEl.textContent = 'View all your active and completed audit jobs.';
+                viewToggleEl.classList.add('hidden'); // No toggle for brand clients
+            } else {
+                // Shelfer view - location-based + global toggle
+                pageTitleEl.textContent = 'Available Jobs';
+                jobsTitleEl.textContent = 'Available Jobs';
+                descriptionEl.textContent = `Jobs available in your area (${userProfile.location || 'Location not set'}).`;
+                viewToggleEl.classList.remove('hidden');
+                
+                // Set up toggle handlers
+                document.getElementById('local-view').addEventListener('click', () => switchToLocalView());
+                document.getElementById('global-view').addEventListener('click', () => switchToGlobalView());
+            }
+        }
+
+        // Switch to local view (shelfers only)
+        function switchToLocalView() {
+            isLocalView = true;
+            document.getElementById('local-view').className = 'px-3 py-1 text-sm bg-blue-100 text-blue-700 rounded-md mr-2';
+            document.getElementById('global-view').className = 'px-3 py-1 text-sm text-gray-600 hover:text-gray-800';
+            document.getElementById('description-text').textContent = `Jobs available in your area (${userProfile.location || 'Location not set'}).`;
+            displayJobs();
+        }
+
+        // Switch to global view (shelfers only)
+        function switchToGlobalView() {
+            isLocalView = false;
+            document.getElementById('local-view').className = 'px-3 py-1 text-sm text-gray-600 hover:text-gray-800 mr-2';
+            document.getElementById('global-view').className = 'px-3 py-1 text-sm bg-blue-100 text-blue-700 rounded-md';
+            document.getElementById('description-text').textContent = 'All available jobs across all locations. Share with friends in other markets!';
+            displayJobs();
+        }
+
+        // Load jobs based on user role
         async function loadJobs() {
             try {
-                const jobs = await saGet('jobs', []);
-                displayJobs(jobs);
+                allJobs = await saGet('jobs', []);
+                
+                if (userProfile.role === 'brand_client' || userProfile.role === 'admin') {
+                    // Filter to only user's jobs
+                    allJobs = allJobs.filter(job => job.client_id === currentUser.id);
+                }
+                
+                displayJobs();
             } catch (error) {
                 console.error('Error loading jobs:', error);
                 document.getElementById('jobs-list').innerHTML = '<div class="text-center text-red-500">Error loading jobs</div>';
             }
         }
 
-        // Display jobs
-        function displayJobs(jobs) {
+        // Display jobs based on current view
+        function displayJobs() {
             const container = document.getElementById('jobs-list');
             
-            if (jobs.length === 0) {
-                container.innerHTML = '<div class="text-center text-gray-500">No jobs available</div>';
+            let jobsToShow = allJobs;
+            
+            // For shelfers, filter by location if in local view
+            if (userProfile.role === 'shelfer' && isLocalView && userProfile.location) {
+                jobsToShow = allJobs.filter(job => {
+                    // Simple location matching - can be enhanced later
+                    return job.store_location && job.store_location.toLowerCase().includes(userProfile.location.toLowerCase());
+                });
+            }
+            
+            // Only show available jobs for shelfers
+            if (userProfile.role === 'shelfer') {
+                jobsToShow = jobsToShow.filter(job => job.status === 'pending' || job.status === 'assigned');
+            }
+            
+            if (jobsToShow.length === 0) {
+                if (userProfile.role === 'brand_client') {
+                    container.innerHTML = '<div class="text-center text-gray-500">No jobs created yet. <a href="create-job.html" class="text-blue-600 hover:underline">Create your first job</a></div>';
+                } else {
+                    container.innerHTML = '<div class="text-center text-gray-500">No jobs available in this view. Try switching to "All Jobs" to see opportunities in other markets!</div>';
+                }
                 return;
             }
 
-            const jobsHtml = jobs.map(job => `
-                <div class="py-4 border-b border-gray-200 last:border-b-0">
-                    <div class="flex items-start justify-between">
-                        <div class="flex-1">
-                            <div class="font-medium text-gray-900">${job.title}</div>
-                            <div class="text-sm text-gray-600">${job.description || 'No description'}</div>
-                            <div class="text-sm text-gray-500">Status: ${job.status}</div>
-                        </div>
-                        <div class="text-right">
-                            <div class="text-sm font-medium text-gray-900">$${job.total_payout || 0}</div>
-                            <button class="btn-red text-sm mt-2">Accept Job</button>
+            const jobsHtml = jobsToShow.map(job => {
+                const isBrandView = userProfile.role === 'brand_client' || userProfile.role === 'admin';
+                const canAccept = userProfile.role === 'shelfer' && (job.status === 'pending' || job.status === 'assigned');
+                
+                return `
+                    <div class="py-4 border-b border-gray-200 last:border-b-0">
+                        <div class="flex items-start justify-between">
+                            <div class="flex-1">
+                                <div class="font-medium text-gray-900">${job.title}</div>
+                                <div class="text-sm text-gray-600">${job.description || 'No description'}</div>
+                                <div class="text-sm text-gray-500">
+                                    Status: <span class="font-medium ${job.status === 'completed' ? 'text-green-600' : job.status === 'pending' ? 'text-blue-600' : 'text-gray-600'}">${job.status}</span>
+                                    ${job.store_location ? ` • ${job.store_location}` : ''}
+                                </div>
+                                <div class="text-sm text-gray-500">Created: ${new Date(job.created_at).toLocaleDateString()}</div>
+                            </div>
+                            <div class="text-right">
+                                ${isBrandView ? 
+                                    `<div class="text-sm font-medium text-gray-900">${job.status === 'completed' ? '✅ Complete' : '⏳ In Progress'}</div>` :
+                                    `<div class="text-sm font-medium text-gray-900">$${job.payout_per_store || 0}/store</div>
+                                     ${canAccept ? '<button class="btn-red text-sm mt-2" onclick="acceptJob(\'' + job.id + '\')">Accept Job</button>' : ''}`
+                                }
+                            </div>
                         </div>
                     </div>
-                </div>
-            `).join('');
+                `;
+            }).join('');
 
             container.innerHTML = jobsHtml;
+        }
+
+        // Accept job (shelfers only)
+        async function acceptJob(jobId) {
+            try {
+                // Update job status to assigned
+                const { error } = await supabase
+                    .from('jobs')
+                    .update({ 
+                        status: 'assigned',
+                        assigned_to: currentUser.id,
+                        assigned_at: new Date().toISOString()
+                    })
+                    .eq('id', jobId);
+
+                if (error) {
+                    console.error('Error accepting job:', error);
+                    alert('Error accepting job. Please try again.');
+                    return;
+                }
+
+                // Reload jobs
+                await loadJobs();
+                alert('Job accepted successfully!');
+                
+            } catch (error) {
+                console.error('Error accepting job:', error);
+                alert('Error accepting job. Please try again.');
+            }
         }
 
         // Handle sign out
@@ -102,7 +266,7 @@
     <!-- Navigation -->
     <div class="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200">
         <div class="flex justify-around py-3">
-            <button onclick="goToPage('shelfer.html')" class="text-gray-500 hover:text-gray-700">Dashboard</button>
+            <button onclick="goToPage(userProfile.role === 'brand_client' ? 'brand-client.html' : 'shelfer.html')" class="text-gray-500 hover:text-gray-700">Dashboard</button>
             <button class="font-bold text-[#C62828]">Jobs</button>
             <button onclick="goToPage('brands.html')" class="text-gray-500 hover:text-gray-700">Brands</button>
             <button onclick="goToPage('profile.html')" class="text-gray-500 hover:text-gray-700">Profile</button>
