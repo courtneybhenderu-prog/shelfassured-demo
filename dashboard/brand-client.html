@@ -46,8 +46,8 @@
                 </div>
                 <div class="bg-white rounded-lg shadow p-6">
                     <h3 class="text-lg font-semibold text-gray-900">Success Rate</h3>
-                    <p class="text-3xl font-bold text-purple-600 mt-2" id="success-rate">100%</p>
-                    <p class="text-sm text-gray-500 mt-1">Quality score</p>
+                    <p class="text-3xl font-bold text-purple-600 mt-2" id="success-rate">0%</p>
+                    <p class="text-sm text-gray-500 mt-1" id="success-rate-desc">Start creating jobs to track your success rate</p>
                 </div>
             </div>
 
@@ -77,7 +77,7 @@
                     </div>
                     <div class="ml-4">
                         <h3 class="text-lg font-semibold text-gray-900">Build Your Shelf Intelligence</h3>
-                        <p class="text-gray-600 mt-1">Each audit brings valuable insights to optimize your brand's retail presence. Keep building your data library!</p>
+                        <p class="text-gray-600 mt-1" id="motivational-text">Each audit brings valuable insights to optimize your brand's retail presence. Start building your data library today!</p>
                     </div>
                 </div>
             </div>
@@ -167,14 +167,52 @@
                 // Calculate success rate
                 const totalJobs = clientJobs.length;
                 const completedJobs = clientJobs.filter(job => job.status === 'completed').length;
-                const successRate = totalJobs > 0 ? Math.round((completedJobs / totalJobs) * 100) : 100;
+                const successRate = totalJobs > 0 ? Math.round((completedJobs / totalJobs) * 100) : 0;
                 document.getElementById('success-rate').textContent = `${successRate}%`;
+                
+                // Update success rate description based on data availability
+                const successRateDesc = document.getElementById('success-rate-desc');
+                if (totalJobs === 0) {
+                    successRateDesc.textContent = 'Start creating jobs to track your success rate';
+                } else if (completedJobs === 0) {
+                    successRateDesc.textContent = 'No completed jobs yet - success rate will appear here';
+                } else if (successRate >= 90) {
+                    successRateDesc.textContent = 'Excellent performance!';
+                } else if (successRate >= 75) {
+                    successRateDesc.textContent = 'Great job completion rate';
+                } else if (successRate >= 50) {
+                    successRateDesc.textContent = 'Good completion rate';
+                } else {
+                    successRateDesc.textContent = 'Focus on completing more jobs';
+                }
+                
+                // Update motivational text based on progress
+                updateMotivationalText(totalJobs, completedJobs);
                 
                 // Display recent jobs
                 displayRecentJobs(clientJobs.slice(0, 5));
                 
             } catch (error) {
                 console.error('Error loading dashboard data:', error);
+            }
+        }
+
+        // Update motivational text based on user progress
+        function updateMotivationalText(totalJobs, completedJobs) {
+            const motivationalText = document.getElementById('motivational-text');
+            
+            if (totalJobs === 0) {
+                motivationalText.textContent = 'Each audit brings valuable insights to optimize your brand\'s retail presence. Start building your data library today!';
+            } else if (completedJobs === 0) {
+                motivationalText.textContent = 'You\'ve created jobs - now watch your shelf intelligence grow as they get completed!';
+            } else if (completedJobs === 1) {
+                motivationalText.textContent = 'Great start! Your first completed audit is building valuable retail insights. Keep going!';
+            } else if (completedJobs < 5) {
+                motivationalText.textContent = `You're building momentum with ${completedJobs} completed audits! Each one adds to your retail intelligence.`;
+            } else if (completedJobs < 10) {
+                motivationalText.textContent = `Impressive! ${completedJobs} completed audits are creating a solid foundation of shelf intelligence.`;
+            } else {
+                motivationalText.textContent = `Outstanding! ${completedJobs} completed audits have built a comprehensive retail intelligence database.`;
             }
         }
 
