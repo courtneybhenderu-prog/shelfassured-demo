@@ -257,14 +257,18 @@
 
         // Display users in table
         function displayUsers(users) {
+            console.log('🔍 Debug: displayUsers called with:', users.length, 'users');
             const tbody = document.getElementById('users-table-body');
+            console.log('🔍 Debug: tbody element found:', !!tbody);
             
             if (users.length === 0) {
                 tbody.innerHTML = '<tr><td colspan="6" class="px-6 py-4 text-center text-gray-500">No users found</td></tr>';
                 return;
             }
 
-            const usersHtml = users.map(user => {
+            console.log('🔍 Debug: Creating HTML for', users.length, 'users');
+            const usersHtml = users.map((user, index) => {
+                console.log(`🔍 Debug: Processing user ${index}:`, user.email, user.role);
                 return `
                     <tr>
                         <td class="px-6 py-4 whitespace-nowrap">
@@ -305,7 +309,9 @@
                 `;
             }).join('');
 
+            console.log('🔍 Debug: Setting innerHTML with', usersHtml.length, 'characters');
             tbody.innerHTML = usersHtml;
+            console.log('🔍 Debug: Display complete');
         }
 
         // Get role color class
