@@ -106,5 +106,44 @@
     </div>
 
     <script src="shared/api.js"></script>
+    <script>
+        // Debug script to check if goToPage is available
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('🔍 Debug: DOM loaded');
+            console.log('🔍 Debug: goToPage function available?', typeof window.goToPage);
+            
+            // Test the buttons
+            const createBtn = document.querySelector('button[onclick*="signup"]');
+            const signinBtn = document.querySelector('button[onclick*="signin"]');
+            
+            console.log('🔍 Debug: Create Account button found?', !!createBtn);
+            console.log('🔍 Debug: Sign In button found?', !!signinBtn);
+            
+            // Add click listeners as backup
+            if (createBtn) {
+                createBtn.addEventListener('click', function() {
+                    console.log('🔍 Debug: Create Account clicked');
+                    if (typeof window.goToPage === 'function') {
+                        window.goToPage('auth/signup.html');
+                    } else {
+                        console.error('❌ goToPage function not available');
+                        window.location.href = 'auth/signup.html';
+                    }
+                });
+            }
+            
+            if (signinBtn) {
+                signinBtn.addEventListener('click', function() {
+                    console.log('🔍 Debug: Sign In clicked');
+                    if (typeof window.goToPage === 'function') {
+                        window.goToPage('auth/signin.html');
+                    } else {
+                        console.error('❌ goToPage function not available');
+                        window.location.href = 'auth/signin.html';
+                    }
+                });
+            }
+        });
+    </script>
 </body>
 </html>
