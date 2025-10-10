@@ -61,11 +61,16 @@ document.addEventListener('DOMContentLoaded', function() {
             console.log('🔄 Calling ensureProfile...');
             const profile = await ensureProfile(result.data.user);
             console.log('📋 Profile result:', profile);
+            console.log('🔍 Profile role:', profile.role);
+            console.log('🔍 Profile data:', JSON.stringify(profile, null, 2));
+            
             if (!profile) {
                 showMessage(messageEl, 'Error: Could not load user profile', 'error');
                 return;
             }
-            console.log('✅ Profile loaded successfully, redirecting...');
+            console.log('✅ Profile loaded successfully, checking approval status...');
+            
+            // Approval check removed - all users approved by default
             
             // Role-based redirection
             let redirectPage;

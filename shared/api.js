@@ -317,12 +317,14 @@ window.ensureProfile = async function(user) {
     
     // If no existing profile, create one
     console.log('🔄 Creating new profile for user');
+    const role = md.role || 'shelfer';
     const profileData = {
       id: user.id,
       email: user.email,
       full_name: md.full_name || null,
       phone: md.phone || null,
-      role: md.role || 'shelfer'
+      role: role,
+      approval_status: 'approved' // All users approved by default
     };
     console.log('📋 Profile data to insert:', profileData);
     
@@ -358,13 +360,24 @@ window.ensureProfile = async function(user) {
 document.addEventListener('DOMContentLoaded', async function() {
   console.log('🚀 ShelfAssured API initialized with Supabase!');
   
+<<<<<<< HEAD
   // Wait for Supabase to be available
   if (!supabase) {
     console.log('⏳ Waiting for Supabase to initialize...');
+=======
+  // Cooperative global guard - respects per-page overrides
+  console.log('🔍 GLOBAL GUARD: Checking flags...');
+  console.log('🔍 GLOBAL GUARD: SA_DISABLE_GLOBAL_GUARD =', window.SA_DISABLE_GLOBAL_GUARD);
+  console.log('🔍 GLOBAL GUARD: SA_PAGE_ROLE =', window.SA_PAGE_ROLE);
+  
+  if (window.SA_DISABLE_GLOBAL_GUARD === true) {
+    console.log('🔒 Global guard disabled by page');
+>>>>>>> 5297ed5ddd26304acbf8ba2cbb1a8905818fa0d0
     return;
   }
   
   // Check if user is logged in
+<<<<<<< HEAD
   try {
     const { data: { user } } = await supabase.auth.getUser();
     if (user) {
@@ -374,6 +387,57 @@ document.addEventListener('DOMContentLoaded', async function() {
     }
   } catch (error) {
     console.error('❌ Error checking user auth:', error);
+=======
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) {
+    console.log('ℹ️ No user logged in');
+    // Only redirect if no page role is declared
+    if (!window.SA_PAGE_ROLE) {
+      console.log('🔄 No page role declared, redirecting to signin');
+      window.location.href = '../auth/signin.html';
+    }
+    return;
+  }
+  
+  console.log('✅ User logged in:', user.email);
+  
+  // If page has declared a role, check if user matches
+  if (window.SA_PAGE_ROLE) {
+    console.log('🔍 Page role declared:', window.SA_PAGE_ROLE);
+    
+    // If admin page and already passed admin check, do nothing
+    if (window.SA_PAGE_ROLE === 'admin' && window.SA_ADMIN_READY === true) {
+      console.log('✅ Admin page already passed checks, skipping global guard');
+      return;
+    }
+    
+    // Get user profile to check role
+    try {
+      const prof = await ensureProfile(user);
+      const role = prof?.role ?? user?.user_metadata?.role ?? 'shelfer';
+      
+      if (role !== window.SA_PAGE_ROLE) {
+        console.log('❌ Role mismatch:', role, 'vs', window.SA_PAGE_ROLE);
+        // Redirect to correct dashboard
+        const base = location.origin.includes('localhost')
+          ? 'http://localhost:8000'
+          : 'https://courtneybhenderu-prog.github.io/shelfassured-demo';
+        
+        if (role === 'admin') {
+          window.location.href = `${base}/admin/dashboard.html`;
+        } else if (role === 'brand_client') {
+          window.location.href = `${base}/dashboard/brand-client.html`;
+        } else {
+          window.location.href = `${base}/dashboard/shelfer.html`;
+        }
+        return;
+      }
+      
+      console.log('✅ Role matches page requirement:', role);
+    } catch (error) {
+      console.error('❌ Error checking role:', error);
+    }
+>>>>>>> 5297ed5ddd26304acbf8ba2cbb1a8905818fa0d0
   }
   
   // Load data from Supabase
