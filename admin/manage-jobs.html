@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Help & Support - Admin Dashboard</title>
+    <title>Manage Jobs - Admin Dashboard</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.47.5/dist/umd/supabase.min.js"></script>
     <link rel="stylesheet" href="../shared/styles.css">
@@ -15,7 +15,7 @@
             <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 <div class="flex justify-between items-center py-4">
                     <div class="flex items-center">
-                        <h1 class="text-2xl font-bold text-gray-900">Help & Support</h1>
+                        <h1 class="text-2xl font-bold text-gray-900">Manage Jobs</h1>
                         <span class="ml-3 px-2 py-1 text-xs font-semibold text-white bg-red-600 rounded-full">ADMIN ONLY</span>
                     </div>
                     <div class="flex items-center space-x-4">
@@ -30,19 +30,19 @@
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
             <!-- Coming Soon Card -->
             <div class="bg-white rounded-lg shadow-sm border p-8 text-center">
-                <div class="mx-auto w-16 h-16 bg-yellow-100 rounded-full flex items-center justify-center mb-4">
-                    <svg class="w-8 h-8 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 5.636l-3.536 3.536m0 5.656l3.536 3.536M9.172 9.172L5.636 5.636m3.536 9.192L5.636 18.364M12 2.25a9.75 9.75 0 100 19.5 9.75 9.75 0 000-19.5z"></path>
+                <div class="mx-auto w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mb-4">
+                    <svg class="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path>
                     </svg>
                 </div>
                 <h2 class="text-2xl font-bold text-gray-900 mb-2">Coming Soon!</h2>
-                <p class="text-gray-600 mb-4">The Help & Support system is currently under development.</p>
+                <p class="text-gray-600 mb-4">The Job Management system is currently under development.</p>
                 <p class="text-sm text-gray-500">This will include:</p>
                 <ul class="text-sm text-gray-500 mt-2 space-y-1">
-                    <li>• View help requests from shelfers and brand clients</li>
-                    <li>• Respond to support tickets</li>
-                    <li>• Manage user issues and feedback</li>
-                    <li>• System notifications and alerts</li>
+                    <li>• Create and assign jobs to shelfers</li>
+                    <li>• Track job progress and completion</li>
+                    <li>• Manage job priorities and deadlines</li>
+                    <li>• View job analytics and reports</li>
                 </ul>
             </div>
         </div>
@@ -71,7 +71,7 @@
                     return;
                 }
                 
-                console.log('✅ Admin access confirmed for Help & Support');
+                console.log('✅ Admin access confirmed for Manage Jobs');
             } catch (error) {
                 console.error('❌ Error checking admin access:', error);
                 window.location.href = '../auth/signin.html';
