@@ -256,6 +256,9 @@ function goToPage(page) {
   window.location.href = page;
 }
 
+// Expose goToPage globally for HTML onclick handlers
+window.goToPage = goToPage;
+
 // Check if current user's email is confirmed
 window.isEmailConfirmed = async function() {
   if (!supabase) return false;
