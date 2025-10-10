@@ -155,12 +155,17 @@
         // Initialize dashboard with admin access check
         async function initializeDashboard() {
             try {
+                console.log('🚀 Starting initializeDashboard...');
+                
                 // Get current user
+                console.log('🔍 Getting current user...');
                 const { data: { user } } = await supabase.auth.getUser();
                 if (!user) {
+                    console.log('❌ No user found, redirecting to signin');
                     window.location.href = '../auth/signin.html';
                     return;
                 }
+                console.log('✅ User found:', user.email);
                 currentUser = user;
 
                 // Get user profile
@@ -345,6 +350,11 @@
                 console.error('Error signing out:', error);
                 window.location.href = '../auth/signin.html';
             }
+        }
+
+        // Navigation helper
+        function goToPage(page) {
+            window.location.href = page;
         }
     </script>
 
