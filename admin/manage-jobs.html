@@ -67,7 +67,13 @@
                     .single();
                 
                 if (!profile || profile.role !== 'admin') {
-                    window.location.href = '../auth/signin.html';
+                    // Redirect to appropriate dashboard based on role
+                    const role = profile?.role || 'shelfer';
+                    if (role === 'brand_client') {
+                        window.location.href = '../dashboard/brand-client.html';
+                    } else {
+                        window.location.href = '../dashboard/shelfer.html';
+                    }
                     return;
                 }
                 
