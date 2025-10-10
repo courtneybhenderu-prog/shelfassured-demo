@@ -77,6 +77,16 @@
                 window.location.href = '../auth/signin.html';
             }
         });
+
+        // Sign out function
+        async function signOut() {
+            try {
+                await supabase.auth.signOut();
+                window.location.href = '../auth/signin.html';
+            } catch (error) {
+                console.error('Error signing out:', error);
+            }
+        }
     </script>
 </body>
 </html>
