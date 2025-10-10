@@ -69,7 +69,7 @@ document.getElementById('signin-form').addEventListener('submit', async function
             // Role-based redirection
             let redirectPage;
             if (profile.role === 'admin') {
-                redirectPage = '../admin/barcode-capture.html';
+                redirectPage = '../admin/dashboard.html';
             } else if (profile.role === 'brand_client') {
                 redirectPage = '../dashboard/brand-client.html';
             } else {
