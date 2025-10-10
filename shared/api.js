@@ -95,18 +95,21 @@ window.saGet = async function(key, fallback = null) {
         if (skusError) throw skusError;
         return skus || fallback;
         
-      case 'jobs':
-        const { data: jobs, error: jobsError } = await supabase
-          .from('jobs')
-          .select(`
-            *,
-            brands(name),
-            job_stores(store_id, stores(name, address)),
-            job_skus(sku_id, skus(name, upc))
-          `)
+      case 'users':
+        const { data: users, error: usersError } = await supabase
+          .from('users')
+          .select('*')
           .order('created_at', { ascending: false });
-        if (jobsError) throw jobsError;
-        return jobs || fallback;
+        if (usersError) throw usersError;
+        return users || fallback;
+        
+      case 'audit_requests':
+        const { data: auditRequests, error: auditRequestsError } = await supabase
+          .from('audit_requests')
+          .select('*')
+          .order('created_at', { ascending: false });
+        if (auditRequestsError) throw auditRequestsError;
+        return auditRequests || fallback;
         
       default:
         // Fallback to original function for other keys
