@@ -25,3 +25,4 @@ Splash (#screen1) • Create Account (#screen2) • Sign In (#screen3) • Shopp
 - `index.html` — all UI + JS
 - `docs/UX-PLAN.md` — page-by-page behavior
 - `CHANGELOG.md` — notable changes
+# Force rebuild Fri Oct 10 18:17:28 CDT 2025
