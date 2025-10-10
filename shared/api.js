@@ -343,6 +343,10 @@ document.addEventListener('DOMContentLoaded', async function() {
   console.log('🚀 ShelfAssured API initialized with Supabase!');
   
   // Cooperative global guard - respects per-page overrides
+  console.log('🔍 GLOBAL GUARD: Checking flags...');
+  console.log('🔍 GLOBAL GUARD: SA_DISABLE_GLOBAL_GUARD =', window.SA_DISABLE_GLOBAL_GUARD);
+  console.log('🔍 GLOBAL GUARD: SA_PAGE_ROLE =', window.SA_PAGE_ROLE);
+  
   if (window.SA_DISABLE_GLOBAL_GUARD === true) {
     console.log('🔒 Global guard disabled by page');
     return;

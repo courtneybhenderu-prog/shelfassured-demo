@@ -7,9 +7,11 @@
     
     <!-- Set flags in HTML before any scripts -->
     <script>
+        console.log('🚨 HTML: Setting flags immediately!');
         window.SA_PAGE_ROLE = 'admin';
         window.SA_DISABLE_GLOBAL_GUARD = true;
         window.SA_ADMIN_READY = true;
+        console.log('🚨 HTML: Flags set - SA_PAGE_ROLE:', window.SA_PAGE_ROLE, 'SA_DISABLE_GLOBAL_GUARD:', window.SA_DISABLE_GLOBAL_GUARD);
     </script>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
