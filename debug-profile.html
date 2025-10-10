@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Profile Debug - ShelfAssured</title>
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        .debug-section { margin: 20px 0; padding: 15px; border: 1px solid #ccc; border-radius: 5px; }
+        .success { background-color: #d4edda; border-color: #c3e6cb; }
+        .error { background-color: #f8d7da; border-color: #f5c6cb; }
+        .info { background-color: #d1ecf1; border-color: #bee5eb; }
+        pre { background: #f8f9fa; padding: 10px; border-radius: 3px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>🔍 Profile Debug Tool</h1>
+    <p>This tool will help us debug why the admin dashboard isn't working.</p>
+    
+    <div id="results"></div>
+    
+    <script>
+        // Initialize Supabase
+        const supabaseUrl = 'https://qjqjqjqjqjqjqjqj.supabase.co';
+        const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFqcWpxanFqcWpxanFqcWpxanEiLCJyb2xlIjoiYW5vbiIsImlhdCI6MTczNDk4NzIwMCwiZXhwIjoyMDUwNTYzMjAwfQ.8Q8Q8Q8Q8Q8Q8Q8Q8Q8Q8Q8Q8Q8Q8Q8Q8Q8Q8Q8';
+        const supabase = window.supabase = supabase.createClient(supabaseUrl, supabaseKey);
+        
+        const resultsDiv = document.getElementById('results');
+        
+        function addResult(title, content, type = 'info') {
+            const div = document.createElement('div');
+            div.className = `debug-section ${type}`;
+            div.innerHTML = `
+                <h3>${title}</h3>
+                <pre>${content}</pre>
+            `;
+            resultsDiv.appendChild(div);
+        }
+        
+        async function debugProfile() {
+            try {
+                // 1. Check current user
+                const { data: { user }, error: userError } = await supabase.auth.getUser();
+                if (userError) {
+                    addResult('❌ Auth Error', JSON.stringify(userError, null, 2), 'error');
+                    return;
+                }
+                
+                if (!user) {
+                    addResult('❌ No User', 'No user is currently logged in', 'error');
+                    return;
+                }
+                
+                addResult('✅ Current User', JSON.stringify({
+                    id: user.id,
+                    email: user.email,
+                    email_confirmed_at: user.email_confirmed_at,
+                    user_metadata: user.user_metadata
+                }, null, 2), 'success');
+                
+                // 2. Check if profile exists in users table
+                const { data: profile, error: profileError } = await supabase
+                    .from('users')
+                    .select('*')
+                    .eq('id', user.id)
+                    .single();
+                
+                if (profileError) {
+                    addResult('❌ Profile Query Error', JSON.stringify(profileError, null, 2), 'error');
+                } else if (profile) {
+                    addResult('✅ Profile Found', JSON.stringify(profile, null, 2), 'success');
+                } else {
+                    addResult('❌ No Profile', 'No profile found in users table', 'error');
+                }
+                
+                // 3. Test ensureProfile function
+                try {
+                    const ensureProfileResult = await ensureProfile(user);
+                    addResult('✅ ensureProfile Result', JSON.stringify(ensureProfileResult, null, 2), 'success');
+                } catch (ensureError) {
+                    addResult('❌ ensureProfile Error', JSON.stringify(ensureError, null, 2), 'error');
+                }
+                
+                // 4. Check all users in table
+                const { data: allUsers, error: allUsersError } = await supabase
+                    .from('users')
+                    .select('id, email, role, approval_status')
+                    .order('created_at', { ascending: false });
+                
+                if (allUsersError) {
+                    addResult('❌ All Users Query Error', JSON.stringify(allUsersError, null, 2), 'error');
+                } else {
+                    addResult('📋 All Users', JSON.stringify(allUsers, null, 2), 'info');
+                }
+                
+            } catch (error) {
+                addResult('❌ General Error', JSON.stringify(error, null, 2), 'error');
+            }
+        }
+        
+        // Copy ensureProfile function from shared/api.js
+        window.ensureProfile = async function(user) {
+            if (!supabase) {
+                console.log('❌ Supabase not available in ensureProfile');
+                return { role: 'shelfer' };
+            }
+            
+            try {
+                if (!user) {
+                    const { data: { user: currentUser } } = await supabase.auth.getUser();
+                    if (!currentUser) {
+                        console.log('❌ No current user found');
+                        return null;
+                    }
+                    user = currentUser;
+                }
+                
+                console.log('🔍 Ensuring profile for user:', user.id, user.email);
+                const md = user.user_metadata || {};
+                console.log('📋 User metadata:', md);
+                
+                const { data: existingProfile, error: getError } = await supabase
+                    .from('users')
+                    .select('*')
+                    .eq('id', user.id)
+                    .single();
+                
+                if (existingProfile) {
+                    console.log('✅ Found existing profile:', existingProfile);
+                    return existingProfile;
+                }
+                
+                console.log('🔄 Creating new profile for user');
+                const role = md.role || 'shelfer';
+                const profileData = {
+                    id: user.id,
+                    email: user.email,
+                    full_name: md.full_name || null,
+                    phone: md.phone || null,
+                    role: role,
+                    approval_status: role === 'shelfer' ? 'pending' : 'approved'
+                };
+                console.log('📋 Profile data to insert:', profileData);
+                
+                const { data: newProfile, error: createError } = await supabase
+                    .from('users')
+                    .insert(profileData)
+                    .select()
+                    .single();
+                
+                if (createError) {
+                    console.error('❌ Error creating profile:', createError);
+                    throw createError;
+                }
+                
+                console.log('✅ Profile created:', newProfile);
+                return newProfile;
+            } catch (error) {
+                console.error('❌ Error ensuring profile:', error);
+                return { 
+                    id: user?.id || 'unknown', 
+                    email: user?.email || 'unknown', 
+                    role: 'shelfer',
+                    full_name: user?.user_metadata?.full_name || null,
+                    phone: user?.user_metadata?.phone || null
+                };
+            }
+        };
+        
+        // Run debug when page loads
+        document.addEventListener('DOMContentLoaded', debugProfile);
+    </script>
+</body>
+</html>
