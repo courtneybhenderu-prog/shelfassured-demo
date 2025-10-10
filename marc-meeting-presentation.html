@@ -1,0 +1,647 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ShelfAssured Demo - Marc Meeting Presentation</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .slide {
+            min-height: 100vh;
+            display: none;
+        }
+        .slide.active {
+            display: block;
+        }
+        .flow-arrow {
+            animation: bounce 2s infinite;
+        }
+        @keyframes bounce {
+            0%, 20%, 50%, 80%, 100% {
+                transform: translateY(0);
+            }
+            40% {
+                transform: translateY(-10px);
+            }
+            60% {
+                transform: translateY(-5px);
+            }
+        }
+        .metric-card {
+            transition: transform 0.3s ease;
+        }
+        .metric-card:hover {
+            transform: translateY(-5px);
+        }
+        .role-badge {
+            animation: pulse 2s infinite;
+        }
+        @keyframes pulse {
+            0% {
+                box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.7);
+            }
+            70% {
+                box-shadow: 0 0 0 10px rgba(59, 130, 246, 0);
+            }
+            100% {
+                box-shadow: 0 0 0 0 rgba(59, 130, 246, 0);
+            }
+        }
+    </style>
+</head>
+<body class="bg-gray-100">
+    <!-- Navigation -->
+    <div class="fixed top-4 right-4 z-50">
+        <div class="bg-white rounded-lg shadow-lg p-4">
+            <div class="flex space-x-2">
+                <button onclick="prevSlide()" class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">← Prev</button>
+                <span id="slide-counter" class="px-4 py-2 bg-gray-200 rounded">1 / 8</span>
+                <button onclick="nextSlide()" class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">Next →</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Slide 1: Title -->
+    <div class="slide active bg-gradient-to-br from-blue-600 to-purple-700 text-white">
+        <div class="flex items-center justify-center min-h-screen">
+            <div class="text-center">
+                <h1 class="text-6xl font-bold mb-6">ShelfAssured Demo</h1>
+                <h2 class="text-3xl mb-8">Marc Meeting Presentation</h2>
+                <div class="text-xl space-y-2">
+                    <p><strong>Date:</strong> January 10, 2025</p>
+                    <p><strong>Presenter:</strong> Courtney Bhenderu</p>
+                    <p><strong>Purpose:</strong> Review current system flow, pages, and links</p>
+                </div>
+                <div class="mt-12">
+                    <button onclick="nextSlide()" class="bg-white text-blue-600 px-8 py-4 rounded-lg text-xl font-semibold hover:bg-gray-100 transition-colors">
+                        Start Presentation →
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Slide 2: Current Status -->
+    <div class="slide bg-white">
+        <div class="p-12">
+            <h1 class="text-4xl font-bold text-gray-900 mb-8">🎯 Current System Status</h1>
+            
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                <!-- What's Working -->
+                <div class="bg-green-50 border-l-4 border-green-500 p-6 rounded-lg">
+                    <h2 class="text-2xl font-bold text-green-800 mb-4">✅ What's Working</h2>
+                    <ul class="space-y-3 text-green-700">
+                        <li class="flex items-center">
+                            <span class="w-2 h-2 bg-green-500 rounded-full mr-3"></span>
+                            <strong>Authentication System</strong> - Sign up, sign in, email confirmation
+                        </li>
+                        <li class="flex items-center">
+                            <span class="w-2 h-2 bg-green-500 rounded-full mr-3"></span>
+                            <strong>Role-Based Access</strong> - Admin, Shelfer, Brand Client roles
+                        </li>
+                        <li class="flex items-center">
+                            <span class="w-2 h-2 bg-green-500 rounded-full mr-3"></span>
+                            <strong>Admin Dashboard</strong> - Live metrics, user management, navigation
+                        </li>
+                        <li class="flex items-center">
+                            <span class="w-2 h-2 bg-green-500 rounded-full mr-3"></span>
+                            <strong>Database Integration</strong> - Supabase backend with normalized schema
+                        </li>
+                        <li class="flex items-center">
+                            <span class="w-2 h-2 bg-green-500 rounded-full mr-3"></span>
+                            <strong>GitHub Pages Deployment</strong> - Live demo environment
+                        </li>
+                    </ul>
+                </div>
+
+                <!-- Recent Fixes -->
+                <div class="bg-blue-50 border-l-4 border-blue-500 p-6 rounded-lg">
+                    <h2 class="text-2xl font-bold text-blue-800 mb-4">🔧 Recent Fixes Applied</h2>
+                    <ul class="space-y-3 text-blue-700">
+                        <li class="flex items-center">
+                            <span class="w-2 h-2 bg-blue-500 rounded-full mr-3"></span>
+                            Fixed admin dashboard navigation
+                        </li>
+                        <li class="flex items-center">
+                            <span class="w-2 h-2 bg-blue-500 rounded-full mr-3"></span>
+                            Resolved Supabase CDN issues
+                        </li>
+                        <li class="flex items-center">
+                            <span class="w-2 h-2 bg-blue-500 rounded-full mr-3"></span>
+                            Updated database schema
+                        </li>
+                        <li class="flex items-center">
+                            <span class="w-2 h-2 bg-blue-500 rounded-full mr-3"></span>
+                            Fixed RLS policies
+                        </li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Live Demo URL -->
+            <div class="mt-8 bg-gray-100 p-6 rounded-lg">
+                <h3 class="text-xl font-bold text-gray-900 mb-4">🚀 Live Demo URL</h3>
+                <div class="bg-white p-4 rounded border-2 border-dashed border-gray-300">
+                    <code class="text-lg text-blue-600">https://courtneybhenderu-prog.github.io/shelfassured-demo/</code>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Slide 3: System Architecture -->
+    <div class="slide bg-gray-900 text-white">
+        <div class="p-12">
+            <h1 class="text-4xl font-bold mb-8">🏗️ System Architecture</h1>
+            
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                <!-- User Roles -->
+                <div class="bg-gray-800 p-6 rounded-lg">
+                    <h2 class="text-2xl font-bold mb-6 text-blue-400">User Roles & Access</h2>
+                    
+                    <div class="space-y-4">
+                        <div class="bg-red-900 p-4 rounded-lg">
+                            <h3 class="font-bold text-red-300">Admin (courtney@beshelfassured.com)</h3>
+                            <ul class="text-sm text-gray-300 mt-2 space-y-1">
+                                <li>• Full system access</li>
+                                <li>• User management</li>
+                                <li>• Job creation & management</li>
+                                <li>• Submission review</li>
+                                <li>• Help & support</li>
+                            </ul>
+                        </div>
+                        
+                        <div class="bg-green-900 p-4 rounded-lg">
+                            <h3 class="font-bold text-green-300">Shelfer (contractor role)</h3>
+                            <ul class="text-sm text-gray-300 mt-2 space-y-1">
+                                <li>• Available jobs list</li>
+                                <li>• Job completion workflow</li>
+                                <li>• Photo capture & submission</li>
+                                <li>• Earnings tracking</li>
+                            </ul>
+                        </div>
+                        
+                        <div class="bg-blue-900 p-4 rounded-lg">
+                            <h3 class="font-bold text-blue-300">Brand Client</h3>
+                            <ul class="text-sm text-gray-300 mt-2 space-y-1">
+                                <li>• Job creation requests</li>
+                                <li>• Audit requests</li>
+                                <li>• Job status tracking</li>
+                                <li>• Performance metrics</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Database Schema -->
+                <div class="bg-gray-800 p-6 rounded-lg">
+                    <h2 class="text-2xl font-bold mb-6 text-green-400">Database Schema</h2>
+                    
+                    <div class="grid grid-cols-2 gap-4 text-sm">
+                        <div class="space-y-2">
+                            <div class="bg-gray-700 p-2 rounded text-yellow-300">Core Tables:</div>
+                            <div class="bg-gray-700 p-2 rounded text-gray-300">• users</div>
+                            <div class="bg-gray-700 p-2 rounded text-gray-300">• brands</div>
+                            <div class="bg-gray-700 p-2 rounded text-gray-300">• stores</div>
+                            <div class="bg-gray-700 p-2 rounded text-gray-300">• skus</div>
+                            <div class="bg-gray-700 p-2 rounded text-gray-300">• jobs</div>
+                        </div>
+                        <div class="space-y-2">
+                            <div class="bg-gray-700 p-2 rounded text-yellow-300">Relationships:</div>
+                            <div class="bg-gray-700 p-2 rounded text-gray-300">• job_skus</div>
+                            <div class="bg-gray-700 p-2 rounded text-gray-300">• job_stores</div>
+                            <div class="bg-gray-700 p-2 rounded text-gray-300">• job_submissions</div>
+                            <div class="bg-gray-700 p-2 rounded text-gray-300">• submission_details</div>
+                            <div class="bg-gray-700 p-2 rounded text-gray-300">• submission_photos</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Slide 4: Page Flow -->
+    <div class="slide bg-white">
+        <div class="p-12">
+            <h1 class="text-4xl font-bold text-gray-900 mb-8">📱 Page Flow & Navigation</h1>
+            
+            <!-- Flow Diagram -->
+            <div class="bg-gray-50 p-8 rounded-lg mb-8">
+                <div class="flex flex-col items-center space-y-8">
+                    <!-- Landing Page -->
+                    <div class="bg-blue-100 p-6 rounded-lg text-center min-w-64">
+                        <h3 class="font-bold text-blue-800">Landing Page</h3>
+                        <p class="text-sm text-blue-600">Sign In / Create Account</p>
+                    </div>
+                    
+                    <div class="flow-arrow text-4xl text-gray-400">↓</div>
+                    
+                    <!-- Authentication -->
+                    <div class="bg-green-100 p-6 rounded-lg text-center min-w-64">
+                        <h3 class="font-bold text-green-800">Authentication</h3>
+                        <p class="text-sm text-green-600">Email Confirmation</p>
+                    </div>
+                    
+                    <div class="flow-arrow text-4xl text-gray-400">↓</div>
+                    
+                    <!-- Role-Based Redirect -->
+                    <div class="grid grid-cols-3 gap-4">
+                        <div class="bg-red-100 p-4 rounded-lg text-center">
+                            <h4 class="font-bold text-red-800">Admin</h4>
+                            <p class="text-xs text-red-600">admin/dashboard.html</p>
+                        </div>
+                        <div class="bg-green-100 p-4 rounded-lg text-center">
+                            <h4 class="font-bold text-green-800">Shelfer</h4>
+                            <p class="text-xs text-green-600">dashboard/shelfer.html</p>
+                        </div>
+                        <div class="bg-blue-100 p-4 rounded-lg text-center">
+                            <h4 class="font-bold text-blue-800">Brand</h4>
+                            <p class="text-xs text-blue-600">dashboard/brand-client.html</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Key URLs -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div class="bg-gray-100 p-6 rounded-lg">
+                    <h3 class="text-xl font-bold mb-4">🔗 Key Demo URLs</h3>
+                    <div class="space-y-2 text-sm">
+                        <div class="bg-white p-2 rounded border">
+                            <strong>Main Demo:</strong><br>
+                            <code class="text-blue-600">courtneybhenderu-prog.github.io/shelfassured-demo/</code>
+                        </div>
+                        <div class="bg-white p-2 rounded border">
+                            <strong>Admin Dashboard:</strong><br>
+                            <code class="text-blue-600">.../admin/dashboard.html</code>
+                        </div>
+                        <div class="bg-white p-2 rounded border">
+                            <strong>Sign In:</strong><br>
+                            <code class="text-blue-600">.../auth/signin.html</code>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-gray-100 p-6 rounded-lg">
+                    <h3 class="text-xl font-bold mb-4">👥 Test Accounts</h3>
+                    <div class="space-y-2 text-sm">
+                        <div class="bg-white p-2 rounded border">
+                            <strong>Admin:</strong><br>
+                            <code class="text-red-600">courtney@beshelfassured.com</code>
+                        </div>
+                        <div class="bg-white p-2 rounded border">
+                            <strong>Shelfer:</strong><br>
+                            <code class="text-green-600">Any shelfer account</code>
+                        </div>
+                        <div class="bg-white p-2 rounded border">
+                            <strong>Brand Client:</strong><br>
+                            <code class="text-blue-600">Any brand client account</code>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Slide 5: Admin Dashboard -->
+    <div class="slide bg-gray-100">
+        <div class="p-12">
+            <h1 class="text-4xl font-bold text-gray-900 mb-8">🎛️ Admin Dashboard Features</h1>
+            
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                <!-- Key Metrics -->
+                <div class="bg-white p-6 rounded-lg shadow-lg">
+                    <h2 class="text-2xl font-bold mb-6 text-blue-600">📊 Key Metrics</h2>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div class="metric-card bg-blue-50 p-4 rounded-lg text-center">
+                            <div class="text-3xl font-bold text-blue-600">0</div>
+                            <div class="text-sm text-gray-600">Total Jobs</div>
+                        </div>
+                        <div class="metric-card bg-green-50 p-4 rounded-lg text-center">
+                            <div class="text-3xl font-bold text-green-600">7</div>
+                            <div class="text-sm text-gray-600">Active Users</div>
+                        </div>
+                        <div class="metric-card bg-orange-50 p-4 rounded-lg text-center">
+                            <div class="text-3xl font-bold text-orange-600">0</div>
+                            <div class="text-sm text-gray-600">Pending Reviews</div>
+                        </div>
+                        <div class="metric-card bg-red-50 p-4 rounded-lg text-center">
+                            <div class="text-3xl font-bold text-red-600">0</div>
+                            <div class="text-sm text-gray-600">Help Requests</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Quick Actions -->
+                <div class="bg-white p-6 rounded-lg shadow-lg">
+                    <h2 class="text-2xl font-bold mb-6 text-red-600">⚡ Quick Actions</h2>
+                    <div class="space-y-3">
+                        <div class="bg-red-100 p-3 rounded-lg">
+                            <strong>Manage Jobs</strong> → Coming Soon
+                        </div>
+                        <div class="bg-red-100 p-3 rounded-lg">
+                            <strong>Review Submissions</strong> → Coming Soon
+                        </div>
+                        <div class="bg-green-100 p-3 rounded-lg">
+                            <strong>Help & Support</strong> → ✅ Working
+                        </div>
+                        <div class="bg-green-100 p-3 rounded-lg">
+                            <strong>User Management</strong> → ✅ Working
+                        </div>
+                        <div class="bg-gray-100 p-3 rounded-lg">
+                            <strong>Barcode Scanner</strong> → ✅ Working
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Navigation Toggle -->
+            <div class="mt-8 bg-white p-6 rounded-lg shadow-lg">
+                <h2 class="text-2xl font-bold mb-6 text-purple-600">🔄 Navigation Toggle</h2>
+                <div class="flex justify-center space-x-4">
+                    <div class="role-badge bg-red-100 text-red-800 px-6 py-3 rounded-lg font-bold">Admin</div>
+                    <div class="bg-gray-100 text-gray-600 px-6 py-3 rounded-lg">Shelfer</div>
+                    <div class="bg-gray-100 text-gray-600 px-6 py-3 rounded-lg">Brand</div>
+                    <div class="bg-gray-100 text-gray-600 px-6 py-3 rounded-lg">Profile</div>
+                </div>
+                <p class="text-center text-gray-600 mt-4">Seamlessly switch between different user views</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Slide 6: Role-Specific Views -->
+    <div class="slide bg-gradient-to-br from-green-400 to-blue-500 text-white">
+        <div class="p-12">
+            <h1 class="text-4xl font-bold mb-8">👥 Role-Specific Views</h1>
+            
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                <!-- Shelfer Dashboard -->
+                <div class="bg-white bg-opacity-20 backdrop-blur-sm p-6 rounded-lg">
+                    <h2 class="text-2xl font-bold mb-4 text-green-200">🛒 Shelfer Dashboard</h2>
+                    <div class="space-y-3 text-sm">
+                        <div class="bg-white bg-opacity-20 p-3 rounded">
+                            <strong>Total Income:</strong> $0.00
+                        </div>
+                        <div class="bg-white bg-opacity-20 p-3 rounded">
+                            <strong>Available Jobs:</strong> 0
+                        </div>
+                        <div class="bg-white bg-opacity-20 p-3 rounded">
+                            <strong>Features:</strong>
+                            <ul class="mt-2 space-y-1">
+                                <li>• Job list with status tracking</li>
+                                <li>• Photo capture workflow</li>
+                                <li>• Earnings history</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Brand Client Dashboard -->
+                <div class="bg-white bg-opacity-20 backdrop-blur-sm p-6 rounded-lg">
+                    <h2 class="text-2xl font-bold mb-4 text-blue-200">🏢 Brand Client Dashboard</h2>
+                    <div class="space-y-3 text-sm">
+                        <div class="bg-white bg-opacity-20 p-3 rounded">
+                            <strong>Jobs Completed:</strong> 0
+                        </div>
+                        <div class="bg-white bg-opacity-20 p-3 rounded">
+                            <strong>Success Rate:</strong> 100%
+                        </div>
+                        <div class="bg-white bg-opacity-20 p-3 rounded">
+                            <strong>Quick Actions:</strong>
+                            <ul class="mt-2 space-y-1">
+                                <li>• Create New Job</li>
+                                <li>• Request New Audit</li>
+                                <li>• View Jobs</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Profile Page -->
+                <div class="bg-white bg-opacity-20 backdrop-blur-sm p-6 rounded-lg">
+                    <h2 class="text-2xl font-bold mb-4 text-purple-200">👤 Profile Page</h2>
+                    <div class="space-y-3 text-sm">
+                        <div class="bg-white bg-opacity-20 p-3 rounded">
+                            <strong>User Information:</strong> Display
+                        </div>
+                        <div class="bg-white bg-opacity-20 p-3 rounded">
+                            <strong>Role Settings:</strong> Specific
+                        </div>
+                        <div class="bg-white bg-opacity-20 p-3 rounded">
+                            <strong>Account Management:</strong> Available
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Slide 7: Next Development Priorities -->
+    <div class="slide bg-white">
+        <div class="p-12">
+            <h1 class="text-4xl font-bold text-gray-900 mb-8">🚀 Next Development Priorities</h1>
+            
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                <!-- Phase 1 -->
+                <div class="bg-blue-50 border-l-4 border-blue-500 p-6 rounded-lg">
+                    <h2 class="text-2xl font-bold text-blue-800 mb-6">Phase 1: Core Job Workflow</h2>
+                    
+                    <div class="space-y-4">
+                        <div class="bg-white p-4 rounded-lg shadow">
+                            <h3 class="font-bold text-blue-700">1. Job Creation Form</h3>
+                            <p class="text-sm text-gray-600">Brand selection, Store selection, SKU assignment, Shelfer assignment</p>
+                        </div>
+                        
+                        <div class="bg-white p-4 rounded-lg shadow">
+                            <h3 class="font-bold text-blue-700">2. Shelfer Job Interface</h3>
+                            <p class="text-sm text-gray-600">Available jobs list, Job acceptance, Photo capture workflow, Submission process</p>
+                        </div>
+                        
+                        <div class="bg-white p-4 rounded-lg shadow">
+                            <h3 class="font-bold text-blue-700">3. Admin Review System</h3>
+                            <p class="text-sm text-gray-600">Submission review, Approval/rejection, Quality control, Payout processing</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Phase 2 -->
+                <div class="bg-green-50 border-l-4 border-green-500 p-6 rounded-lg">
+                    <h2 class="text-2xl font-bold text-green-800 mb-6">Phase 2: Enhanced Features</h2>
+                    
+                    <div class="space-y-4">
+                        <div class="bg-white p-4 rounded-lg shadow">
+                            <h3 class="font-bold text-green-700">Real-time Notifications</h3>
+                        </div>
+                        
+                        <div class="bg-white p-4 rounded-lg shadow">
+                            <h3 class="font-bold text-green-700">Advanced Reporting</h3>
+                        </div>
+                        
+                        <div class="bg-white p-4 rounded-lg shadow">
+                            <h3 class="font-bold text-green-700">Mobile Optimization</h3>
+                        </div>
+                        
+                        <div class="bg-white p-4 rounded-lg shadow">
+                            <h3 class="font-bold text-green-700">API Integrations</h3>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Timeline -->
+            <div class="mt-8 bg-gray-100 p-6 rounded-lg">
+                <h3 class="text-xl font-bold mb-4">📅 Suggested Timeline</h3>
+                <div class="grid grid-cols-3 gap-4 text-center">
+                    <div class="bg-blue-100 p-4 rounded-lg">
+                        <div class="font-bold text-blue-800">Week 1-2</div>
+                        <div class="text-sm text-blue-600">Job Creation Form</div>
+                    </div>
+                    <div class="bg-green-100 p-4 rounded-lg">
+                        <div class="font-bold text-green-800">Week 3-4</div>
+                        <div class="text-sm text-green-600">Shelfer Interface</div>
+                    </div>
+                    <div class="bg-purple-100 p-4 rounded-lg">
+                        <div class="font-bold text-purple-800">Week 5-6</div>
+                        <div class="text-sm text-purple-600">Admin Review System</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Slide 8: Demo Script & Questions -->
+    <div class="slide bg-gradient-to-br from-purple-600 to-pink-600 text-white">
+        <div class="p-12">
+            <h1 class="text-4xl font-bold mb-8">🎯 Demo Script & Questions</h1>
+            
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                <!-- Demo Script -->
+                <div class="bg-white bg-opacity-20 backdrop-blur-sm p-6 rounded-lg">
+                    <h2 class="text-2xl font-bold mb-6">📋 Demo Script for Marc</h2>
+                    
+                    <div class="space-y-4 text-sm">
+                        <div class="bg-white bg-opacity-20 p-3 rounded">
+                            <strong>1. Landing Page Demo</strong><br>
+                            Show clean, professional landing page and sign-in flow
+                        </div>
+                        
+                        <div class="bg-white bg-opacity-20 p-3 rounded">
+                            <strong>2. Admin Dashboard Demo</strong><br>
+                            Show live metrics, navigation toggle, user management
+                        </div>
+                        
+                        <div class="bg-white bg-opacity-20 p-3 rounded">
+                            <strong>3. Role-Specific Views</strong><br>
+                            Demonstrate Shelfer, Brand, and Profile views
+                        </div>
+                        
+                        <div class="bg-white bg-opacity-20 p-3 rounded">
+                            <strong>4. Database Integration</strong><br>
+                            Show Supabase integration and real-time updates
+                        </div>
+                        
+                        <div class="bg-white bg-opacity-20 p-3 rounded">
+                            <strong>5. Next Steps Discussion</strong><br>
+                            Job workflow, timeline, and priorities
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Questions for Marc -->
+                <div class="bg-white bg-opacity-20 backdrop-blur-sm p-6 rounded-lg">
+                    <h2 class="text-2xl font-bold mb-6">❓ Questions for Marc</h2>
+                    
+                    <div class="space-y-4 text-sm">
+                        <div class="bg-white bg-opacity-20 p-3 rounded">
+                            <strong>Priority Focus:</strong><br>
+                            Which workflow should we build first?
+                        </div>
+                        
+                        <div class="bg-white bg-opacity-20 p-3 rounded">
+                            <strong>User Experience:</strong><br>
+                            Any specific UX requirements or preferences?
+                        </div>
+                        
+                        <div class="bg-white bg-opacity-20 p-3 rounded">
+                            <strong>Business Logic:</strong><br>
+                            Changes to job creation/assignment process?
+                        </div>
+                        
+                        <div class="bg-white bg-opacity-20 p-3 rounded">
+                            <strong>Timeline:</strong><br>
+                            Target completion date for MVP?
+                        </div>
+                        
+                        <div class="bg-white bg-opacity-20 p-3 rounded">
+                            <strong>Testing:</strong><br>
+                            Who will be primary testers for each role?
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Action Items -->
+            <div class="mt-8 bg-white bg-opacity-20 backdrop-blur-sm p-6 rounded-lg">
+                <h3 class="text-xl font-bold mb-4">📝 Action Items</h3>
+                <div class="grid grid-cols-2 gap-4 text-sm">
+                    <div class="space-y-2">
+                        <div class="bg-white bg-opacity-20 p-2 rounded">□ Review current system flow</div>
+                        <div class="bg-white bg-opacity-20 p-2 rounded">□ Confirm next development priorities</div>
+                        <div class="bg-white bg-opacity-20 p-2 rounded">□ Set timeline for core workflow</div>
+                    </div>
+                    <div class="space-y-2">
+                        <div class="bg-white bg-opacity-20 p-2 rounded">□ Identify missing requirements</div>
+                        <div class="bg-white bg-opacity-20 p-2 rounded">□ Plan testing strategy</div>
+                        <div class="bg-white bg-opacity-20 p-2 rounded">□ Schedule follow-up meeting</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Final Message -->
+            <div class="mt-8 text-center">
+                <div class="bg-white bg-opacity-20 backdrop-blur-sm p-6 rounded-lg">
+                    <h3 class="text-2xl font-bold mb-4">🎉 Ready to Demo!</h3>
+                    <p class="text-lg">Fully functional admin system with role-based navigation and live data integration</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentSlide = 1;
+        const totalSlides = 8;
+
+        function showSlide(n) {
+            const slides = document.querySelectorAll('.slide');
+            slides.forEach(slide => slide.classList.remove('active'));
+            
+            if (n > totalSlides) currentSlide = 1;
+            if (n < 1) currentSlide = totalSlides;
+            
+            slides[currentSlide - 1].classList.add('active');
+            document.getElementById('slide-counter').textContent = `${currentSlide} / ${totalSlides}`;
+        }
+
+        function nextSlide() {
+            currentSlide++;
+            showSlide(currentSlide);
+        }
+
+        function prevSlide() {
+            currentSlide--;
+            showSlide(currentSlide);
+        }
+
+        // Keyboard navigation
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'ArrowRight' || e.key === ' ') {
+                nextSlide();
+            } else if (e.key === 'ArrowLeft') {
+                prevSlide();
+            }
+        });
+
+        // Initialize
+        showSlide(1);
+    </script>
+</body>
+</html>
