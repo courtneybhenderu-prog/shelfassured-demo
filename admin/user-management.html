@@ -86,7 +86,11 @@
                     </div>
                     <div>
                         <label class="block text-sm font-medium text-gray-700">Date Range</label>
-                        <input type="date" id="date-filter" class="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2">
+                        <div class="mt-1 flex space-x-2">
+                            <input type="date" id="date-start" placeholder="Start Date" class="block w-full border border-gray-300 rounded-md px-3 py-2">
+                            <span class="flex items-center text-gray-500">to</span>
+                            <input type="date" id="date-end" placeholder="End Date" class="block w-full border border-gray-300 rounded-md px-3 py-2">
+                        </div>
                     </div>
                 </div>
                 <div class="mt-4 flex space-x-4">
@@ -442,35 +446,55 @@
             const roleFilter = document.getElementById('role-filter').value;
             const approvalFilter = document.getElementById('approval-filter').value;
             const activityFilter = document.getElementById('activity-filter').value;
-            const dateFilter = document.getElementById('date-filter').value;
+            const dateStart = document.getElementById('date-start').value;
+            const dateEnd = document.getElementById('date-end').value;
+
+            console.log('🔍 Applying filters:', { roleFilter, approvalFilter, activityFilter, dateStart, dateEnd });
+            console.log('🔍 Total users before filtering:', allUsers.length);
 
             let filteredUsers = allUsers;
 
+            // Role filter
             if (roleFilter) {
                 filteredUsers = filteredUsers.filter(user => user.role === roleFilter);
+                console.log('🔍 After role filter:', filteredUsers.length);
             }
 
+            // Approval status filter
             if (approvalFilter) {
                 filteredUsers = filteredUsers.filter(user => (user.approval_status || 'approved') === approvalFilter);
+                console.log('🔍 After approval filter:', filteredUsers.length);
             }
 
+            // Activity filter
             if (activityFilter) {
                 filteredUsers = filteredUsers.filter(user => {
                     if (activityFilter === 'active') return user.is_active !== false;
                     if (activityFilter === 'inactive') return user.is_active === false;
                     return true;
                 });
+                console.log('🔍 After activity filter:', filteredUsers.length);
             }
 
-            if (dateFilter) {
-                const filterDate = new Date(dateFilter);
+            // Date range filter
+            if (dateStart || dateEnd) {
                 filteredUsers = filteredUsers.filter(user => {
                     const userDate = new Date(user.created_at);
-                    return userDate.toDateString() === filterDate.toDateString();
+                    const startDate = dateStart ? new Date(dateStart) : null;
+                    const endDate = dateEnd ? new Date(dateEnd) : null;
+                    
+                    if (startDate && userDate < startDate) return false;
+                    if (endDate && userDate > endDate) return false;
+                    return true;
                 });
+                console.log('🔍 After date filter:', filteredUsers.length);
             }
 
+            console.log('🔍 Final filtered users:', filteredUsers.length);
+            
+            // Update display
             displayUsers(filteredUsers);
+            updateStats(filteredUsers);
         }
 
         // Clear filters
@@ -478,8 +502,12 @@
             document.getElementById('role-filter').value = '';
             document.getElementById('approval-filter').value = '';
             document.getElementById('activity-filter').value = '';
-            document.getElementById('date-filter').value = '';
+            document.getElementById('date-start').value = '';
+            document.getElementById('date-end').value = '';
+            
+            // Reset to show all users
             displayUsers(allUsers);
+            updateStats(allUsers);
         }
 
         // Export users
