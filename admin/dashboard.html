@@ -205,6 +205,13 @@
                     console.log('✅ Profile loaded:', profile);
                     userProfile = profile;
                 }
+                
+                // Ensure userProfile is set before proceeding
+                if (!userProfile) {
+                    console.error('❌ userProfile is still undefined after profile loading');
+                    window.location.href = '../auth/signin.html';
+                    return;
+                }
 
                 // Check admin access
                 console.log('🔍 Checking admin access. userProfile:', userProfile);
