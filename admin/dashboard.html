@@ -148,17 +148,21 @@
                 currentUser = user;
 
                 // Get user profile
+                console.log('🔍 Fetching profile for user:', user.id, user.email);
                 const { data: profile, error } = await supabase
                     .from('users')
-                    .select('role, full_name')
+                    .select('role, full_name, approval_status')
                     .eq('id', user.id)
                     .single();
 
                 if (error || !profile) {
-                    console.error('Error fetching user profile:', error);
+                    console.error('❌ Error fetching user profile:', error);
+                    console.error('❌ Profile data:', profile);
                     window.location.href = '../auth/signin.html';
                     return;
                 }
+                
+                console.log('✅ Profile loaded:', profile);
                 userProfile = profile;
 
                 // Check admin access
@@ -167,6 +171,8 @@
                     window.location.href = '../dashboard/shelfer.html';
                     return;
                 }
+
+                console.log('✅ Admin access confirmed for:', profile.email);
 
                 // Update UI
                 document.getElementById('admin-user').textContent = `Welcome, ${profile.full_name || user.email}`;
