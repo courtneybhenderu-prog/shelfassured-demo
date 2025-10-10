@@ -69,12 +69,7 @@ document.getElementById('signin-form').addEventListener('submit', async function
             }
             console.log('✅ Profile loaded successfully, checking approval status...');
             
-            // Check approval status for shelfers
-            if (profile.role === 'shelfer' && profile.approval_status !== 'approved') {
-                console.log('⏳ Shelfer account pending approval, redirecting to pending page');
-                setTimeout(() => goToPage('../auth/pending-approval.html'), 1000);
-                return;
-            }
+            // Approval check removed - all users approved by default
             
             // Role-based redirection
             let redirectPage;

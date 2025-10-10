@@ -306,7 +306,7 @@ window.ensureProfile = async function(user) {
       full_name: md.full_name || null,
       phone: md.phone || null,
       role: role,
-      approval_status: role === 'shelfer' ? 'pending' : 'approved'
+      approval_status: 'approved' // All users approved by default
     };
     console.log('📋 Profile data to insert:', profileData);
     
