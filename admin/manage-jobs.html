@@ -34,29 +34,187 @@
 
         <!-- Main Content -->
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-            <!-- Coming Soon Card -->
-            <div class="bg-white rounded-lg shadow-sm border p-8 text-center">
-                <div class="mx-auto w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mb-4">
-                    <svg class="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path>
-                    </svg>
+            <!-- Job Creation Form -->
+            <div class="bg-white rounded-lg shadow-sm border p-8">
+                <div class="mb-8">
+                    <h2 class="text-2xl font-bold text-gray-900 mb-2">Create New Job</h2>
+                    <p class="text-gray-600">Create shelf audit jobs for shelfers to complete</p>
                 </div>
-                <h2 class="text-2xl font-bold text-gray-900 mb-2">Coming Soon!</h2>
-                <p class="text-gray-600 mb-4">The Job Management system is currently under development.</p>
-                <p class="text-sm text-gray-500">This will include:</p>
-                <ul class="text-sm text-gray-500 mt-2 space-y-1">
-                    <li>• Create and assign jobs to shelfers</li>
-                    <li>• Track job progress and completion</li>
-                    <li>• Manage job priorities and deadlines</li>
-                    <li>• View job analytics and reports</li>
-                </ul>
+
+                <!-- Error Messages -->
+                <div id="error-messages" class="hidden mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
+                    <div class="flex">
+                        <div class="flex-shrink-0">
+                            <svg class="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
+                                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd" />
+                            </svg>
+                        </div>
+                        <div class="ml-3">
+                            <h3 class="text-sm font-medium text-red-800">Error creating job</h3>
+                            <div id="error-details" class="mt-2 text-sm text-red-700"></div>
+                            <div class="mt-4 flex space-x-3">
+                                <button id="retry-button" class="text-sm bg-red-100 text-red-800 px-3 py-1 rounded hover:bg-red-200">Try Again</button>
+                                <button id="cancel-button" class="text-sm bg-gray-100 text-gray-800 px-3 py-1 rounded hover:bg-gray-200">Cancel and Exit</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Success Messages -->
+                <div id="success-messages" class="hidden mb-6 p-4 bg-green-50 border border-green-200 rounded-lg">
+                    <div class="flex">
+                        <div class="flex-shrink-0">
+                            <svg class="h-5 w-5 text-green-400" viewBox="0 0 20 20" fill="currentColor">
+                                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
+                            </svg>
+                        </div>
+                        <div class="ml-3">
+                            <h3 class="text-sm font-medium text-green-800">Jobs created successfully!</h3>
+                            <div id="success-details" class="mt-2 text-sm text-green-700"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <form id="job-creation-form" class="space-y-6">
+                    <!-- Job Title -->
+                    <div>
+                        <label for="job-title" class="block text-sm font-medium text-gray-700 mb-2">Job Title *</label>
+                        <input type="text" id="job-title" name="job-title" required
+                               class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                               placeholder="e.g., DJ's Boudain Shelf Audit">
+                        <p class="mt-1 text-sm text-gray-500">5-255 characters</p>
+                    </div>
+
+                    <!-- Description -->
+                    <div>
+                        <label for="job-description" class="block text-sm font-medium text-gray-700 mb-2">Job Description</label>
+                        <textarea id="job-description" name="job-description" rows="3"
+                                  class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                  placeholder="Optional description of the job requirements"></textarea>
+                        <p class="mt-1 text-sm text-gray-500">Maximum 2000 characters</p>
+                    </div>
+
+                    <!-- Brand Selection -->
+                    <div>
+                        <label for="brand-name" class="block text-sm font-medium text-gray-700 mb-2">Brand *</label>
+                        <div class="relative">
+                            <input type="text" id="brand-name" name="brand-name" required
+                                   class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                   placeholder="e.g., DJ's Boudain, Callie's Hot Little Biscuits">
+                            <div id="brand-suggestions" class="absolute z-10 w-full bg-white border border-gray-300 rounded-lg shadow-lg hidden"></div>
+                        </div>
+                        <p class="mt-1 text-sm text-gray-500">Type brand name - will create new brand if not found</p>
+                    </div>
+
+                    <!-- Store Selection -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Store Locations *</label>
+                        <div class="space-y-3">
+                            <div class="flex items-center">
+                                <input type="checkbox" id="all-stores" name="all-stores" class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded">
+                                <label for="all-stores" class="ml-2 text-sm text-gray-700">All active stores</label>
+                            </div>
+                            <div id="store-selection" class="space-y-2">
+                                <div class="flex items-center space-x-2">
+                                    <input type="text" placeholder="Store name (e.g., H-E-B, Whole Foods)" 
+                                           class="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                                    <button type="button" onclick="addStoreInput()" class="px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">Add Store</button>
+                                </div>
+                            </div>
+                        </div>
+                        <p class="mt-1 text-sm text-gray-500">Select stores where the audit will be performed</p>
+                    </div>
+
+                    <!-- SKU Selection -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Products to Check (SKUs) *</label>
+                        <div id="sku-selection" class="space-y-2">
+                            <div class="flex items-center space-x-2">
+                                <input type="text" placeholder="Product name (e.g., Original Boudain, Jalapeno Boudain)" 
+                                       class="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                                <button type="button" onclick="addSkuInput()" class="px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">Add Product</button>
+                            </div>
+                        </div>
+                        <p class="mt-1 text-sm text-gray-500">Add products to audit - will create new SKUs if not found</p>
+                    </div>
+
+                    <!-- Assigned User -->
+                    <div>
+                        <label for="assigned-user" class="block text-sm font-medium text-gray-700 mb-2">Assigned To *</label>
+                        <select id="assigned-user" name="assigned-user" required
+                                class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                            <option value="">Select user...</option>
+                        </select>
+                    </div>
+
+                    <!-- Priority -->
+                    <div>
+                        <label for="priority" class="block text-sm font-medium text-gray-700 mb-2">Priority</label>
+                        <select id="priority" name="priority"
+                                class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                            <option value="normal">Normal</option>
+                            <option value="low">Low</option>
+                            <option value="high">High</option>
+                            <option value="urgent">Urgent</option>
+                        </select>
+                    </div>
+
+                    <!-- Due Date -->
+                    <div>
+                        <label for="due-date" class="block text-sm font-medium text-gray-700 mb-2">Due Date</label>
+                        <input type="datetime-local" id="due-date" name="due-date"
+                               class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                        <p class="mt-1 text-sm text-gray-500">Standard timeline: 48 hours (placeholder for Marc's feedback)</p>
+                    </div>
+
+                    <!-- Special Instructions -->
+                    <div>
+                        <label for="special-instructions" class="block text-sm font-medium text-gray-700 mb-2">Special Instructions</label>
+                        <textarea id="special-instructions" name="special-instructions" rows="3"
+                                  class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                  placeholder="Any special requirements beyond standard $5 job requirements"></textarea>
+                        <p class="mt-1 text-sm text-gray-500">Standard requirements: 3 photos + price verification. Beyond this requires custom audit.</p>
+                    </div>
+
+                    <!-- Job Summary -->
+                    <div id="job-summary" class="hidden bg-gray-50 p-4 rounded-lg">
+                        <h3 class="text-lg font-medium text-gray-900 mb-2">Job Summary</h3>
+                        <div id="summary-details" class="text-sm text-gray-600"></div>
+                    </div>
+
+                    <!-- Form Actions -->
+                    <div class="flex justify-between pt-6 border-t border-gray-200">
+                        <button type="button" onclick="goToPage('dashboard.html')" 
+                                class="px-6 py-3 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50">
+                            Cancel
+                        </button>
+                        <button type="submit" id="confirm-job-btn"
+                                class="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed">
+                            <span id="submit-text">Confirm Job</span>
+                            <span id="loading-spinner" class="hidden ml-2">
+                                <svg class="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                </svg>
+                            </span>
+                        </button>
+                    </div>
+                </form>
             </div>
         </div>
     </div>
 
     <script src="../shared/api.js"></script>
     <script>
-        // Basic admin check - show page to all authenticated users for now
+        // Global variables
+        let brands = [];
+        let stores = [];
+        let skus = [];
+        let users = [];
+        let selectedStores = [];
+        let selectedSkus = [];
+
+        // Initialize page
         document.addEventListener('DOMContentLoaded', async function() {
             try {
                 const { data: { user } } = await supabase.auth.getUser();
@@ -65,13 +223,575 @@
                     return;
                 }
                 
-                // For placeholder pages, show to all authenticated users
-                console.log('✅ Showing Manage Jobs placeholder to authenticated user:', user.email);
+                console.log('✅ Loading job creation form for:', user.email);
+                
+                // Load initial data
+                await loadInitialData();
+                
+                // Setup form event listeners
+                setupFormEventListeners();
+                
+                // Setup error handling
+                setupErrorHandling();
+                
             } catch (error) {
-                console.error('❌ Error checking authentication:', error);
-                window.location.href = '../auth/signin.html';
+                console.error('❌ Error initializing job creation form:', error);
+                showError('Failed to load job creation form. Please refresh the page.');
             }
         });
+
+        // Load initial data
+        async function loadInitialData() {
+            try {
+                // Load brands, stores, skus, and users
+                const [brandsResult, storesResult, skusResult, usersResult] = await Promise.all([
+                    supabase.from('brands').select('*').order('name'),
+                    supabase.from('stores').select('*').order('name'),
+                    supabase.from('skus').select('*').order('name'),
+                    supabase.from('users').select('*').eq('is_active', true).order('full_name')
+                ]);
+
+                brands = brandsResult.data || [];
+                stores = storesResult.data || [];
+                skus = skusResult.data || [];
+                users = usersResult.data || [];
+
+                // Populate assigned user dropdown
+                populateUserDropdown();
+                
+                console.log('📊 Loaded data:', {
+                    brands: brands.length,
+                    stores: stores.length,
+                    skus: skus.length,
+                    users: users.length
+                });
+                
+            } catch (error) {
+                console.error('❌ Error loading initial data:', error);
+                throw error;
+            }
+        }
+
+        // Populate user dropdown
+        function populateUserDropdown() {
+            const select = document.getElementById('assigned-user');
+            select.innerHTML = '<option value="">Select user...</option>';
+            
+            users.forEach(user => {
+                const option = document.createElement('option');
+                option.value = user.id;
+                option.textContent = `${user.full_name || 'No name'} (${user.role})`;
+                select.appendChild(option);
+            });
+        }
+
+        // Setup form event listeners
+        function setupFormEventListeners() {
+            // Brand autocomplete
+            const brandInput = document.getElementById('brand-name');
+            brandInput.addEventListener('input', handleBrandInput);
+            brandInput.addEventListener('blur', hideBrandSuggestions);
+            
+            // Store selection
+            document.getElementById('all-stores').addEventListener('change', handleAllStoresChange);
+            
+            // Form submission
+            document.getElementById('job-creation-form').addEventListener('submit', handleFormSubmit);
+            
+            // Real-time validation
+            document.getElementById('job-title').addEventListener('input', updateJobSummary);
+            document.getElementById('brand-name').addEventListener('input', updateJobSummary);
+        }
+
+        // Setup error handling
+        function setupErrorHandling() {
+            document.getElementById('retry-button').addEventListener('click', () => {
+                hideError();
+                // Form data is preserved, user can try again
+            });
+            
+            document.getElementById('cancel-button').addEventListener('click', () => {
+                window.location.href = 'dashboard.html';
+            });
+        }
+
+        // Brand input handling
+        function handleBrandInput(event) {
+            const query = event.target.value.toLowerCase().trim();
+            if (query.length < 2) {
+                hideBrandSuggestions();
+                return;
+            }
+            
+            const matches = brands.filter(brand => 
+                brand.name.toLowerCase().includes(query)
+            );
+            
+            showBrandSuggestions(matches);
+        }
+
+        // Show brand suggestions
+        function showBrandSuggestions(matches) {
+            const container = document.getElementById('brand-suggestions');
+            container.innerHTML = '';
+            
+            if (matches.length === 0) {
+                container.innerHTML = '<div class="p-3 text-gray-500">No matching brands found</div>';
+            } else {
+                matches.forEach(brand => {
+                    const div = document.createElement('div');
+                    div.className = 'p-3 hover:bg-gray-50 cursor-pointer border-b border-gray-200 last:border-b-0';
+                    div.textContent = brand.name;
+                    div.addEventListener('click', () => {
+                        document.getElementById('brand-name').value = brand.name;
+                        hideBrandSuggestions();
+                        updateJobSummary();
+                    });
+                    container.appendChild(div);
+                });
+            }
+            
+            container.classList.remove('hidden');
+        }
+
+        // Hide brand suggestions
+        function hideBrandSuggestions() {
+            document.getElementById('brand-suggestions').classList.add('hidden');
+        }
+
+        // Handle all stores checkbox
+        function handleAllStoresChange(event) {
+            const storeSelection = document.getElementById('store-selection');
+            if (event.target.checked) {
+                storeSelection.style.display = 'none';
+                selectedStores = stores.map(store => store.name);
+            } else {
+                storeSelection.style.display = 'block';
+                selectedStores = [];
+            }
+            updateJobSummary();
+        }
+
+        // Add store input
+        function addStoreInput() {
+            const container = document.getElementById('store-selection');
+            const input = container.querySelector('input');
+            const storeName = input.value.trim();
+            
+            if (!storeName) {
+                alert('Please enter a store name');
+                return;
+            }
+            
+            if (selectedStores.includes(storeName)) {
+                alert('Store already added');
+                return;
+            }
+            
+            selectedStores.push(storeName);
+            input.value = '';
+            updateJobSummary();
+            updateStoreDisplay();
+        }
+
+        // Add SKU input
+        function addSkuInput() {
+            const container = document.getElementById('sku-selection');
+            const input = container.querySelector('input');
+            const skuName = input.value.trim();
+            
+            if (!skuName) {
+                alert('Please enter a product name');
+                return;
+            }
+            
+            if (selectedSkus.includes(skuName)) {
+                alert('Product already added');
+                return;
+            }
+            
+            selectedSkus.push(skuName);
+            input.value = '';
+            updateJobSummary();
+            updateSkuDisplay();
+        }
+
+        // Update store display
+        function updateStoreDisplay() {
+            const container = document.getElementById('store-selection');
+            const existingDisplay = container.querySelector('.selected-stores');
+            if (existingDisplay) {
+                existingDisplay.remove();
+            }
+            
+            if (selectedStores.length > 0) {
+                const display = document.createElement('div');
+                display.className = 'selected-stores mt-2 p-2 bg-gray-50 rounded';
+                display.innerHTML = `
+                    <div class="text-sm font-medium text-gray-700 mb-1">Selected Stores:</div>
+                    <div class="flex flex-wrap gap-2">
+                        ${selectedStores.map(store => `
+                            <span class="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full">
+                                ${store}
+                                <button type="button" onclick="removeStore('${store}')" class="ml-1 text-blue-600 hover:text-blue-800">×</button>
+                            </span>
+                        `).join('')}
+                    </div>
+                `;
+                container.appendChild(display);
+            }
+        }
+
+        // Update SKU display
+        function updateSkuDisplay() {
+            const container = document.getElementById('sku-selection');
+            const existingDisplay = container.querySelector('.selected-skus');
+            if (existingDisplay) {
+                existingDisplay.remove();
+            }
+            
+            if (selectedSkus.length > 0) {
+                const display = document.createElement('div');
+                display.className = 'selected-skus mt-2 p-2 bg-gray-50 rounded';
+                display.innerHTML = `
+                    <div class="text-sm font-medium text-gray-700 mb-1">Selected Products:</div>
+                    <div class="flex flex-wrap gap-2">
+                        ${selectedSkus.map(sku => `
+                            <span class="px-2 py-1 bg-green-100 text-green-800 text-xs rounded-full">
+                                ${sku}
+                                <button type="button" onclick="removeSku('${sku}')" class="ml-1 text-green-600 hover:text-green-800">×</button>
+                            </span>
+                        `).join('')}
+                    </div>
+                `;
+                container.appendChild(display);
+            }
+        }
+
+        // Remove store
+        function removeStore(storeName) {
+            selectedStores = selectedStores.filter(s => s !== storeName);
+            updateJobSummary();
+            updateStoreDisplay();
+        }
+
+        // Remove SKU
+        function removeSku(skuName) {
+            selectedSkus = selectedSkus.filter(s => s !== skuName);
+            updateJobSummary();
+            updateSkuDisplay();
+        }
+
+        // Update job summary
+        function updateJobSummary() {
+            const title = document.getElementById('job-title').value.trim();
+            const brand = document.getElementById('brand-name').value.trim();
+            const allStores = document.getElementById('all-stores').checked;
+            const stores = allStores ? selectedStores : selectedStores;
+            const skus = selectedSkus;
+            
+            if (title && brand && stores.length > 0 && skus.length > 0) {
+                const totalJobs = stores.length * skus.length;
+                const summary = document.getElementById('summary-details');
+                summary.innerHTML = `
+                    <div class="space-y-1">
+                        <div><strong>Title:</strong> ${title}</div>
+                        <div><strong>Brand:</strong> ${brand}</div>
+                        <div><strong>Stores:</strong> ${stores.length} ${allStores ? '(All active stores)' : ''}</div>
+                        <div><strong>Products:</strong> ${skus.length}</div>
+                        <div class="font-medium text-blue-600"><strong>Total Jobs:</strong> ${totalJobs}</div>
+                    </div>
+                `;
+                document.getElementById('job-summary').classList.remove('hidden');
+            } else {
+                document.getElementById('job-summary').classList.add('hidden');
+            }
+        }
+
+        // Handle form submission
+        async function handleFormSubmit(event) {
+            event.preventDefault();
+            
+            try {
+                // Validate form
+                if (!validateForm()) {
+                    return;
+                }
+                
+                // Show loading state
+                setLoadingState(true);
+                hideError();
+                hideSuccess();
+                
+                // Get form data
+                const formData = getFormData();
+                
+                // Create jobs
+                const result = await createJobs(formData);
+                
+                // Show success
+                showSuccess(result);
+                
+                // Redirect after delay
+                setTimeout(() => {
+                    window.location.href = 'dashboard.html';
+                }, 3000);
+                
+            } catch (error) {
+                console.error('❌ Error creating jobs:', error);
+                showError(error.message);
+            } finally {
+                setLoadingState(false);
+            }
+        }
+
+        // Validate form
+        function validateForm() {
+            const title = document.getElementById('job-title').value.trim();
+            const brand = document.getElementById('brand-name').value.trim();
+            const assignedUser = document.getElementById('assigned-user').value;
+            const allStores = document.getElementById('all-stores').checked;
+            const stores = allStores ? selectedStores : selectedStores;
+            
+            if (!title || title.length < 5) {
+                alert('Job title must be at least 5 characters');
+                return false;
+            }
+            
+            if (!brand) {
+                alert('Brand name is required');
+                return false;
+            }
+            
+            if (!allStores && stores.length === 0) {
+                alert('Please select at least one store');
+                return false;
+            }
+            
+            if (selectedSkus.length === 0) {
+                alert('Please add at least one product (SKU)');
+                return false;
+            }
+            
+            if (!assignedUser) {
+                alert('Please select an assigned user');
+                return false;
+            }
+            
+            return true;
+        }
+
+        // Get form data
+        function getFormData() {
+            const allStores = document.getElementById('all-stores').checked;
+            const stores = allStores ? stores : selectedStores;
+            
+            return {
+                title: document.getElementById('job-title').value.trim(),
+                description: document.getElementById('job-description').value.trim(),
+                brand: document.getElementById('brand-name').value.trim(),
+                stores: stores,
+                skus: selectedSkus,
+                assignedUserId: document.getElementById('assigned-user').value,
+                priority: document.getElementById('priority').value,
+                dueDate: document.getElementById('due-date').value,
+                specialInstructions: document.getElementById('special-instructions').value.trim()
+            };
+        }
+
+        // Create jobs
+        async function createJobs(formData) {
+            const errors = [];
+            const createdJobs = [];
+            
+            try {
+                // Ensure brand exists
+                let brandId = await ensureBrandExists(formData.brand);
+                
+                // Ensure stores exist
+                const storeIds = await ensureStoresExist(formData.stores);
+                
+                // Ensure SKUs exist
+                const skuIds = await ensureSkusExist(formData.skus, brandId);
+                
+                // Create jobs (one per store-SKU combination)
+                for (const storeId of storeIds) {
+                    for (const skuId of skuIds) {
+                        try {
+                            const jobData = {
+                                title: formData.title,
+                                description: formData.description,
+                                brand_id: brandId,
+                                assigned_user_id: formData.assignedUserId,
+                                priority: formData.priority,
+                                due_date: formData.dueDate || null,
+                                special_instructions: formData.specialInstructions,
+                                status: 'pending',
+                                total_cost: 5.00, // Standard $5 job
+                                created_at: new Date().toISOString()
+                            };
+                            
+                            const { data: job, error } = await supabase
+                                .from('jobs')
+                                .insert(jobData)
+                                .select()
+                                .single();
+                            
+                            if (error) throw error;
+                            
+                            // Link job to store and SKU
+                            await supabase.from('job_stores').insert({
+                                job_id: job.id,
+                                store_id: storeId
+                            });
+                            
+                            await supabase.from('job_skus').insert({
+                                job_id: job.id,
+                                sku_id: skuId
+                            });
+                            
+                            createdJobs.push(job);
+                            
+                        } catch (error) {
+                            console.error(`❌ Error creating job for store ${storeId}, SKU ${skuId}:`, error);
+                            errors.push(`Failed to create job for store-SKU combination: ${error.message}`);
+                        }
+                    }
+                }
+                
+                if (errors.length > 0 && createdJobs.length === 0) {
+                    throw new Error(`All jobs failed to create: ${errors.join(', ')}`);
+                }
+                
+                return {
+                    created: createdJobs.length,
+                    errors: errors.length,
+                    total: storeIds.length * skuIds.length
+                };
+                
+            } catch (error) {
+                console.error('❌ Error in createJobs:', error);
+                throw error;
+            }
+        }
+
+        // Ensure brand exists
+        async function ensureBrandExists(brandName) {
+            const existingBrand = brands.find(b => b.name.toLowerCase() === brandName.toLowerCase());
+            if (existingBrand) {
+                return existingBrand.id;
+            }
+            
+            const { data: brand, error } = await supabase
+                .from('brands')
+                .insert({ name: brandName })
+                .select()
+                .single();
+            
+            if (error) throw new Error(`Failed to create brand: ${error.message}`);
+            
+            brands.push(brand);
+            return brand.id;
+        }
+
+        // Ensure stores exist
+        async function ensureStoresExist(storeNames) {
+            const storeIds = [];
+            
+            for (const storeName of storeNames) {
+                const existingStore = stores.find(s => s.name.toLowerCase() === storeName.toLowerCase());
+                if (existingStore) {
+                    storeIds.push(existingStore.id);
+                } else {
+                    const { data: store, error } = await supabase
+                        .from('stores')
+                        .insert({ name: storeName })
+                        .select()
+                        .single();
+                    
+                    if (error) throw new Error(`Failed to create store: ${error.message}`);
+                    
+                    stores.push(store);
+                    storeIds.push(store.id);
+                }
+            }
+            
+            return storeIds;
+        }
+
+        // Ensure SKUs exist
+        async function ensureSkusExist(skuNames, brandId) {
+            const skuIds = [];
+            
+            for (const skuName of skuNames) {
+                const existingSku = skus.find(s => s.name.toLowerCase() === skuName.toLowerCase());
+                if (existingSku) {
+                    skuIds.push(existingSku.id);
+                } else {
+                    const { data: sku, error } = await supabase
+                        .from('skus')
+                        .insert({ 
+                            name: skuName,
+                            brand_id: brandId
+                        })
+                        .select()
+                        .single();
+                    
+                    if (error) throw new Error(`Failed to create SKU: ${error.message}`);
+                    
+                    skus.push(sku);
+                    skuIds.push(sku.id);
+                }
+            }
+            
+            return skuIds;
+        }
+
+        // Show error
+        function showError(message) {
+            document.getElementById('error-details').textContent = message;
+            document.getElementById('error-messages').classList.remove('hidden');
+        }
+
+        // Hide error
+        function hideError() {
+            document.getElementById('error-messages').classList.add('hidden');
+        }
+
+        // Show success
+        function showSuccess(result) {
+            const details = document.getElementById('success-details');
+            details.innerHTML = `
+                <div class="space-y-1">
+                    <div>✅ Created ${result.created} jobs successfully</div>
+                    ${result.errors > 0 ? `<div>⚠️ ${result.errors} jobs failed</div>` : ''}
+                    <div>📊 Total expected: ${result.total} jobs</div>
+                </div>
+            `;
+            document.getElementById('success-messages').classList.remove('hidden');
+        }
+
+        // Hide success
+        function hideSuccess() {
+            document.getElementById('success-messages').classList.add('hidden');
+        }
+
+        // Set loading state
+        function setLoadingState(loading) {
+            const button = document.getElementById('confirm-job-btn');
+            const submitText = document.getElementById('submit-text');
+            const spinner = document.getElementById('loading-spinner');
+            
+            if (loading) {
+                button.disabled = true;
+                submitText.textContent = 'Creating Jobs...';
+                spinner.classList.remove('hidden');
+            } else {
+                button.disabled = false;
+                submitText.textContent = 'Confirm Job';
+                spinner.classList.add('hidden');
+            }
+        }
 
         // Sign out function
         async function signOut() {
@@ -81,6 +801,11 @@
             } catch (error) {
                 console.error('Error signing out:', error);
             }
+        }
+
+        // Navigation helper
+        function goToPage(page) {
+            window.location.href = page;
         }
     </script>
 </body>
