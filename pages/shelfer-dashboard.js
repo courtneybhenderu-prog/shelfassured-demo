@@ -45,7 +45,7 @@ async function loadDashboard() {
 function viewJob(jobId) {
     console.log('Viewing job:', jobId);
     // Navigate to job details page
-    goToPage(`../jobs/details.html?id=${jobId}`);
+    window.location.href = `job-details.html?job_id=${jobId}`;
 }
 
 // Load dashboard when page loads

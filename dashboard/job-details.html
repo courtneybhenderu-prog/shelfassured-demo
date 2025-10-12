@@ -1,0 +1,466 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>ShelfAssured · Job Details</title>
+  <meta name="description" content="Shelfer job details: upload photos, verify price, record stock level, and submit." />
+  <meta name="color-scheme" content="light" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: { sans: ['Inter','system-ui','sans-serif'] },
+          boxShadow: { brand:'0 4px 6px -1px rgba(0,0,0,.10)'}
+        }
+      }
+    }
+  </script>
+  <style>
+    :root{
+      --brand-red:#C62828; --brand-red-hover:#B71C1C;
+      --brand-gold:#F9A825; --brand-brown:#3D342F;
+      --bg:#F7F3F0; --card:#FCFBF9; --text-900:#111827; --text-600:#6B7280; --border:#E5E7EB;
+    }
+    html,body{background:var(--bg);color:var(--text-900)}
+    @media(prefers-color-scheme:dark){html,body{background:var(--bg)!important;color:var(--text-900)!important}}
+    .btn-red{background:var(--brand-red);color:#fff;transition:transform .12s ease}
+    .btn-red:hover{background:var(--brand-red-hover);transform:translateY(-1px)}
+    .btn-gray{background:#6B7280;color:#fff}
+    .brand-card{background:var(--card);box-shadow:0 4px 6px -1px rgba(0,0,0,.10);border-radius:.75rem}
+    .brand-input{background:#fff;border:1px solid var(--border);border-radius:.5rem}
+    .brand-input:focus{outline:none;border-color:var(--brand-red);box-shadow:0 0 0 3px rgba(198,40,40,.15)}
+    .badge{background:var(--card);border:1px solid var(--border);border-radius:9999px;padding:.25rem .6rem}
+    .dropzone{border:2px dashed var(--border);border-radius:.75rem;background:#fff}
+  </style>
+</head>
+<body class="font-sans antialiased">
+  <!-- Top bar / crumbs -->
+  <header class="border-b" style="border-color:var(--border)">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex items-center justify-between">
+      <a href="javascript:history.back()" class="flex items-center gap-2" aria-label="Back to Dashboard">
+        <span class="text-2xl font-extrabold tracking-tight"><span style="color:var(--brand-brown)">Shelf</span><span style="color:var(--brand-gold)">Assured</span></span>
+      </a>
+      <div class="text-sm text-gray-600">Shelfer Dashboard</div>
+    </div>
+  </header>
+
+  <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+    <!-- Job header -->
+    <section class="brand-card p-5 sm:p-6 mb-6">
+      <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <div>
+          <h1 class="text-2xl sm:text-3xl font-bold">Job · <span id="jobId">Loading...</span></h1>
+          <p class="mt-1 text-sm" style="color:var(--text-600)">Brand: <span id="brand">Loading...</span> · Store: <span id="store">Loading...</span> · SKU: <span id="sku">Loading...</span></p>
+        </div>
+        <div class="flex flex-wrap items-center gap-2">
+          <span class="badge">⏱ 48h standard</span>
+          <span class="badge">📷 3 photos</span>
+          <span class="badge">🧾 Price & stock check</span>
+        </div>
+      </div>
+    </section>
+
+    <form id="jobForm" class="grid lg:grid-cols-2 gap-6">
+      <!-- Left: Photo uploads -->
+      <section class="brand-card p-5 sm:p-6">
+        <h2 class="text-xl font-semibold">Upload Photos</h2>
+        <p class="mt-1 text-sm" style="color:var(--text-600)">Provide clear, readable photos. Minimum 1000×1000px, max 5MB each. JPG or PNG.</p>
+
+        <div class="mt-4 grid gap-4">
+          <!-- Product closeup -->
+          <div>
+            <label class="block text-sm font-medium">1) Product on shelf (close)</label>
+            <p class="mt-1 text-xs" style="color:var(--text-600)">Close photo of the product on the shelf with label readable.</p>
+            <div class="mt-2 dropzone p-4 flex items-center gap-4">
+              <input id="photoItemSet" type="file" accept="image/*" class="hidden" />
+              <button type="button" class="btn-gray px-3 py-2 rounded-lg" onclick="document.getElementById('photoItemSet').click()">Choose file</button>
+              <div id="previewItemSet" class="text-sm text-gray-600">No file chosen</div>
+            </div>
+          </div>
+          <!-- Section view -->
+          <div>
+            <label class="block text-sm font-medium">2) Section/shelf context</label>
+            <p class="mt-1 text-xs" style="color:var(--text-600)">Further back shot showing the section/shelf context around the product.</p>
+            <div class="mt-2 dropzone p-4 flex items-center gap-4">
+              <input id="photoSection" type="file" accept="image/*" class="hidden" />
+              <button type="button" class="btn-gray px-3 py-2 rounded-lg" onclick="document.getElementById('photoSection').click()">Choose file</button>
+              <div id="previewSection" class="text-sm text-gray-600">No file chosen</div>
+            </div>
+          </div>
+          <!-- Wide angle -->
+          <div>
+            <label class="block text-sm font-medium">3) Wide-angle shelf view</label>
+            <p class="mt-1 text-xs" style="color:var(--text-600)">Wide-angle shot showing the broader shelf context around the section.</p>
+            <div class="mt-2 dropzone p-4 flex items-center gap-4">
+              <input id="photoWide" type="file" accept="image/*" class="hidden" />
+              <button type="button" class="btn-gray px-3 py-2 rounded-lg" onclick="document.getElementById('photoWide').click()">Choose file</button>
+              <div id="previewWide" class="text-sm text-gray-600">No file chosen</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Right: Data capture -->
+      <section class="brand-card p-5 sm:p-6">
+        <h2 class="text-xl font-semibold">Record Findings</h2>
+        <div class="mt-4 grid gap-4">
+          <div>
+            <label class="block text-sm font-medium">Shelf price</label>
+            <div class="mt-1 relative">
+              <span class="absolute left-3 top-2.5 text-gray-500">$</span>
+              <input id="price" type="number" step="0.01" min="0" class="brand-input w-full pl-7 pr-3 py-2" placeholder="e.g. 3.49" />
+            </div>
+            <p class="text-xs mt-1" style="color:var(--text-600)">Enter price shown on tag; note promos in comments.</p>
+          </div>
+
+          <div>
+            <label class="block text-sm font-medium">Stock level</label>
+            <select id="stock" class="brand-input w-full px-3 py-2">
+              <option value="" disabled selected>Select</option>
+              <option value="in_stock">In stock</option>
+              <option value="low">Low</option>
+              <option value="oos">Out of stock</option>
+            </select>
+          </div>
+
+          <div>
+            <label class="block text-sm font-medium">Notes</label>
+            <textarea id="notes" rows="4" class="brand-input w-full px-3 py-2" placeholder="Anything unusual (promo sign, missing tag, moved location, etc.)"></textarea>
+          </div>
+
+          <div class="grid sm:grid-cols-2 gap-4">
+            <div>
+              <label class="block text-sm font-medium">Captured at</label>
+              <input id="capturedAt" type="text" class="brand-input w-full px-3 py-2" readonly />
+            </div>
+            <div>
+              <label class="block text-sm font-medium">Device</label>
+              <input id="device" type="text" class="brand-input w-full px-3 py-2" readonly />
+            </div>
+          </div>
+
+          <div class="pt-2 flex flex-wrap gap-3">
+            <button type="submit" class="btn-red px-5 py-3 rounded-xl font-semibold">Submit for review</button>
+            <button type="button" id="saveDraft" class="btn-gray px-5 py-3 rounded-xl font-semibold">Save draft</button>
+            <span id="formMsg" class="text-sm" style="color:var(--text-600)"></span>
+          </div>
+        </div>
+      </section>
+    </form>
+
+    <!-- Definition of Done -->
+    <section class="brand-card p-5 sm:p-6 mt-6">
+      <h2 class="text-xl font-semibold">Definition of Done</h2>
+      <ul class="mt-3 list-disc pl-6 text-sm" style="color:var(--text-600)">
+        <li>3 photos uploaded: product on shelf (close), section/shelf context, wide-angle shelf view (sharp & legible)</li>
+        <li>Price entered; promos noted in comments</li>
+        <li>Stock level recorded (in stock / low / OOS)</li>
+      </ul>
+    </section>
+  </main>
+
+  <!-- Supabase SDK -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.47.5/dist/umd/supabase.min.js"></script>
+  <script src="../shared/api.js"></script>
+  <script>
+    // Supabase is initialized in shared/api.js
+
+    // Global variables
+    let currentJob = null;
+    let currentUser = null;
+
+    // Initialize page
+    document.addEventListener('DOMContentLoaded', async function() {
+      try {
+        // Get job ID from URL
+        const urlParams = new URLSearchParams(window.location.search);
+        const jobId = urlParams.get('job_id');
+        
+        if (!jobId) {
+          console.error('❌ No job ID provided');
+          window.location.href = 'dashboard.html';
+          return;
+        }
+
+        // Get current user
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) {
+          window.location.href = '../auth/signin.html';
+          return;
+        }
+        currentUser = user;
+
+        // Load job details
+        await loadJobDetails(jobId);
+        
+        // Setup form
+        setupFormHandlers();
+        
+        // Auto-capture metadata
+        updateMetadata();
+        
+      } catch (error) {
+        console.error('❌ Error initializing job details:', error);
+        showError('Failed to load job details. Please try again.');
+      }
+    });
+
+    // Load job details
+    async function loadJobDetails(jobId) {
+      try {
+        const { data: job, error } = await supabase
+          .from('jobs')
+          .select(`
+            *,
+            brands(name),
+            job_stores(stores(name)),
+            job_skus(skus(name, upc))
+          `)
+          .eq('id', jobId)
+          .single();
+
+        if (error) throw error;
+
+        currentJob = job;
+        
+        // Update UI
+        document.getElementById('jobId').textContent = job.title || 'Untitled Job';
+        document.getElementById('brand').textContent = job.brands?.name || 'Unknown Brand';
+        document.getElementById('store').textContent = job.job_stores?.[0]?.stores?.name || 'Unknown Store';
+        document.getElementById('sku').textContent = job.job_skus?.[0]?.skus?.name || 'Unknown SKU';
+
+        console.log('✅ Job loaded:', job);
+        
+      } catch (error) {
+        console.error('❌ Error loading job:', error);
+        throw error;
+      }
+    }
+
+    // Setup form handlers
+    function setupFormHandlers() {
+      // Photo upload handlers
+      const slots = [
+        { input: 'photoItemSet', preview: 'previewItemSet', key: 'product_closeup' },
+        { input: 'photoSection', preview: 'previewSection', key: 'section_context' },
+        { input: 'photoWide', preview: 'previewWide', key: 'wide_angle' }
+      ];
+
+      slots.forEach(slot => {
+        const input = document.getElementById(slot.input);
+        const preview = document.getElementById(slot.preview);
+        
+        input.addEventListener('change', async (e) => {
+          const file = e.target.files[0];
+          if (file) {
+            const isValid = await validatePhoto(file, preview);
+            if (isValid) {
+              // Store file for later upload
+              window[slot.key + 'File'] = file;
+            }
+          }
+        });
+      });
+
+      // Form submission
+      document.getElementById('jobForm').addEventListener('submit', handleSubmit);
+      
+      // Save draft
+      document.getElementById('saveDraft').addEventListener('click', saveDraft);
+    }
+
+    // Validate photo
+    async function validatePhoto(file, previewEl) {
+      const MAX_SIZE_MB = 5;
+      const MIN_W = 1000, MIN_H = 1000;
+      
+      // Check file size
+      const mb = file.size / (1024 * 1024);
+      if (mb > MAX_SIZE_MB) {
+        previewEl.textContent = `❌ File too large (${mb.toFixed(1)}MB)`;
+        return false;
+      }
+
+      // Check dimensions
+      return new Promise((resolve) => {
+        const img = new Image();
+        img.onload = () => {
+          if (img.width < MIN_W || img.height < MIN_H) {
+            previewEl.textContent = `❌ Too small (${img.width}×${img.height})`;
+            resolve(false);
+          } else {
+            previewEl.innerHTML = `<span class='text-green-700'>✅ ${file.name}</span> <span class='text-gray-500 text-xs'>(${img.width}×${img.height})</span>`;
+            resolve(true);
+          }
+        };
+        img.onerror = () => {
+          previewEl.textContent = '❌ Invalid image';
+          resolve(false);
+        };
+        img.src = URL.createObjectURL(file);
+      });
+    }
+
+    // Update metadata
+    function updateMetadata() {
+      const now = new Date();
+      document.getElementById('capturedAt').value = now.toISOString();
+      document.getElementById('device').value = /Mobi|Android/i.test(navigator.userAgent) ? 'mobile' : 'desktop';
+    }
+
+    // Handle form submission
+    async function handleSubmit(e) {
+      e.preventDefault();
+      
+      try {
+        // Validate required photos
+        const requiredPhotos = ['product_closeup', 'section_context', 'wide_angle'];
+        const missingPhotos = requiredPhotos.filter(key => !window[key + 'File']);
+        
+        if (missingPhotos.length > 0) {
+          showError(`Please upload all required photos: ${missingPhotos.join(', ')}`);
+          return;
+        }
+
+        // Validate stock level
+        const stock = document.getElementById('stock').value;
+        if (!stock) {
+          showError('Please select stock level');
+          return;
+        }
+
+        // Show loading
+        setLoading(true);
+
+        // Upload photos to Supabase Storage
+        const photoUrls = await uploadPhotos();
+
+        // Create job submission
+        const submissionData = {
+          job_id: currentJob.id,
+          contractor_id: currentUser.id,
+          submission_type: 'photo',
+          data: {
+            price: document.getElementById('price').value ? parseFloat(document.getElementById('price').value) : null,
+            stock_level: stock,
+            notes: document.getElementById('notes').value || null,
+            captured_at: document.getElementById('capturedAt').value,
+            device: document.getElementById('device').value
+          },
+          files: photoUrls
+        };
+
+        const { data: submission, error } = await supabase
+          .from('job_submissions')
+          .insert(submissionData)
+          .select()
+          .single();
+
+        if (error) throw error;
+
+        // Update job status
+        await supabase
+          .from('jobs')
+          .update({ 
+            status: 'pending_review',
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', currentJob.id);
+
+        // Show success
+        showSuccess('Job submitted successfully! Thank you for your work.');
+        
+        // Redirect after delay
+        setTimeout(() => {
+          window.location.href = 'dashboard.html';
+        }, 2000);
+
+      } catch (error) {
+        console.error('❌ Error submitting job:', error);
+        showError('Failed to submit job. Please try again.');
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    // Upload photos to Supabase Storage
+    async function uploadPhotos() {
+      const photoUrls = [];
+      const photoTypes = ['product_closeup', 'section_context', 'wide_angle'];
+      
+      for (const photoType of photoTypes) {
+        const file = window[photoType + 'File'];
+        if (file) {
+          const fileName = `${photoType}_${Date.now()}.${file.name.split('.').pop()}`;
+          const filePath = `jobs/${currentJob.id}/${fileName}`;
+          
+          const { data, error } = await supabase.storage
+            .from('job-submissions')
+            .upload(filePath, file);
+          
+          if (error) throw error;
+          
+          // Get public URL
+          const { data: urlData } = supabase.storage
+            .from('job-submissions')
+            .getPublicUrl(filePath);
+          
+          photoUrls.push({
+            type: photoType,
+            url: urlData.publicUrl,
+            filename: fileName
+          });
+        }
+      }
+      
+      return photoUrls;
+    }
+
+    // Save draft
+    function saveDraft() {
+      // Store form data in localStorage
+      const draftData = {
+        jobId: currentJob.id,
+        price: document.getElementById('price').value,
+        stock: document.getElementById('stock').value,
+        notes: document.getElementById('notes').value,
+        timestamp: new Date().toISOString()
+      };
+      
+      localStorage.setItem(`job_draft_${currentJob.id}`, JSON.stringify(draftData));
+      showSuccess('Draft saved locally');
+    }
+
+    // Show error message
+    function showError(message) {
+      const msgEl = document.getElementById('formMsg');
+      msgEl.textContent = message;
+      msgEl.style.color = '#C62828';
+    }
+
+    // Show success message
+    function showSuccess(message) {
+      const msgEl = document.getElementById('formMsg');
+      msgEl.textContent = message;
+      msgEl.style.color = '#059669';
+    }
+
+    // Set loading state
+    function setLoading(loading) {
+      const submitBtn = document.querySelector('button[type="submit"]');
+      if (loading) {
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Submitting...';
+      } else {
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Submit for review';
+      }
+    }
+  </script>
+</body>
+</html>

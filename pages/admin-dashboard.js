@@ -126,7 +126,7 @@ function updateRecentActivity(jobs, users) {
             recentJobsContainer.innerHTML = '<div class="text-center text-gray-500">No recent jobs</div>';
         } else {
             const jobsHtml = recentJobs.map(job => `
-                <div class="py-3 border-b border-gray-200 last:border-b-0">
+                <div class="py-3 border-b border-gray-200 last:border-b-0 cursor-pointer hover:bg-gray-50" onclick="viewJobDetails('${job.id}')">
                     <div class="flex items-start justify-between">
                         <div class="flex-1">
                             <div class="font-medium text-gray-900">${job.title || 'Untitled Job'}</div>
@@ -195,4 +195,10 @@ async function handleSignOut() {
 // Navigation helper
 function goToPage(page) {
     window.location.href = page;
+}
+
+// View job details
+function viewJobDetails(jobId) {
+    console.log('Viewing job details:', jobId);
+    window.location.href = `../dashboard/job-details.html?job_id=${jobId}`;
 }

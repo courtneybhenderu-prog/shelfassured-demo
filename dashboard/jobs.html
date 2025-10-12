@@ -211,7 +211,10 @@
                                 ${isBrandView ? 
                                     `<div class="text-sm font-medium text-gray-900">${job.status === 'completed' ? '✅ Complete' : '⏳ In Progress'}</div>` :
                                     `<div class="text-sm font-medium text-gray-900">$${job.payout_per_store || 0}/store</div>
-                                     ${canAccept ? '<button class="btn-red text-sm mt-2" onclick="acceptJob(\'' + job.id + '\')">Accept Job</button>' : ''}`
+                                     <div class="mt-2 space-x-2">
+                                         <button class="btn-gray text-sm" onclick="viewJobDetails('${job.id}')">View Details</button>
+                                         ${canAccept ? '<button class="btn-red text-sm" onclick="acceptJob(\'' + job.id + '\')">Accept Job</button>' : ''}
+                                     </div>`
                                 }
                             </div>
                         </div>
@@ -220,6 +223,12 @@
             }).join('');
 
             container.innerHTML = jobsHtml;
+        }
+
+        // View job details
+        function viewJobDetails(jobId) {
+            console.log('Viewing job details:', jobId);
+            window.location.href = `job-details.html?job_id=${jobId}`;
         }
 
         // Accept job (shelfers only)
