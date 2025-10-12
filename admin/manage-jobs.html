@@ -336,32 +336,39 @@
         // Load initial data
         async function loadInitialData() {
             try {
-                // Load brands, stores, skus, and users
-                const [brandsResult, storesResult, skusResult, usersResult] = await Promise.all([
+                console.log('🔄 Loading initial data...');
+                
+                // Load brands, skus, and users (stores are loaded by enhanced store selector)
+                const [brandsResult, skusResult, usersResult] = await Promise.all([
                     supabase.from('brands').select('*').order('name'),
-                    supabase.from('stores').select('*').order('name'),
                     supabase.from('skus').select('*').order('name'),
                     supabase.from('users').select('*').eq('is_active', true).order('full_name')
                 ]);
 
                 brands = brandsResult.data || [];
-                stores = storesResult.data || [];
                 skus = skusResult.data || [];
                 users = usersResult.data || [];
+                
+                // Initialize stores as empty array (will be populated by enhanced store selector)
+                stores = [];
 
                 // Populate assigned user dropdown
                 populateUserDropdown();
                 
                 console.log('📊 Loaded data:', {
                     brands: brands.length,
-                    stores: stores.length,
+                    stores: 'loaded by enhanced store selector',
                     skus: skus.length,
                     users: users.length
                 });
                 
             } catch (error) {
                 console.error('❌ Error loading initial data:', error);
-                throw error;
+                // Don't throw error, just log it and continue
+                brands = [];
+                skus = [];
+                users = [];
+                stores = [];
             }
         }
 

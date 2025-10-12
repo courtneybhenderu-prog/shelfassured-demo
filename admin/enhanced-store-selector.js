@@ -182,12 +182,15 @@ class StoreSelector {
             const isSelected = this.selectedStores.find(s => s.id === store.id);
             const distance = this.calculateDistance(store);
             
+            // Use banner name instead of store number for display
+            const displayName = this.getDisplayName(store);
+            
             return `
                 <div class="store-item p-3 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer ${isSelected ? 'bg-blue-50 border-blue-300' : ''}" 
                      onclick="storeSelector.toggleStore('${store.id}')">
                     <div class="flex justify-between items-start">
                         <div class="flex-1">
-                            <div class="font-medium text-gray-900">${store.name}</div>
+                            <div class="font-medium text-gray-900">${displayName}</div>
                             <div class="text-sm text-gray-600">${store.address}</div>
                             <div class="text-sm text-gray-500">${store.city}, ${store.state} ${store.zip_code}</div>
                             ${store.phone ? `<div class="text-sm text-gray-500">${store.phone}</div>` : ''}
@@ -204,6 +207,36 @@ class StoreSelector {
         container.innerHTML = html;
     }
 
+    // Get display name for store (prefer banner name over store number)
+    getDisplayName(store) {
+        // If the name looks like a store number (all digits), try to get banner name
+        if (/^\d+$/.test(store.name)) {
+            // Try to extract banner from the name or use a default
+            if (store.name.includes('1313')) return 'Food Lion';
+            if (store.name.includes('288')) return 'H-E-B Alvin';
+            if (store.name.includes('17')) return 'H-E-B Angleton';
+            if (store.name.includes('458')) return 'H-E-B Carthage';
+            if (store.name.includes('257')) return 'H-E-B Cleveland';
+            if (store.name.includes('256')) return 'H-E-B Columbus';
+            if (store.name.includes('287')) return 'H-E-B Crockett';
+            if (store.name.includes('351')) return 'H-E-B Edna';
+            if (store.name.includes('53')) return 'H-E-B Groves';
+            if (store.name.includes('416')) return 'H-E-B La Grange';
+            if (store.name.includes('339')) return 'H-E-B Livingston';
+            if (store.name.includes('116')) return 'H-E-B Lumberton';
+            if (store.name.includes('35')) return 'H-E-B Orange';
+            if (store.name.includes('86')) return 'H-E-B Port Arthur';
+            if (store.name.includes('348')) return 'H-E-B Santa Fe';
+            if (store.name.includes('271')) return 'H-E-B West Columbia';
+            if (store.name.includes('355')) return 'H-E-B Yoakum';
+            // Default fallback
+            return `H-E-B Store ${store.name}`;
+        }
+        
+        // If name already looks like a proper store name, use it
+        return store.name;
+    }
+
     // Render selected stores
     renderSelectedStores() {
         const container = document.getElementById('selected-stores');
@@ -214,16 +247,19 @@ class StoreSelector {
             return;
         }
 
-        const html = this.selectedStores.map(store => `
-            <div class="selected-store-item p-2 bg-green-100 border border-green-300 rounded-lg flex justify-between items-center">
-                <div class="flex-1">
-                    <div class="font-medium text-green-800">${store.name}</div>
-                    <div class="text-sm text-green-600">${store.city}, ${store.state}</div>
+        const html = this.selectedStores.map(store => {
+            const displayName = this.getDisplayName(store);
+            return `
+                <div class="selected-store-item p-2 bg-green-100 border border-green-300 rounded-lg flex justify-between items-center">
+                    <div class="flex-1">
+                        <div class="font-medium text-green-800">${displayName}</div>
+                        <div class="text-sm text-green-600">${store.city}, ${store.state}</div>
+                    </div>
+                    <button onclick="storeSelector.removeStore('${store.id}')" 
+                            class="text-green-600 hover:text-green-800 font-bold">×</button>
                 </div>
-                <button onclick="storeSelector.removeStore('${store.id}')" 
-                        class="text-green-600 hover:text-green-800 font-bold">×</button>
-            </div>
-        `).join('');
+            `;
+        }).join('');
 
         container.innerHTML = html;
     }
