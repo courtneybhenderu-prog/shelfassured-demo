@@ -411,28 +411,41 @@
                 console.log('🔄 Setting up brand autocomplete...');
                 // Brand autocomplete
                 const brandInput = document.getElementById('brand-name');
+                console.log('Brand input element:', brandInput);
                 if (brandInput) {
                     brandInput.addEventListener('input', handleBrandInput);
                     brandInput.addEventListener('blur', hideBrandSuggestions);
+                    console.log('✅ Brand autocomplete setup complete');
+                } else {
+                    console.warn('⚠️ Brand input element not found');
                 }
                 
                 console.log('🔄 Setting up form submission...');
                 // Form submission
                 const form = document.getElementById('job-creation-form');
+                console.log('Form element:', form);
                 if (form) {
                     form.addEventListener('submit', handleFormSubmit);
+                    console.log('✅ Form submission setup complete');
+                } else {
+                    console.warn('⚠️ Form element not found');
                 }
                 
                 console.log('🔄 Setting up real-time validation...');
                 // Real-time validation
                 const jobTitle = document.getElementById('job-title');
+                console.log('Job title element:', jobTitle);
                 if (jobTitle) {
                     jobTitle.addEventListener('input', updateJobSummary);
+                    console.log('✅ Real-time validation setup complete');
+                } else {
+                    console.warn('⚠️ Job title element not found');
                 }
                 
                 console.log('✅ Form event listeners setup complete');
             } catch (error) {
                 console.error('❌ Error setting up form event listeners:', error);
+                console.error('❌ Error details:', error.message, error.stack);
                 throw error;
             }
         }
