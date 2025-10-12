@@ -310,25 +310,39 @@
         // Initialize page
         document.addEventListener('DOMContentLoaded', async function() {
             try {
+                console.log('🔄 Starting job creation form initialization...');
+                
+                // Check if supabase is available
+                if (typeof supabase === 'undefined') {
+                    throw new Error('Supabase not available');
+                }
+                
                 const { data: { user } } = await supabase.auth.getUser();
                 if (!user) {
+                    console.log('❌ No user found, redirecting to signin');
                     window.location.href = '../auth/signin.html';
                     return;
                 }
                 
-                console.log('✅ Loading job creation form for:', user.email);
+                console.log('✅ User authenticated:', user.email);
                 
                 // Load initial data
+                console.log('🔄 Loading initial data...');
                 await loadInitialData();
                 
                 // Setup form event listeners
+                console.log('🔄 Setting up form event listeners...');
                 setupFormEventListeners();
                 
                 // Setup error handling
+                console.log('🔄 Setting up error handling...');
                 setupErrorHandling();
+                
+                console.log('✅ Job creation form initialized successfully');
                 
             } catch (error) {
                 console.error('❌ Error initializing job creation form:', error);
+                console.error('❌ Error details:', error.message, error.stack);
                 showError('Failed to load job creation form. Please refresh the page.');
             }
         });
@@ -393,32 +407,60 @@
 
         // Setup form event listeners
         function setupFormEventListeners() {
-            // Brand autocomplete
-            const brandInput = document.getElementById('brand-name');
-            brandInput.addEventListener('input', handleBrandInput);
-            brandInput.addEventListener('blur', hideBrandSuggestions);
-            
-            // Store selection
-            document.getElementById('all-stores').addEventListener('change', handleAllStoresChange);
-            
-            // Form submission
-            document.getElementById('job-creation-form').addEventListener('submit', handleFormSubmit);
-            
-            // Real-time validation
-            document.getElementById('job-title').addEventListener('input', updateJobSummary);
-            document.getElementById('brand-name').addEventListener('input', updateJobSummary);
+            try {
+                console.log('🔄 Setting up brand autocomplete...');
+                // Brand autocomplete
+                const brandInput = document.getElementById('brand-name');
+                if (brandInput) {
+                    brandInput.addEventListener('input', handleBrandInput);
+                    brandInput.addEventListener('blur', hideBrandSuggestions);
+                }
+                
+                console.log('🔄 Setting up form submission...');
+                // Form submission
+                const form = document.getElementById('job-creation-form');
+                if (form) {
+                    form.addEventListener('submit', handleFormSubmit);
+                }
+                
+                console.log('🔄 Setting up real-time validation...');
+                // Real-time validation
+                const jobTitle = document.getElementById('job-title');
+                if (jobTitle) {
+                    jobTitle.addEventListener('input', updateJobSummary);
+                }
+                
+                console.log('✅ Form event listeners setup complete');
+            } catch (error) {
+                console.error('❌ Error setting up form event listeners:', error);
+                throw error;
+            }
         }
 
         // Setup error handling
         function setupErrorHandling() {
-            document.getElementById('retry-button').addEventListener('click', () => {
-                hideError();
-                // Form data is preserved, user can try again
-            });
-            
-            document.getElementById('cancel-button').addEventListener('click', () => {
-                window.location.href = 'dashboard.html';
-            });
+            try {
+                console.log('🔄 Setting up error handling...');
+                const retryButton = document.getElementById('retry-button');
+                if (retryButton) {
+                    retryButton.addEventListener('click', () => {
+                        hideError();
+                        // Form data is preserved, user can try again
+                    });
+                }
+                
+                const cancelButton = document.getElementById('cancel-button');
+                if (cancelButton) {
+                    cancelButton.addEventListener('click', () => {
+                        window.location.href = 'dashboard.html';
+                    });
+                }
+                
+                console.log('✅ Error handling setup complete');
+            } catch (error) {
+                console.error('❌ Error setting up error handling:', error);
+                // Don't throw error for error handling setup
+            }
         }
 
         // Brand input handling
