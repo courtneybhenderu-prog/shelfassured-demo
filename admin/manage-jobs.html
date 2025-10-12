@@ -506,17 +506,17 @@
             const title = document.getElementById('job-title').value.trim();
             const brand = document.getElementById('brand-name').value.trim();
             const allStores = document.getElementById('all-stores').checked;
-            const stores = allStores ? selectedStores : selectedStores;
+            const storeList = allStores ? stores : selectedStores;
             const skus = selectedSkus;
             
-            if (title && brand && stores.length > 0 && skus.length > 0) {
-                const totalJobs = stores.length * skus.length;
+            if (title && brand && storeList.length > 0 && skus.length > 0) {
+                const totalJobs = storeList.length * skus.length;
                 const summary = document.getElementById('summary-details');
                 summary.innerHTML = `
                     <div class="space-y-1">
                         <div><strong>Title:</strong> ${title}</div>
                         <div><strong>Brand:</strong> ${brand}</div>
-                        <div><strong>Stores:</strong> ${stores.length} ${allStores ? '(All active stores)' : ''}</div>
+                        <div><strong>Stores:</strong> ${storeList.length} ${allStores ? '(All active stores)' : ''}</div>
                         <div><strong>Products:</strong> ${skus.length}</div>
                         <div class="font-medium text-blue-600"><strong>Total Jobs:</strong> ${totalJobs}</div>
                     </div>
@@ -570,7 +570,7 @@
             const brand = document.getElementById('brand-name').value.trim();
             const assignedUser = document.getElementById('assigned-user').value;
             const allStores = document.getElementById('all-stores').checked;
-            const stores = allStores ? selectedStores : selectedStores;
+            const stores = allStores ? stores : selectedStores;
             
             if (!title || title.length < 5) {
                 alert('Job title must be at least 5 characters');
@@ -582,7 +582,7 @@
                 return false;
             }
             
-            if (!allStores && stores.length === 0) {
+            if (!allStores && storeList.length === 0) {
                 alert('Please select at least one store');
                 return false;
             }
@@ -603,13 +603,13 @@
         // Get form data
         function getFormData() {
             const allStores = document.getElementById('all-stores').checked;
-            const stores = allStores ? stores : selectedStores;
+            const storeList = allStores ? stores : selectedStores;
             
             return {
                 title: document.getElementById('job-title').value.trim(),
                 description: document.getElementById('job-description').value.trim(),
                 brand: document.getElementById('brand-name').value.trim(),
-                stores: stores,
+                stores: storeList,
                 skus: selectedSkus,
                 assignedUserId: document.getElementById('assigned-user').value,
                 priority: document.getElementById('priority').value,
