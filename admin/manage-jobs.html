@@ -375,7 +375,8 @@
                 selectedStores = stores.map(store => store.name);
             } else {
                 storeSelection.style.display = 'block';
-                selectedStores = [];
+                // Don't clear manually added stores when unchecking "All active stores"
+                // selectedStores = []; // REMOVED - this was clearing user's manual entries
             }
             updateJobSummary();
         }
@@ -506,7 +507,7 @@
             const title = document.getElementById('job-title').value.trim();
             const brand = document.getElementById('brand-name').value.trim();
             const allStores = document.getElementById('all-stores').checked;
-            const storeList = allStores ? stores : selectedStores;
+            const storeList = allStores ? (stores || []) : selectedStores;
             const skus = selectedSkus;
             
             if (title && brand && storeList.length > 0 && skus.length > 0) {
@@ -603,7 +604,7 @@
         // Get form data
         function getFormData() {
             const allStores = document.getElementById('all-stores').checked;
-            const storeList = allStores ? stores : selectedStores;
+            const storeList = allStores ? (stores || []) : selectedStores;
             
             return {
                 title: document.getElementById('job-title').value.trim(),
