@@ -107,6 +107,15 @@
 
     <script src="shared/api.js"></script>
     <script>
+        // Define goToPage function
+        function goToPage(page) {
+            console.log('🔍 Debug: goToPage called with:', page);
+            window.location.href = page;
+        }
+        
+        // Make it globally available
+        window.goToPage = goToPage;
+        
         // Debug script to check if goToPage is available
         document.addEventListener('DOMContentLoaded', function() {
             console.log('🔍 Debug: DOM loaded');
