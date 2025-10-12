@@ -1,0 +1,13 @@
+# Environment Variables
+# This file contains sensitive data - DO NOT COMMIT TO VERSION CONTROL
+.env
+
+# Logs
+*.log
+
+# Dependencies
+node_modules/
+
+# OS generated files
+.DS_Store
+Thumbs.db
