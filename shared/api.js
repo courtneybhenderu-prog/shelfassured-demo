@@ -383,10 +383,10 @@ document.addEventListener('DOMContentLoaded', async function() {
   }
   
   // Development debugging: Always tell me what the guard saw
-  window.__SA_DEV__ && console.info('[SA][guard]', 'path=', location.pathname, 'role=', String(window.SA_PAGE_ROLE));
+  window.__SA_DEV__ && console.info('%c[SA][guard]', 'color: #2563eb; font-weight: bold;', 'path=', location.pathname, 'role=', String(window.SA_PAGE_ROLE));
   
   // Development debugging: Warn if a page forgot to define the role
-  window.__SA_DEV__ && typeof window.SA_PAGE_ROLE === 'undefined' && console.warn('[SA][guard] Missing SA_PAGE_ROLE on', location.pathname);
+  window.__SA_DEV__ && typeof window.SA_PAGE_ROLE === 'undefined' && console.warn('%c[SA][guard] Missing SA_PAGE_ROLE on', 'color: #dc2626; font-weight: bold;', location.pathname);
   
   // Check if user is logged in
   const { data: { user } } = await supabase.auth.getUser();
