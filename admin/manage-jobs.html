@@ -167,13 +167,13 @@
                         <p class="mt-1 text-sm text-gray-500">Standard timeline: 48 hours (placeholder for Marc's feedback)</p>
                     </div>
 
-                    <!-- Special Instructions -->
+                    <!-- Additional Notes -->
                     <div>
-                        <label for="special-instructions" class="block text-sm font-medium text-gray-700 mb-2">Special Instructions</label>
+                        <label for="special-instructions" class="block text-sm font-medium text-gray-700 mb-2">Additional Notes</label>
                         <textarea id="special-instructions" name="special-instructions" rows="3"
                                   class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                  placeholder="Any special requirements beyond standard $5 job requirements"></textarea>
-                        <p class="mt-1 text-sm text-gray-500">Standard requirements: 3 photos + price verification. Beyond this requires custom audit.</p>
+                                  placeholder=""></textarea>
+                        <p class="mt-1 text-sm text-gray-500">Standard requirements: 3 photos (product on shelf, price tag, overall shelf view) + price verification + stock level check. Beyond this requires custom audit.</p>
                     </div>
 
                     <!-- Job Summary -->
@@ -272,12 +272,18 @@
             }
         }
 
-        // Populate user dropdown
+        // Populate user dropdown (filtered to Courtney and Marc only)
         function populateUserDropdown() {
             const select = document.getElementById('assigned-user');
             select.innerHTML = '<option value="">Select user...</option>';
             
-            users.forEach(user => {
+            // Filter to only show Courtney and Marc
+            const filteredUsers = users.filter(user => {
+                const name = (user.full_name || '').toLowerCase();
+                return name.includes('courtney') || name.includes('marc');
+            });
+            
+            filteredUsers.forEach(user => {
                 const option = document.createElement('option');
                 option.value = user.id;
                 option.textContent = `${user.full_name || 'No name'} (${user.role})`;
