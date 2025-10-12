@@ -107,6 +107,9 @@
 
     <script src="shared/api.js"></script>
     <script>
+        // Set page role to prevent automatic redirect
+        window.SA_PAGE_ROLE = 'public';
+        
         // Define goToPage function
         function goToPage(page) {
             console.log('🔍 Debug: goToPage called with:', page);
