@@ -400,6 +400,12 @@ document.addEventListener('DOMContentLoaded', async function() {
   if (window.SA_PAGE_ROLE) {
     console.log('🔍 Page role declared:', window.SA_PAGE_ROLE);
     
+    // Handle public pages (no authentication required)
+    if (window.SA_PAGE_ROLE === 'public') {
+      console.log('✅ Public page, no authentication required');
+      return;
+    }
+    
     // If admin page and already passed admin check, do nothing
     if (window.SA_PAGE_ROLE === 'admin' && window.SA_ADMIN_READY === true) {
       console.log('✅ Admin page already passed checks, skipping global guard');
