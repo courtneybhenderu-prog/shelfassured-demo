@@ -4,6 +4,18 @@
     <meta charset="utf-8">
     <title>ShelfAssured</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    
+    <!-- Development debugging system -->
+    <script>
+        // Dev mode if you add ?dev=1, or set localStorage.SA_DEV = "1"
+        (function () {
+            const q = new URLSearchParams(location.search);
+            if (q.get('dev') === '1') localStorage.setItem('SA_DEV', '1');
+            if (q.get('dev') === '0') localStorage.removeItem('SA_DEV');
+            window.__SA_DEV__ = !!localStorage.getItem('SA_DEV');
+        })();
+    </script>
+    
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Supabase SDK (UMD build, reliable CDN) -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.47.5/dist/umd/supabase.min.js"></script>
@@ -108,6 +120,9 @@
     <script>
         // Set page role to prevent automatic redirect BEFORE loading shared/api.js
         window.SA_PAGE_ROLE = 'public';
+        
+        // Debug: Confirm role was set before shared/api.js loads
+        window.__SA_DEV__ && console.debug('[SA][page]', 'role set to', window.SA_PAGE_ROLE, 'before shared/api.js');
     </script>
     <script src="shared/api.js"></script>
     <script>
