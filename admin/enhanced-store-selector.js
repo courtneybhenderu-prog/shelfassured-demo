@@ -191,8 +191,7 @@ class StoreSelector {
                     <div class="flex justify-between items-start">
                         <div class="flex-1">
                             <div class="font-medium text-gray-900">${displayName}</div>
-                            <div class="text-sm text-gray-600">${store.address}</div>
-                            <div class="text-sm text-gray-500">${store.city}, ${store.state} ${store.zip_code}</div>
+                            <div class="text-sm text-gray-600">${this.getFormattedAddress(store)}</div>
                             ${store.phone ? `<div class="text-sm text-gray-500">${store.phone}</div>` : ''}
                         </div>
                         <div class="text-right">
@@ -207,34 +206,22 @@ class StoreSelector {
         container.innerHTML = html;
     }
 
-    // Get display name for store (prefer banner name over store number)
+    // Get display name for store (use Column E - STORE from Google Sheet)
     getDisplayName(store) {
-        // If the name looks like a store number (all digits), try to get banner name
-        if (/^\d+$/.test(store.name)) {
-            // Try to extract banner from the name or use a default
-            if (store.name.includes('1313')) return 'Food Lion';
-            if (store.name.includes('288')) return 'H-E-B Alvin';
-            if (store.name.includes('17')) return 'H-E-B Angleton';
-            if (store.name.includes('458')) return 'H-E-B Carthage';
-            if (store.name.includes('257')) return 'H-E-B Cleveland';
-            if (store.name.includes('256')) return 'H-E-B Columbus';
-            if (store.name.includes('287')) return 'H-E-B Crockett';
-            if (store.name.includes('351')) return 'H-E-B Edna';
-            if (store.name.includes('53')) return 'H-E-B Groves';
-            if (store.name.includes('416')) return 'H-E-B La Grange';
-            if (store.name.includes('339')) return 'H-E-B Livingston';
-            if (store.name.includes('116')) return 'H-E-B Lumberton';
-            if (store.name.includes('35')) return 'H-E-B Orange';
-            if (store.name.includes('86')) return 'H-E-B Port Arthur';
-            if (store.name.includes('348')) return 'H-E-B Santa Fe';
-            if (store.name.includes('271')) return 'H-E-B West Columbia';
-            if (store.name.includes('355')) return 'H-E-B Yoakum';
-            // Default fallback
-            return `H-E-B Store ${store.name}`;
-        }
+        // Use the 'name' field which should contain Column E (STORE) from Google Sheet
+        // This gives us clean names like "HEB - ALVIN", "WHOLE FOODS MARKET - CEDAR PARK"
+        return store.name || 'Unknown Store';
+    }
+
+    // Get formatted address (concatenate G+H+I+J: ADDRESS + CITY + STATE + ZIP)
+    getFormattedAddress(store) {
+        const parts = [];
+        if (store.address) parts.push(store.address);
+        if (store.city) parts.push(store.city);
+        if (store.state) parts.push(store.state);
+        if (store.zip_code) parts.push(store.zip_code);
         
-        // If name already looks like a proper store name, use it
-        return store.name;
+        return parts.join(', ');
     }
 
     // Render selected stores
@@ -253,7 +240,7 @@ class StoreSelector {
                 <div class="selected-store-item p-2 bg-green-100 border border-green-300 rounded-lg flex justify-between items-center">
                     <div class="flex-1">
                         <div class="font-medium text-green-800">${displayName}</div>
-                        <div class="text-sm text-green-600">${store.city}, ${store.state}</div>
+                        <div class="text-sm text-green-600">${this.getFormattedAddress(store)}</div>
                     </div>
                     <button onclick="storeSelector.removeStore('${store.id}')" 
                             class="text-green-600 hover:text-green-800 font-bold">×</button>
@@ -313,6 +300,109 @@ class StoreSelector {
     // Get selected stores for form submission
     getSelectedStores() {
         return this.selectedStores;
+    }
+
+    // Add new store (for future implementation)
+    async addNewStore(storeData) {
+        try {
+            console.log('🔄 Adding new store:', storeData);
+            
+            // Auto-geocode address to get GPS coordinates
+            const coordinates = await this.geocodeAddress(storeData.address, storeData.city, storeData.state);
+            
+            const newStore = {
+                name: storeData.name,
+                address: storeData.address,
+                city: storeData.city,
+                state: storeData.state,
+                zip_code: storeData.zip_code,
+                chain: storeData.chain || 'Unknown',
+                banner: storeData.banner || storeData.name,
+                store_number: storeData.store_number || '',
+                phone: storeData.phone || '',
+                metro: storeData.metro || '',
+                country: 'US',
+                latitude: coordinates.lat,
+                longitude: coordinates.lng,
+                source: 'user_added', // Flag as user-added
+                is_active: true,
+                created_at: new Date().toISOString(),
+                updated_at: new Date().toISOString()
+            };
+
+            const { data, error } = await supabase
+                .from('stores')
+                .insert([newStore])
+                .select()
+                .single();
+
+            if (error) throw error;
+
+            // Add to local arrays
+            this.allStores.push(data);
+            this.filteredStores.push(data);
+            
+            // Re-render
+            this.renderStoreList();
+            this.updateCounts();
+
+            console.log('✅ New store added:', data);
+            
+            // Notify admin (future implementation)
+            await this.notifyAdminNewStore(data);
+            
+            return data;
+        } catch (error) {
+            console.error('❌ Error adding new store:', error);
+            throw error;
+        }
+    }
+
+    // Geocode address to get GPS coordinates
+    async geocodeAddress(address, city, state) {
+        try {
+            const fullAddress = `${address}, ${city}, ${state}`;
+            console.log('📍 Geocoding address:', fullAddress);
+            
+            const response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(fullAddress)}&limit=1&countrycodes=us`);
+            const data = await response.json();
+            
+            if (data && data.length > 0) {
+                const result = data[0];
+                console.log('✅ Geocoding successful:', result);
+                
+                // Validate coordinates are in Texas (rough bounds)
+                const lat = parseFloat(result.lat);
+                const lng = parseFloat(result.lon);
+                
+                if (lat >= 25.5 && lat <= 36.5 && lng >= -106.5 && lng <= -93.5) {
+                    return { lat, lng };
+                } else {
+                    console.warn('⚠️ Coordinates outside Texas bounds, using fallback');
+                }
+            }
+            
+            throw new Error('Address not found or outside Texas');
+        } catch (error) {
+            console.error('❌ Geocoding failed:', error);
+            // Return default coordinates (Austin, TX) as fallback
+            return { lat: 30.2672, lng: -97.7431 };
+        }
+    }
+
+    // Notify admin of new store (future implementation)
+    async notifyAdminNewStore(store) {
+        try {
+            // This could send an email notification or create a notification record
+            console.log('📧 Admin notification: New store added by user:', store.name);
+            
+            // Future: Send email notification to admin
+            // Future: Create notification record in database
+            // Future: Update admin dashboard with pending review items
+            
+        } catch (error) {
+            console.error('❌ Error sending admin notification:', error);
+        }
     }
 }
 
