@@ -783,8 +783,8 @@
                 // Ensure brand exists
                 let brandId = await ensureBrandExists(formData.brand);
                 
-                // Ensure stores exist
-                const storeIds = await ensureStoresExist(formData.stores);
+                // Get store IDs from enhanced store selector (no need to create new stores)
+                const storeIds = formData.stores.map(store => store.id);
                 
                 // Ensure SKUs exist
                 const skuIds = await ensureSkusExist(formData.skus, brandId);
