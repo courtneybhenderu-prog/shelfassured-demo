@@ -105,10 +105,12 @@
         </div>
     </div>
 
+    <script>
+        // Set page role to prevent automatic redirect BEFORE loading shared/api.js
+        window.SA_PAGE_ROLE = 'public';
+    </script>
     <script src="shared/api.js"></script>
     <script>
-        // Set page role to prevent automatic redirect
-        window.SA_PAGE_ROLE = 'public';
         
         // Define goToPage function
         function goToPage(page) {
