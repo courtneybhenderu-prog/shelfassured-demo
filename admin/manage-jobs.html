@@ -125,17 +125,19 @@
                         <p class="mt-1 text-sm text-gray-500">Select stores where the audit will be performed</p>
                     </div>
 
-                    <!-- SKU Selection -->
+                    <!-- Product Selection -->
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">Products to Check (SKUs) *</label>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Products to Check *</label>
                         <div id="sku-selection" class="space-y-2">
-                            <div class="flex items-center space-x-2">
-                                <input type="text" placeholder="Product name (e.g., Original Boudain, Jalapeno Boudain)" 
-                                       class="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                            <div class="space-y-2">
+                                <input type="text" id="product-name" placeholder="Product name (e.g., Original Boudain)" 
+                                       class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                                <input type="text" id="product-sku" placeholder="SKU/UPC (optional, e.g., 0123456789012)" 
+                                       class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
                                 <button type="button" onclick="addSkuInput()" class="px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">Add Product</button>
                             </div>
                         </div>
-                        <p class="mt-1 text-sm text-gray-500">Add products to audit - will create new SKUs if not found</p>
+                        <p class="mt-1 text-sm text-gray-500">Add products to audit - SKU/UPC can be added later in store if not known</p>
                     </div>
 
                     <!-- Assigned User -->
@@ -402,22 +404,33 @@
 
         // Add SKU input
         function addSkuInput() {
-            const container = document.getElementById('sku-selection');
-            const input = container.querySelector('input');
-            const skuName = input.value.trim();
+            const productName = document.getElementById('product-name').value.trim();
+            const productSku = document.getElementById('product-sku').value.trim();
             
-            if (!skuName) {
+            if (!productName) {
                 alert('Please enter a product name');
                 return;
             }
             
-            if (selectedSkus.includes(skuName)) {
+            // Check if product name already exists
+            const existingProduct = selectedSkus.find(sku => sku.name === productName);
+            if (existingProduct) {
                 alert('Product already added');
                 return;
             }
             
-            selectedSkus.push(skuName);
-            input.value = '';
+            // Add product with both name and SKU (SKU can be empty)
+            const productData = {
+                name: productName,
+                sku: productSku || null
+            };
+            
+            selectedSkus.push(productData);
+            
+            // Clear inputs
+            document.getElementById('product-name').value = '';
+            document.getElementById('product-sku').value = '';
+            
             updateJobSummary();
             updateSkuDisplay();
         }
@@ -462,10 +475,10 @@
                 display.innerHTML = `
                     <div class="text-sm font-medium text-gray-700 mb-1">Selected Products:</div>
                     <div class="flex flex-wrap gap-2">
-                        ${selectedSkus.map(sku => `
+                        ${selectedSkus.map((sku, index) => `
                             <span class="px-2 py-1 bg-green-100 text-green-800 text-xs rounded-full">
-                                ${sku}
-                                <button type="button" onclick="removeSku('${sku}')" class="ml-1 text-green-600 hover:text-green-800">×</button>
+                                ${sku.name}${sku.sku ? ` (${sku.sku})` : ''}
+                                <button type="button" onclick="removeSku(${index})" class="ml-1 text-green-600 hover:text-green-800">×</button>
                             </span>
                         `).join('')}
                     </div>
@@ -482,8 +495,8 @@
         }
 
         // Remove SKU
-        function removeSku(skuName) {
-            selectedSkus = selectedSkus.filter(s => s !== skuName);
+        function removeSku(index) {
+            selectedSkus.splice(index, 1);
             updateJobSummary();
             updateSkuDisplay();
         }
@@ -726,18 +739,21 @@
         }
 
         // Ensure SKUs exist
-        async function ensureSkusExist(skuNames, brandId) {
+        async function ensureSkusExist(skuData, brandId) {
             const skuIds = [];
             
-            for (const skuName of skuNames) {
-                const existingSku = skus.find(s => s.name.toLowerCase() === skuName.toLowerCase());
+            for (const skuItem of skuData) {
+                // Check if SKU exists by name (case insensitive)
+                const existingSku = skus.find(s => s.name.toLowerCase() === skuItem.name.toLowerCase());
                 if (existingSku) {
                     skuIds.push(existingSku.id);
                 } else {
+                    // Create new SKU with both name and UPC (UPC can be null)
                     const { data: sku, error } = await supabase
                         .from('skus')
                         .insert({ 
-                            name: skuName,
+                            name: skuItem.name,
+                            upc: skuItem.sku || null, // UPC can be null if not provided
                             brand_id: brandId
                         })
                         .select()
