@@ -5,8 +5,31 @@ let scannerActive = false;
 let currentUser = null;
 
 // Google Vision API integration (GS1 removed due to cost)
-// API key removed for security - use environment variable instead
-const GOOGLE_VISION_API_KEY = process.env.GOOGLE_VISION_API_KEY || '';
+// API key loaded from Supabase settings table
+let GOOGLE_VISION_API_KEY = '';
+
+// Load API key from Supabase
+async function loadApiKey() {
+    try {
+        const { data, error } = await supabase
+            .from('settings')
+            .select('value')
+            .eq('key', 'google_vision_api_key')
+            .single();
+        
+        if (error) throw error;
+        
+        // Parse the JSON value to get the actual API key
+        const credentials = JSON.parse(data.value);
+        GOOGLE_VISION_API_KEY = credentials.private_key;
+        
+        console.log('✅ API key loaded from Supabase');
+        return true;
+    } catch (error) {
+        console.error('❌ Error loading API key:', error);
+        return false;
+    }
+}
 
 // Note: GS1 API removed due to $500/month cost - using manual entry + Google Vision instead
 
@@ -74,6 +97,12 @@ function fileToBase64(file) {
 // Initialize the page
 document.addEventListener('DOMContentLoaded', async function() {
     console.log('🔧 Admin Barcode Capture initialized');
+    
+    // Load API key from Supabase
+    const apiKeyLoaded = await loadApiKey();
+    if (!apiKeyLoaded) {
+        console.warn('⚠️ API key not loaded - barcode scanning may not work');
+    }
     
     // Check if user is admin
     await checkAdminAccess();
