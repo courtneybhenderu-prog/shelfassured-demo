@@ -5,7 +5,8 @@ let scannerActive = false;
 let currentUser = null;
 
 // Google Vision API integration (GS1 removed due to cost)
-const GOOGLE_VISION_API_KEY = 'AIzaSyAQw980fBtj_RTYnLjssAWAM1fbugj9RMU';
+// API key removed for security - use environment variable instead
+const GOOGLE_VISION_API_KEY = process.env.GOOGLE_VISION_API_KEY || '';
 
 // Note: GS1 API removed due to $500/month cost - using manual entry + Google Vision instead
 
