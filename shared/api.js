@@ -382,10 +382,16 @@ document.addEventListener('DOMContentLoaded', async function() {
     return;
   }
   
-  // Development debugging: Always tell me what the guard saw
+  // DEVELOPMENT DEBUGGING: Colorized console logging for troubleshooting
+  // This system helps debug redirect issues, role mismatches, and script loading problems
+  // Enable with ?dev=1 on any page, disable with ?dev=0
+  
+  // Blue info log: Shows what the guard sees (path and role) every time it runs
+  // This helps verify the guard is working correctly and roles are set properly
   window.__SA_DEV__ && console.info('%c[SA][guard]', 'color: #2563eb; font-weight: bold;', 'path=', location.pathname, 'role=', String(window.SA_PAGE_ROLE));
   
-  // Development debugging: Warn if a page forgot to define the role
+  // Red warning log: Alerts when a page forgot to set SA_PAGE_ROLE
+  // This catches the exact issue we had where index.html wasn't setting the role before shared/api.js loaded
   window.__SA_DEV__ && typeof window.SA_PAGE_ROLE === 'undefined' && console.warn('%c[SA][guard] Missing SA_PAGE_ROLE on', 'color: #dc2626; font-weight: bold;', location.pathname);
   
   // Check if user is logged in

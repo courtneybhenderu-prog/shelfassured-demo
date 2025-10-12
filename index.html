@@ -5,7 +5,25 @@
     <title>ShelfAssured</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     
-    <!-- Development debugging system -->
+    <!-- 
+    DEVELOPMENT DEBUGGING SYSTEM
+    ============================
+    This system provides colorized console logging for debugging redirect issues,
+    role mismatches, and script loading order problems.
+    
+    HOW TO USE:
+    - Enable: Visit any page with ?dev=1 (e.g., /?dev=1)
+    - Disable: Visit any page with ?dev=0 or run localStorage.removeItem('SA_DEV')
+    - Or manually: localStorage.setItem('SA_DEV', '1') in console
+    
+    WHAT YOU'LL SEE:
+    - 🔵 Blue [SA][guard] logs: Normal guard execution
+    - 🔴 Red [SA][guard] warnings: Missing SA_PAGE_ROLE (problems!)
+    - 🟢 Green [SA][page] logs: Role confirmation before shared/api.js
+    
+    This system would have caught our redirect issue immediately by showing
+    role=undefined in the guard logs.
+    -->
     <script>
         // Dev mode if you add ?dev=1, or set localStorage.SA_DEV = "1"
         (function () {
@@ -118,10 +136,12 @@
     </div>
 
     <script>
-        // Set page role to prevent automatic redirect BEFORE loading shared/api.js
+        // CRITICAL: Set page role BEFORE loading shared/api.js to prevent redirect loops
+        // This prevents the global guard from redirecting public pages to signin
         window.SA_PAGE_ROLE = 'public';
         
-        // Debug: Confirm role was set before shared/api.js loads
+        // Debug: Confirm role was set before shared/api.js loads (dev mode only)
+        // This helps verify script loading order is correct
         window.__SA_DEV__ && console.debug('%c[SA][page]', 'color: #059669; font-weight: bold;', 'role set to', window.SA_PAGE_ROLE, 'before shared/api.js');
     </script>
     <script src="shared/api.js"></script>
