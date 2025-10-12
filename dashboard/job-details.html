@@ -183,7 +183,7 @@
         
         if (!jobId) {
           console.error('❌ No job ID provided');
-          window.location.href = 'dashboard.html';
+          window.location.href = 'shelfer.html';
           return;
         }
 
@@ -367,7 +367,7 @@
         await supabase
           .from('jobs')
           .update({ 
-            status: 'pending_review',
+            status: 'in_progress',
             updated_at: new Date().toISOString()
           })
           .eq('id', currentJob.id);
@@ -377,7 +377,7 @@
         
         // Redirect after delay
         setTimeout(() => {
-          window.location.href = 'dashboard.html';
+          window.location.href = 'shelfer.html';
         }, 2000);
 
       } catch (error) {
@@ -403,7 +403,10 @@
             .from('job-submissions')
             .upload(filePath, file);
           
-          if (error) throw error;
+          if (error) {
+            console.error('❌ Storage upload error:', error);
+            throw new Error(`Failed to upload ${photoType} photo: ${error.message}`);
+          }
           
           // Get public URL
           const { data: urlData } = supabase.storage
