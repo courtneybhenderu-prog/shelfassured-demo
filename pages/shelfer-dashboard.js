@@ -15,8 +15,12 @@ async function loadDashboard() {
         console.log('🔄 Loading dashboard data...');
         
         // Load jobs
-        const jobs = await saGet('jobs', []);
-        console.log('📊 Jobs loaded:', jobs);
+        const allJobs = await saGet('jobs', []);
+        console.log('📊 All jobs loaded:', allJobs);
+        
+        // Filter jobs for shelfers - only show pending and assigned jobs
+        const jobs = allJobs.filter(job => job.status === 'pending' || job.status === 'assigned');
+        console.log('📊 Filtered jobs for shelfer:', jobs);
         
         // Update UI
         document.getElementById('available-jobs').textContent = jobs.length;
