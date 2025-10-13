@@ -82,7 +82,8 @@ window.saGet = async function(key, fallback = null) {
           .from('stores')
           .select('*')
           .eq('is_active', true)
-          .order('name');
+          .order('name')
+          .limit(5000);
         if (storesError) throw storesError;
         return stores || fallback;
         

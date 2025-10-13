@@ -11,27 +11,37 @@ class StoreSelector {
         this.currentLocation = null;
     }
 
-    // Load all Texas stores from Supabase
+    // Initialize store selector (don't load stores until search)
     async loadStores() {
         try {
-            const { data, error } = await supabase
-                .from('stores')
-                .select('*')
-                .eq('state', 'TX')
-                .eq('is_active', true)
-                .order('name');
-
-            if (error) throw error;
+            console.log('🔄 Initializing store selector...');
             
-            this.allStores = data || [];
-            this.filteredStores = [...this.allStores];
-            console.log(`✅ Loaded ${this.allStores.length} Texas stores`);
+            // Don't load stores upfront - start empty
+            this.allStores = [];
+            this.filteredStores = [];
             
-            this.renderStoreList();
+            console.log('🚀 NEW VERSION: Store selector initialized - ready for search (LAZY LOADING ENABLED)');
+            
+            // Show empty state
+            this.renderEmptyState();
+            this.updateCounts();
             return true;
         } catch (error) {
-            console.error('❌ Error loading stores:', error);
+            console.error('❌ Error initializing store selector:', error);
             return false;
+        }
+    }
+
+    // Show empty state
+    renderEmptyState() {
+        const container = document.getElementById('store-search-results');
+        if (container) {
+            container.innerHTML = `
+                <div class="text-center text-gray-500 py-8">
+                    <div class="text-lg mb-2">🔍 Search for stores</div>
+                    <div class="text-sm">Enter a ZIP code, city name, or store name to find stores</div>
+                </div>
+            `;
         }
     }
 
@@ -62,11 +72,19 @@ class StoreSelector {
     }
 
     // Search stores by name, city, or address
-    searchStores(term) {
+    async searchStores(term) {
         this.searchTerm = term.toLowerCase();
+        
+        // If we haven't loaded stores yet and user is searching, load them now
+        if (this.allStores.length === 0 && this.searchTerm) {
+            await this.loadStoresFromDatabase();
+        }
         
         if (!this.searchTerm) {
             this.filteredStores = [...this.allStores];
+            if (this.allStores.length === 0) {
+                this.renderEmptyState();
+            }
         } else {
             this.filteredStores = this.allStores.filter(store => 
                 store.name.toLowerCase().includes(this.searchTerm) ||
@@ -77,6 +95,31 @@ class StoreSelector {
         }
         
         this.renderStoreList();
+    }
+
+    // Load stores from database when needed
+    async loadStoresFromDatabase() {
+        try {
+            console.log('🔄 Loading stores from database...');
+            
+            const { data, error } = await supabase
+                .from('stores')
+                .select('*')
+                .eq('state', 'TX')
+                .eq('is_active', true)
+                .order('name')
+                .limit(5000);
+
+            if (error) throw error;
+            
+            this.allStores = data || [];
+            this.filteredStores = [...this.allStores];
+            
+            console.log(`✅ Loaded ${this.allStores.length} stores from database`);
+            
+        } catch (error) {
+            console.error('❌ Error loading stores:', error);
+        }
     }
 
     // Filter stores by chain/banner
@@ -246,10 +289,10 @@ let storeSelector;
 document.addEventListener('DOMContentLoaded', async function() {
     storeSelector = new StoreSelector();
     
-    // Load stores
-    const storesLoaded = await storeSelector.loadStores();
-    if (!storesLoaded) {
-        console.error('❌ Failed to load stores - falling back to manual entry');
+    // Initialize store selector (don't load stores until search)
+    const initialized = await storeSelector.loadStores();
+    if (!initialized) {
+        console.error('❌ Failed to initialize store selector');
         return;
     }
 
@@ -264,8 +307,8 @@ document.addEventListener('DOMContentLoaded', async function() {
     // Set up search input
     const searchInput = document.getElementById('store-search');
     if (searchInput) {
-        searchInput.addEventListener('input', (e) => {
-            storeSelector.searchStores(e.target.value);
+        searchInput.addEventListener('input', async (e) => {
+            await storeSelector.searchStores(e.target.value);
         });
     }
 

@@ -131,7 +131,8 @@ class ShelfAssuredAPI {
         .from('stores')
         .select('*')
         .eq('is_active', true)
-        .order('name');
+        .order('name')
+        .limit(5000);
       
       if (error) throw error;
       return { success: true, data };
