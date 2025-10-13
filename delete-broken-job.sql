@@ -1,0 +1,1 @@
+DELETE FROM jobs WHERE id = '67198afd-4038-4244-9e1f-0e5b5750cb28';
