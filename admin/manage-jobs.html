@@ -330,7 +330,7 @@
     </div>
 
     <script src="../shared/api.js?v=20250113-4"></script>
-    <script src="enhanced-store-selector.js?v=20250113-7"></script>
+    <script src="enhanced-store-selector.js?v=20250113-8"></script>
     <script>
         // Global variables
         let brands = [];
@@ -907,14 +907,19 @@
             const createdJobs = [];
             
             try {
+                console.log('🔄 Creating jobs with form data:', formData);
+                
                 // Ensure brand exists
                 let brandId = await ensureBrandExists(formData.brand);
+                console.log('✅ Brand ID:', brandId);
                 
                 // Get store IDs from enhanced store selector (no need to create new stores)
                 const storeIds = formData.stores.map(store => store.id);
+                console.log('✅ Store IDs:', storeIds);
                 
                 // Ensure SKUs exist
                 const skuIds = await ensureSkusExist(formData.skus, brandId);
+                console.log('✅ SKU IDs:', skuIds);
                 
                 // Create jobs (one per store-SKU combination)
                 for (const storeId of storeIds) {
@@ -941,16 +946,30 @@
                             
                             if (error) throw error;
                             
+                            console.log('✅ Job created:', job.id);
+                            
                             // Link job to store and SKU
-                            await supabase.from('job_stores').insert({
+                            const { error: storeError } = await supabase.from('job_stores').insert({
                                 job_id: job.id,
                                 store_id: storeId
                             });
                             
-                            await supabase.from('job_skus').insert({
+                            if (storeError) {
+                                console.error('❌ Error linking store:', storeError);
+                                throw storeError;
+                            }
+                            console.log('✅ Store linked:', storeId);
+                            
+                            const { error: skuError } = await supabase.from('job_skus').insert({
                                 job_id: job.id,
                                 sku_id: skuId
                             });
+                            
+                            if (skuError) {
+                                console.error('❌ Error linking SKU:', skuError);
+                                throw skuError;
+                            }
+                            console.log('✅ SKU linked:', skuId);
                             
                             createdJobs.push(job);
                             
