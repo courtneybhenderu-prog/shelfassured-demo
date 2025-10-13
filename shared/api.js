@@ -267,9 +267,21 @@ function showMessage(element, message, type) {
   }
 }
 
-// Navigation helper
+// Navigation helper with error handling
 function goToPage(page) {
-  window.location.href = page;
+  try {
+    console.log('🔍 Navigation: Going to', page);
+    window.location.href = page;
+  } catch (error) {
+    console.error('❌ Navigation error:', error);
+    // Fallback: try direct assignment
+    try {
+      window.location.assign(page);
+    } catch (fallbackError) {
+      console.error('❌ Fallback navigation failed:', fallbackError);
+      alert('Navigation failed. Please refresh the page.');
+    }
+  }
 }
 
 // Expose goToPage globally for HTML onclick handlers

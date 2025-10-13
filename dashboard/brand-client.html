@@ -7,6 +7,11 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.47.5/dist/umd/supabase.min.js"></script>
     <link rel="stylesheet" href="../shared/styles.css">
+    
+    <!-- Set page role BEFORE loading shared/api.js -->
+    <script>
+        window.SA_PAGE_ROLE = 'brand_client';
+    </script>
 </head>
 <body>
     <div class="min-h-screen bg-gray-100">
@@ -95,7 +100,18 @@
     </div>
 
     <!-- Include shared API -->
-    <script src="../shared/api.js"></script>
+    <script src="../shared/api.js?v=20250113-4"></script>
+    
+    <!-- Define goToPage function -->
+    <script>
+        function goToPage(page) {
+            console.log('🔍 Debug: goToPage called with:', page);
+            window.location.href = page;
+        }
+        
+        // Make it globally available
+        window.goToPage = goToPage;
+    </script>
     
     <script>
         // Initialize dashboard

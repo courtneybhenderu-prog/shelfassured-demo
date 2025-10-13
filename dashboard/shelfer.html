@@ -29,7 +29,9 @@
                 <div class="mt-6">
                     <h3 class="text-lg font-semibold mb-3">Available Jobs</h3>
                     <div id="jobs-list" class="space-y-2">
-                        <!-- Jobs will be loaded here -->
+                        <div class="text-center text-gray-500 py-4">
+                            <div class="animate-pulse">Loading jobs...</div>
+                        </div>
                     </div>
                 </div>
 
@@ -46,9 +48,20 @@
     </div>
 
     <!-- Include shared API -->
-    <script src="../shared/api.js?v=20250113-1"></script>
+    <script src="../shared/api.js?v=20250113-4"></script>
     
     <!-- Include page-specific script -->
     <script src="../pages/shelfer-dashboard.js"></script>
+    
+    <!-- Define goToPage function -->
+    <script>
+        function goToPage(page) {
+            console.log('🔍 Debug: goToPage called with:', page);
+            window.location.href = page;
+        }
+        
+        // Make it globally available
+        window.goToPage = goToPage;
+    </script>
 </body>
 </html>

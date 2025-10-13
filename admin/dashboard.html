@@ -5,41 +5,15 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Admin Dashboard - ShelfAssured</title>
     
-    <!-- Set flags in HTML before any scripts -->
+    <!-- Set page role BEFORE loading shared/api.js -->
     <script>
-        console.log('🚨 HTML: Setting flags immediately!');
         window.SA_PAGE_ROLE = 'admin';
         window.SA_DISABLE_GLOBAL_GUARD = true;
         window.SA_ADMIN_READY = true;
-        console.log('🚨 HTML: Flags set - SA_PAGE_ROLE:', window.SA_PAGE_ROLE, 'SA_DISABLE_GLOBAL_GUARD:', window.SA_DISABLE_GLOBAL_GUARD);
     </script>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.47.5/dist/umd/supabase.min.js"></script>
     <link rel="stylesheet" href="../shared/styles.css">
-    
-    <!-- CRITICAL: Set flags BEFORE any other scripts -->
-    <script>
-        console.log('🚨 CRITICAL: Setting flags immediately!');
-        window.SA_PAGE_ROLE = 'admin';
-        window.SA_DISABLE_GLOBAL_GUARD = true;
-        window.SA_ADMIN_READY = true;
-        console.log('🚨 CRITICAL: All flags set!');
-    </script>
-    
-    <!-- Simple test script -->
-    <script>
-        console.log('🧪 TEST: Script is running!');
-        console.log('🧪 TEST: Current URL:', window.location.href);
-        console.log('🧪 TEST: Supabase available:', !!window.supabase);
-        
-        // Set the page role immediately
-        window.SA_PAGE_ROLE = 'admin';
-        console.log('🧪 TEST: Set SA_PAGE_ROLE = admin');
-        
-        // Disable global guard temporarily
-        window.SA_DISABLE_GLOBAL_GUARD = true;
-        console.log('🧪 TEST: Disabled global guard');
-    </script>
 </head>
 <body>
     <div class="min-h-screen bg-gray-100">
@@ -157,10 +131,21 @@
     </div>
 
     <!-- Include shared API with cache busting -->
-    <script src="../shared/api.js?v=20250110-2"></script>
+    <script src="../shared/api.js?v=20250113-4"></script>
     
     <!-- Include admin dashboard logic with cache busting -->
-    <script src="../pages/admin-dashboard.js?v=20250110"></script>
+    <script src="../pages/admin-dashboard.js?v=20250113-4"></script>
+    
+    <!-- Define goToPage function -->
+    <script>
+        function goToPage(page) {
+            console.log('🔍 Debug: goToPage called with:', page);
+            window.location.href = page;
+        }
+        
+        // Make it globally available
+        window.goToPage = goToPage;
+    </script>
     
 
     <!-- Admin Navigation -->
