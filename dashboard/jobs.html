@@ -53,7 +53,7 @@
     </div>
 
     <!-- Include shared API -->
-    <script src="../shared/api.js"></script>
+    <script src="../shared/api.js?v=20250113-3"></script>
     
     <script>
         let currentUser = null;
@@ -157,7 +157,7 @@
                 allJobs = await saGet('jobs', []);
                 
                 if (userProfile.role === 'brand_client' || userProfile.role === 'admin') {
-                    // Filter to only user's jobs
+                    // Filter to only user's jobs (client_id should be available in job data)
                     allJobs = allJobs.filter(job => job.client_id === currentUser.id);
                 }
                 
