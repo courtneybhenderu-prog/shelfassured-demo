@@ -111,6 +111,20 @@ window.saGet = async function(key, fallback = null) {
         if (auditRequestsError) throw auditRequestsError;
         return auditRequests || fallback;
         
+      case 'jobs':
+        const { data: jobs, error: jobsError } = await supabase
+          .from('jobs')
+          .select(`
+            *,
+            brands(name),
+            users(full_name),
+            job_stores(stores(name, city, state)),
+            job_skus(skus(name))
+          `)
+          .order('created_at', { ascending: false });
+        if (jobsError) throw jobsError;
+        return jobs || fallback;
+        
       default:
         // Fallback to original function for other keys
         return originalSaGet ? originalSaGet(key, fallback) : fallback;
