@@ -329,7 +329,7 @@
         </div>
     </div>
 
-    <script src="../shared/api.js"></script>
+    <script src="../shared/api.js?v=20250113-2"></script>
     <script src="enhanced-store-selector.js"></script>
     <script>
         // Global variables
@@ -1016,7 +1016,6 @@
                     .select(`
                         *,
                         brands(name),
-                        users(full_name),
                         job_stores(stores(name, city, state)),
                         job_skus(skus(name))
                     `)
