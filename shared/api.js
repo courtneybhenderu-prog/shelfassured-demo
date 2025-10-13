@@ -117,7 +117,8 @@ window.saGet = async function(key, fallback = null) {
           .select(`
             *,
             brands(name),
-            users(full_name),
+            client:users!client_id(full_name, email),
+            contractor:users!contractor_id(full_name, email),
             job_stores(stores(name, city, state)),
             job_skus(skus(name))
           `)
