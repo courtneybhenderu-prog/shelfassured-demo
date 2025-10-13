@@ -117,8 +117,6 @@ window.saGet = async function(key, fallback = null) {
           .select(`
             *,
             brands(name),
-            client:users!client_id(full_name, email),
-            contractor:users!contractor_id(full_name, email),
             job_stores(stores(name, city, state)),
             job_skus(skus(name))
           `)
@@ -387,16 +385,6 @@ document.addEventListener('DOMContentLoaded', async function() {
     return;
   }
   
-  // Cooperative global guard - respects per-page overrides
-  console.log('🔍 GLOBAL GUARD: Checking flags...');
-  console.log('🔍 GLOBAL GUARD: SA_DISABLE_GLOBAL_GUARD =', window.SA_DISABLE_GLOBAL_GUARD);
-  console.log('🔍 GLOBAL GUARD: SA_PAGE_ROLE =', window.SA_PAGE_ROLE);
-  
-  if (window.SA_DISABLE_GLOBAL_GUARD === true) {
-    console.log('🔒 Global guard disabled by page');
-    return;
-  }
-  
   // DEVELOPMENT DEBUGGING: Colorized console logging for troubleshooting
   // This system helps debug redirect issues, role mismatches, and script loading problems
   // Enable with ?dev=1 on any page, disable with ?dev=0
@@ -408,6 +396,16 @@ document.addEventListener('DOMContentLoaded', async function() {
   // Red warning log: Alerts when a page forgot to set SA_PAGE_ROLE
   // This catches the exact issue we had where index.html wasn't setting the role before shared/api.js loaded
   window.__SA_DEV__ && typeof window.SA_PAGE_ROLE === 'undefined' && console.warn('%c[SA][guard] Missing SA_PAGE_ROLE on', 'color: #dc2626; font-weight: bold;', location.pathname);
+  
+  // Cooperative global guard - respects per-page overrides
+  console.log('🔍 GLOBAL GUARD: Checking flags...');
+  console.log('🔍 GLOBAL GUARD: SA_DISABLE_GLOBAL_GUARD =', window.SA_DISABLE_GLOBAL_GUARD);
+  console.log('🔍 GLOBAL GUARD: SA_PAGE_ROLE =', window.SA_PAGE_ROLE);
+  
+  if (window.SA_DISABLE_GLOBAL_GUARD === true) {
+    console.log('🔒 Global guard disabled by page');
+    return;
+  }
   
   // Check if user is logged in
   const { data: { user } } = await supabase.auth.getUser();
