@@ -6,6 +6,7 @@ let currentUser = null;
 
 // Google Vision API integration (GS1 removed due to cost)
 // API key loaded from Supabase settings table
+// TODO: Fix Google Vision API key (403 error) - priority for grocery store testing
 let GOOGLE_VISION_API_KEY = '';
 
 // Load API key from Supabase
