@@ -134,7 +134,7 @@ function updateRecentActivity(jobs, users) {
                             <div class="text-sm text-gray-500">Created: ${new Date(job.created_at).toLocaleDateString()}</div>
                         </div>
                         <div class="text-right">
-                            <div class="text-sm font-medium text-gray-900">$${job.total_cost || 0}</div>
+                            <div class="text-sm font-medium text-gray-900">$${job.total_payout || 0}</div>
                         </div>
                     </div>
                 </div>
