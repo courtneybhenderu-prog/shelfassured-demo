@@ -158,16 +158,46 @@ class StoreSelector {
 
     // Filter stores by chain/banner
     filterByChain(chain) {
+        console.log('🔍 Filtering by chain:', chain);
+        console.log('📊 Total stores available:', this.allStores.length);
+        
+        // Update button active states
+        this.updateActiveButton(chain);
+        
         if (!chain || chain === 'all') {
             this.filteredStores = [...this.allStores];
+            console.log('✅ Showing all stores:', this.filteredStores.length);
         } else {
-            this.filteredStores = this.allStores.filter(store => 
-                store.chain && store.chain.toLowerCase().includes(chain.toLowerCase())
-            );
+            this.filteredStores = this.allStores.filter(store => {
+                const storeChain = store.store_chain || store.chain; // Try both property names
+                const matches = storeChain && storeChain.toLowerCase().includes(chain.toLowerCase());
+                if (matches) {
+                    console.log('✅ Match found:', store.name, '->', storeChain);
+                }
+                return matches;
+            });
+            console.log('🎯 Filtered stores for', chain + ':', this.filteredStores.length);
         }
         
         this.renderStoreList();
         this.updateCounts();
+    }
+
+    // Update active button visual state
+    updateActiveButton(activeChain) {
+        // Remove active class from all buttons
+        const buttons = document.querySelectorAll('[onclick*="filterByChain"]');
+        buttons.forEach(button => {
+            button.classList.remove('bg-blue-600', 'ring-2', 'ring-blue-500');
+            button.classList.add('bg-green-600');
+        });
+        
+        // Add active class to clicked button
+        const activeButton = document.querySelector(`[onclick*="filterByChain('${activeChain}')"]`);
+        if (activeButton) {
+            activeButton.classList.remove('bg-green-600');
+            activeButton.classList.add('bg-blue-600', 'ring-2', 'ring-blue-500');
+        }
     }
 
     // Add store to selection
