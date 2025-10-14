@@ -144,11 +144,11 @@
                         <div class="flex items-center justify-between">
                             <label class="block text-sm font-medium text-gray-700">Store Selection *</label>
                             <div class="flex space-x-2">
-                                <button type="button" onclick="storeSelector.selectAllFiltered()" 
+                                <button type="button" onclick="console.log('Select All Filtered clicked'); if(window.storeSelector) { window.storeSelector.selectAllFiltered(); } else { console.error('storeSelector not found'); }" 
                                         class="px-3 py-1 text-sm bg-blue-600 text-white rounded hover:bg-blue-700">
                                     Select All Filtered
                                 </button>
-                                <button type="button" onclick="storeSelector.clearAll()" 
+                                <button type="button" onclick="console.log('Clear All clicked'); if(window.storeSelector) { window.storeSelector.clearAll(); } else { console.error('storeSelector not found'); }" 
                                         class="px-3 py-1 text-sm bg-gray-600 text-white rounded hover:bg-gray-700">
                                     Clear All
                                 </button>
