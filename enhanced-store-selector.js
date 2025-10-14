@@ -200,9 +200,14 @@ class StoreSelector {
                 const storeChain = store.store_chain || store.chain; // Try both property names
                 const storeName = store.name || '';
                 
+                // Normalize chain names for better matching
+                const normalizedChain = chain.toLowerCase().replace(/[-\s]/g, '');
+                const normalizedStoreChain = (storeChain || '').toLowerCase().replace(/[-\s]/g, '');
+                const normalizedStoreName = storeName.toLowerCase().replace(/[-\s]/g, '');
+                
                 // Check both store_chain and name for matches
-                const chainMatch = storeChain && storeChain.toLowerCase().includes(chain.toLowerCase());
-                const nameMatch = storeName.toLowerCase().includes(chain.toLowerCase());
+                const chainMatch = normalizedStoreChain.includes(normalizedChain);
+                const nameMatch = normalizedStoreName.includes(normalizedChain);
                 
                 const matches = chainMatch || nameMatch;
                 if (matches) {
