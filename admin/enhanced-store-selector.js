@@ -112,19 +112,30 @@ class StoreSelector {
             await this.loadStoresFromDatabase();
         }
         
-        if (!this.searchTerm) {
-            this.filteredStores = [...this.allStores];
-            if (this.allStores.length === 0) {
-                this.renderEmptyState();
-            }
-        } else {
-            this.filteredStores = this.allStores.filter(store => 
+        // Start with all stores or current chain filter
+        let baseStores = [...this.allStores];
+        
+        // Apply search filter if there's a search term
+        if (this.searchTerm) {
+            baseStores = baseStores.filter(store => 
                 store.name.toLowerCase().includes(this.searchTerm) ||
                 store.city.toLowerCase().includes(this.searchTerm) ||
                 store.address.toLowerCase().includes(this.searchTerm) ||
                 store.zip_code.includes(this.searchTerm)
             );
         }
+        
+        // Apply current chain filter if one is active
+        if (this.currentChainFilter && this.currentChainFilter !== 'all') {
+            baseStores = baseStores.filter(store => {
+                const storeChain = store.store_chain || store.chain;
+                return storeChain && storeChain.toLowerCase().includes(this.currentChainFilter.toLowerCase());
+            });
+        }
+        
+        this.filteredStores = baseStores;
+        
+        console.log(`🔍 Search "${term}" + Chain "${this.currentChainFilter || 'all'}" = ${this.filteredStores.length} stores`);
         
         this.renderStoreList();
         this.updateCounts();
@@ -193,6 +204,9 @@ class StoreSelector {
     filterByChain(chain) {
         console.log('🔍 Filtering by chain:', chain);
         
+        // Store the current chain filter
+        this.currentChainFilter = chain;
+        
         // Safety check
         if (!this.allStores || this.allStores.length === 0) {
             console.warn('⚠️ No stores loaded yet, loading stores first...');
@@ -207,11 +221,15 @@ class StoreSelector {
         // Update button active states
         this.updateActiveButton(chain);
         
+        // Start with all stores
+        let baseStores = [...this.allStores];
+        
+        // Apply chain filter
         if (!chain || chain === 'all') {
-            this.filteredStores = [...this.allStores];
+            this.filteredStores = baseStores;
             console.log('✅ Showing all stores:', this.filteredStores.length);
         } else {
-            this.filteredStores = this.allStores.filter(store => {
+            this.filteredStores = baseStores.filter(store => {
                 const storeChain = store.store_chain || store.chain; // Try both property names
                 const matches = storeChain && storeChain.toLowerCase().includes(chain.toLowerCase());
                 if (matches) {
@@ -220,6 +238,17 @@ class StoreSelector {
                 return matches;
             });
             console.log('🎯 Filtered stores for', chain + ':', this.filteredStores.length);
+        }
+        
+        // Apply current search filter if there's a search term
+        if (this.searchTerm) {
+            this.filteredStores = this.filteredStores.filter(store => 
+                store.name.toLowerCase().includes(this.searchTerm) ||
+                store.city.toLowerCase().includes(this.searchTerm) ||
+                store.address.toLowerCase().includes(this.searchTerm) ||
+                store.zip_code.includes(this.searchTerm)
+            );
+            console.log(`🔍 After search "${this.searchTerm}": ${this.filteredStores.length} stores`);
         }
         
         this.renderStoreList();
