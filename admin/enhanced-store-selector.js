@@ -117,14 +117,25 @@ class StoreSelector {
         
         // Apply search filter if there's a search term
         if (this.searchTerm) {
-            baseStores = baseStores.filter(store => 
-                store.name.toLowerCase().includes(this.searchTerm) ||
-                store.city.toLowerCase().includes(this.searchTerm) ||
-                store.address.toLowerCase().includes(this.searchTerm) ||
-                store.zip_code.includes(this.searchTerm) ||
-                (store.metro && store.metro.toLowerCase().includes(this.searchTerm)) ||
-                (store.METRO && store.METRO.toLowerCase().includes(this.searchTerm))
-            );
+            baseStores = baseStores.filter(store => {
+                const matches = store.name.toLowerCase().includes(this.searchTerm) ||
+                    store.city.toLowerCase().includes(this.searchTerm) ||
+                    store.address.toLowerCase().includes(this.searchTerm) ||
+                    store.zip_code.includes(this.searchTerm) ||
+                    (store.metro && store.metro.toLowerCase().includes(this.searchTerm)) ||
+                    (store.METRO && store.METRO.toLowerCase().includes(this.searchTerm));
+                
+                // Debug logging for metro matches
+                if (this.searchTerm === 'austin' && (store.metro || store.METRO)) {
+                    console.log(`🔍 Metro check for ${store.name}:`, {
+                        metro: store.metro,
+                        METRO: store.METRO,
+                        matches: matches
+                    });
+                }
+                
+                return matches;
+            });
         }
         
         // Apply current chain filter if one is active
@@ -233,9 +244,15 @@ class StoreSelector {
         } else {
             this.filteredStores = baseStores.filter(store => {
                 const storeChain = store.store_chain || store.chain; // Try both property names
-                const matches = storeChain && storeChain.toLowerCase().includes(chain.toLowerCase());
+                const storeName = store.name || '';
+                
+                // Check both store_chain and name for matches
+                const chainMatch = storeChain && storeChain.toLowerCase().includes(chain.toLowerCase());
+                const nameMatch = storeName.toLowerCase().includes(chain.toLowerCase());
+                
+                const matches = chainMatch || nameMatch;
                 if (matches) {
-                    console.log('✅ Match found:', store.name, '->', storeChain);
+                    console.log('✅ Match found:', store.name, '-> chain:', storeChain, 'name match:', nameMatch);
                 }
                 return matches;
             });
