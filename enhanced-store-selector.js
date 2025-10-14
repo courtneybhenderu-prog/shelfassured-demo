@@ -101,6 +101,7 @@ class StoreSelector {
     async loadStoresFromDatabase() {
         try {
             console.log('🔄 Loading stores from database...');
+            console.log('🔍 Query details: .from("stores").select("*").eq("state", "TX").eq("is_active", true).order("name").limit(5000)');
             
             const { data, error } = await supabase
                 .from('stores')
@@ -110,12 +111,24 @@ class StoreSelector {
                 .order('name')
                 .limit(5000);
 
-            if (error) throw error;
+            if (error) {
+                console.error('❌ Supabase error:', error);
+                throw error;
+            }
+            
+            console.log('📊 Raw response from Supabase:');
+            console.log('  - Data type:', typeof data);
+            console.log('  - Data length:', data ? data.length : 'null');
+            console.log('  - Is array:', Array.isArray(data));
             
             this.allStores = data || [];
             this.filteredStores = [...this.allStores];
             
             console.log(`✅ Loaded ${this.allStores.length} stores from database`);
+            console.log('🔍 First few stores:', this.allStores.slice(0, 3).map(s => s.name));
+            console.log('🔍 Last few stores:', this.allStores.slice(-3).map(s => s.name));
+            
+            this.renderStoreList();
             
         } catch (error) {
             console.error('❌ Error loading stores:', error);

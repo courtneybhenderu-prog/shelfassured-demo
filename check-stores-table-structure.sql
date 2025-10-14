@@ -1,9 +1,6 @@
--- Check the current stores table structure to see what columns exist
-SELECT 
-    column_name, 
-    data_type, 
-    is_nullable,
-    column_default
+-- Check what columns exist in the stores table
+SELECT column_name, data_type 
 FROM information_schema.columns 
 WHERE table_name = 'stores' 
+AND table_schema = 'public' 
 ORDER BY ordinal_position;
