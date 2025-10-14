@@ -275,10 +275,15 @@ class StoreSelector {
 
     // Clear all selections
     clearAll() {
+        console.log('🧹 Clear All button clicked');
+        console.log('📊 Selected stores before clear:', this.selectedStores.length);
+        
         this.selectedStores = [];
         this.renderSelectedStores();
         this.updateCounts();
         this.updateJobSummary();
+        
+        console.log('✅ All stores cleared');
     }
 
     // Render the store list with search results
