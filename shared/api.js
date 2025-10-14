@@ -200,7 +200,7 @@ window.saSignUp = async function(email, password, userData = {}) {
   }
 };
 
-window.saSignIn = async function(email, password) {
+window.saSignIn = async function(email, password, rememberMe = false) {
   if (!supabase) {
     return { success: false, error: 'Supabase not available' };
   }
@@ -208,7 +208,13 @@ window.saSignIn = async function(email, password) {
   try {
     const { data, error } = await supabase.auth.signInWithPassword({
       email,
-      password
+      password,
+      options: {
+        // Set session persistence based on rememberMe checkbox
+        // 'local' = persistent across browser sessions
+        // 'session' = only for current browser session
+        persistSession: rememberMe ? 'local' : 'session'
+      }
     });
     
     if (error) throw error;

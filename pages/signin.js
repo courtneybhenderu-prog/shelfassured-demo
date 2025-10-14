@@ -1,5 +1,17 @@
 // pages/signin.js - Signin page functionality
 
+// Load remembered preferences on page load
+document.addEventListener('DOMContentLoaded', function() {
+    // Check if user previously selected "Remember Me"
+    const rememberedEmail = localStorage.getItem('rememberedEmail');
+    const rememberMeChecked = localStorage.getItem('rememberMe') === 'true';
+    
+    if (rememberedEmail && rememberMeChecked) {
+        document.getElementById('login-email').value = rememberedEmail;
+        document.getElementById('remember-me').checked = true;
+    }
+});
+
 // Handle forgot password
 window.handleForgotPassword = async function() {
     const email = document.getElementById('login-email').value;
@@ -41,6 +53,7 @@ document.addEventListener('DOMContentLoaded', function() {
     
     const email = document.getElementById('login-email').value;
     const password = document.getElementById('login-password').value;
+    const rememberMe = document.getElementById('remember-me').checked;
     const messageEl = document.getElementById('signin-message');
 
     if (!email || !password) {
@@ -51,11 +64,21 @@ document.addEventListener('DOMContentLoaded', function() {
     showMessage(messageEl, 'Signing in...', 'info');
 
     try {
-        const result = await saSignIn(email, password);
+        const result = await saSignIn(email, password, rememberMe);
 
         if (result.success) {
-            showMessage(messageEl, 'Signed in successfully!', 'success');
-            console.log('✅ Signed in successfully');
+            const rememberMessage = rememberMe ? ' (staying signed in)' : '';
+            showMessage(messageEl, 'Signed in successfully!' + rememberMessage, 'success');
+            console.log('✅ Signed in successfully', rememberMe ? '(persistent session)' : '(session only)');
+            
+            // Save user preferences
+            if (rememberMe) {
+                localStorage.setItem('rememberedEmail', email);
+                localStorage.setItem('rememberMe', 'true');
+            } else {
+                localStorage.removeItem('rememberedEmail');
+                localStorage.removeItem('rememberMe');
+            }
             
             // Ensure profile exists and get role
             console.log('🔄 Calling ensureProfile...');
