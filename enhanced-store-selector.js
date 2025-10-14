@@ -125,6 +125,16 @@ class StoreSelector {
     // Filter stores by chain/banner
     filterByChain(chain) {
         console.log('🔍 Filtering by chain:', chain);
+        
+        // Safety check
+        if (!this.allStores || this.allStores.length === 0) {
+            console.warn('⚠️ No stores loaded yet, loading stores first...');
+            this.loadStoresFromDatabase().then(() => {
+                this.filterByChain(chain); // Retry after loading
+            });
+            return;
+        }
+        
         console.log('📊 Total stores available:', this.allStores.length);
         
         // Update button active states
@@ -318,6 +328,9 @@ let storeSelector;
 // Initialize when DOM is loaded
 document.addEventListener('DOMContentLoaded', async function() {
     storeSelector = new StoreSelector();
+    
+    // Make storeSelector globally accessible
+    window.storeSelector = storeSelector;
     
     // Initialize store selector (don't load stores until search)
     const initialized = await storeSelector.loadStores();
