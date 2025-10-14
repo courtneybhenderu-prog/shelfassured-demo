@@ -411,7 +411,14 @@
                     .eq('id', jobId)
                     .single();
 
-                if (error) throw error;
+                if (error) {
+                    console.error('❌ Error loading job:', error);
+                    throw new Error(`Job not found or error loading: ${error.message}`);
+                }
+                
+                if (!job) {
+                    throw new Error('Job not found');
+                }
                 
                 console.log('✅ Job loaded for edit:', job);
                 
@@ -470,6 +477,14 @@
                 
             } catch (error) {
                 console.error('❌ Error loading job for edit:', error);
+                
+                // If job doesn't exist, redirect to clean page
+                if (error.message.includes('not found') || error.message.includes('Job not found')) {
+                    console.log('🔄 Job not found, redirecting to clean page...');
+                    window.location.href = 'manage-jobs.html';
+                    return;
+                }
+                
                 showError('Failed to load job for editing. Please try again.');
             }
         }
