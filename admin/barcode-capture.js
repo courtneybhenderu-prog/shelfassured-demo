@@ -493,7 +493,7 @@ function testFormPopulation() {
         description: 'Classic cola beverage with original recipe',
         size: '12 fl oz',
         category: 'Beverages',
-        store: 'Whole Foods Houston',
+        store: 'Whole Foods Market Houston',
         notes: 'Test data for debugging form population'
     };
     

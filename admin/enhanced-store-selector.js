@@ -162,7 +162,7 @@ class StoreSelector {
             this.filteredStores = [...this.allStores];
         } else {
             this.filteredStores = this.allStores.filter(store => 
-                store.name.toLowerCase().includes(chain.toLowerCase())
+                store.chain && store.chain.toLowerCase().includes(chain.toLowerCase())
             );
         }
         
