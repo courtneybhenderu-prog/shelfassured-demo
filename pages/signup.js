@@ -2,6 +2,8 @@
 
 // Password strength validation
 function validatePasswordStrength(password) {
+    console.log('🔄 Validating password:', password);
+    
     const requirements = {
         length: password.length >= 8,
         uppercase: /[A-Z]/.test(password),
@@ -9,6 +11,8 @@ function validatePasswordStrength(password) {
         number: /[0-9]/.test(password),
         special: /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password)
     };
+    
+    console.log('📋 Requirements:', requirements);
     
     // Update visual indicators
     updateRequirementIndicator('req-length', requirements.length);
@@ -22,13 +26,25 @@ function validatePasswordStrength(password) {
 
 function updateRequirementIndicator(elementId, isValid) {
     const element = document.getElementById(elementId);
+    if (!element) {
+        console.error('❌ Element not found:', elementId);
+        return;
+    }
+    
     const icon = element.querySelector('span');
+    if (!icon) {
+        console.error('❌ Icon not found in element:', elementId);
+        return;
+    }
+    
     if (isValid) {
         icon.textContent = '✅';
         icon.className = 'w-4 h-4 mr-2 text-green-500';
+        console.log('✅ Updated', elementId, 'to valid');
     } else {
         icon.textContent = '○';
         icon.className = 'w-4 h-4 mr-2 text-gray-400';
+        console.log('○ Updated', elementId, 'to invalid');
     }
 }
 
@@ -48,11 +64,30 @@ function validatePasswordMatch() {
 }
 
 // Add event listeners for both password fields
-document.getElementById('signup-password').addEventListener('input', function() {
-    validatePasswordStrength(this.value);
-    validatePasswordMatch();
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('🔄 Setting up password validation...');
+    
+    const passwordField = document.getElementById('signup-password');
+    const confirmField = document.getElementById('signup-confirm-password');
+    
+    if (passwordField) {
+        passwordField.addEventListener('input', function() {
+            console.log('🔄 Password input detected:', this.value);
+            validatePasswordStrength(this.value);
+            validatePasswordMatch();
+        });
+        console.log('✅ Password field event listener added');
+    } else {
+        console.error('❌ Password field not found');
+    }
+    
+    if (confirmField) {
+        confirmField.addEventListener('input', validatePasswordMatch);
+        console.log('✅ Confirm password field event listener added');
+    } else {
+        console.error('❌ Confirm password field not found');
+    }
 });
-document.getElementById('signup-confirm-password').addEventListener('input', validatePasswordMatch);
 
 // Handle form submission
 document.getElementById('signup-form').addEventListener('submit', async function(e) {
