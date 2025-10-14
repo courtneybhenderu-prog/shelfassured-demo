@@ -27,6 +27,30 @@
                     </div>
                     <div class="form-group">
                         <input id="signup-password" type="password" placeholder="Password" class="w-full border rounded px-3 py-3" required>
+                        <div id="password-requirements" class="mt-2 text-xs text-gray-500">
+                            <div class="space-y-1">
+                                <div id="req-length" class="flex items-center">
+                                    <span class="w-4 h-4 mr-2">❌</span>
+                                    <span>At least 8 characters</span>
+                                </div>
+                                <div id="req-uppercase" class="flex items-center">
+                                    <span class="w-4 h-4 mr-2">❌</span>
+                                    <span>One uppercase letter (A-Z)</span>
+                                </div>
+                                <div id="req-lowercase" class="flex items-center">
+                                    <span class="w-4 h-4 mr-2">❌</span>
+                                    <span>One lowercase letter (a-z)</span>
+                                </div>
+                                <div id="req-number" class="flex items-center">
+                                    <span class="w-4 h-4 mr-2">❌</span>
+                                    <span>One number (0-9)</span>
+                                </div>
+                                <div id="req-special" class="flex items-center">
+                                    <span class="w-4 h-4 mr-2">❌</span>
+                                    <span>One special character (!@#$%^&*)</span>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                     <div class="form-group">
                         <input id="signup-confirm-password" type="password" placeholder="Confirm Password" class="w-full border rounded px-3 py-3" required>

@@ -1,5 +1,37 @@
 // pages/signup.js - Signup page functionality
 
+// Password strength validation
+function validatePasswordStrength(password) {
+    const requirements = {
+        length: password.length >= 8,
+        uppercase: /[A-Z]/.test(password),
+        lowercase: /[a-z]/.test(password),
+        number: /[0-9]/.test(password),
+        special: /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password)
+    };
+    
+    // Update visual indicators
+    updateRequirementIndicator('req-length', requirements.length);
+    updateRequirementIndicator('req-uppercase', requirements.uppercase);
+    updateRequirementIndicator('req-lowercase', requirements.lowercase);
+    updateRequirementIndicator('req-number', requirements.number);
+    updateRequirementIndicator('req-special', requirements.special);
+    
+    return Object.values(requirements).every(req => req);
+}
+
+function updateRequirementIndicator(elementId, isValid) {
+    const element = document.getElementById(elementId);
+    const icon = element.querySelector('span');
+    if (isValid) {
+        icon.textContent = '✅';
+        icon.className = 'w-4 h-4 mr-2 text-green-500';
+    } else {
+        icon.textContent = '❌';
+        icon.className = 'w-4 h-4 mr-2 text-red-500';
+    }
+}
+
 // Real-time password confirmation validation
 function validatePasswordMatch() {
     const password = document.getElementById('signup-password').value;
@@ -16,7 +48,10 @@ function validatePasswordMatch() {
 }
 
 // Add event listeners for both password fields
-document.getElementById('signup-password').addEventListener('input', validatePasswordMatch);
+document.getElementById('signup-password').addEventListener('input', function() {
+    validatePasswordStrength(this.value);
+    validatePasswordMatch();
+});
 document.getElementById('signup-confirm-password').addEventListener('input', validatePasswordMatch);
 
 // Handle form submission
@@ -37,8 +72,8 @@ document.getElementById('signup-form').addEventListener('submit', async function
         return;
     }
 
-    if (password.length < 6) {
-        showMessage(messageEl, 'Password must be at least 6 characters', 'error');
+    if (!validatePasswordStrength(password)) {
+        showMessage(messageEl, 'Password does not meet security requirements. Please check the requirements above.', 'error');
         return;
     }
 
