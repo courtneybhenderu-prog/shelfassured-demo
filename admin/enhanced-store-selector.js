@@ -122,7 +122,8 @@ class StoreSelector {
                 store.city.toLowerCase().includes(this.searchTerm) ||
                 store.address.toLowerCase().includes(this.searchTerm) ||
                 store.zip_code.includes(this.searchTerm) ||
-                (store.metro_area && store.metro_area.toLowerCase().includes(this.searchTerm))
+                (store.metro && store.metro.toLowerCase().includes(this.searchTerm)) ||
+                (store.METRO && store.METRO.toLowerCase().includes(this.searchTerm))
             );
         }
         
@@ -248,7 +249,8 @@ class StoreSelector {
                 store.city.toLowerCase().includes(this.searchTerm) ||
                 store.address.toLowerCase().includes(this.searchTerm) ||
                 store.zip_code.includes(this.searchTerm) ||
-                (store.metro_area && store.metro_area.toLowerCase().includes(this.searchTerm))
+                (store.metro && store.metro.toLowerCase().includes(this.searchTerm)) ||
+                (store.METRO && store.METRO.toLowerCase().includes(this.searchTerm))
             );
             console.log(`🔍 After search "${this.searchTerm}": ${this.filteredStores.length} stores`);
         }
