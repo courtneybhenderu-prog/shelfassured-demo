@@ -27,8 +27,8 @@ function updateRequirementIndicator(elementId, isValid) {
         icon.textContent = '✅';
         icon.className = 'w-4 h-4 mr-2 text-green-500';
     } else {
-        icon.textContent = '❌';
-        icon.className = 'w-4 h-4 mr-2 text-red-500';
+        icon.textContent = '○';
+        icon.className = 'w-4 h-4 mr-2 text-gray-400';
     }
 }
 
