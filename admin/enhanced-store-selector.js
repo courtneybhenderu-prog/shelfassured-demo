@@ -134,27 +134,46 @@ class StoreSelector {
     async loadStoresFromDatabase() {
         try {
             console.log('🔄 Loading stores from database...');
-            console.log('🔍 Query details: .from("stores").select("*").eq("state", "TX").eq("is_active", true).order("name").limit(5000)');
+            console.log('🔍 Query details: Using pagination to get all stores');
             
-            const { data, error } = await supabase
-                .from('stores')
-                .select('*')
-                .eq('state', 'TX')
-                .eq('is_active', true)
-                .order('name')
-                .limit(5000);
+            let allStores = [];
+            let from = 0;
+            const pageSize = 1000;
+            let hasMore = true;
+            
+            while (hasMore) {
+                console.log(`📄 Loading page ${Math.floor(from/pageSize) + 1} (records ${from + 1} to ${from + pageSize})`);
+                
+                const { data, error } = await supabase
+                    .from('stores')
+                    .select('*')
+                    .eq('state', 'TX')
+                    .eq('is_active', true)
+                    .order('name')
+                    .range(from, from + pageSize - 1);
 
-            if (error) {
-                console.error('❌ Supabase error:', error);
-                throw error;
+                if (error) {
+                    console.error('❌ Supabase error:', error);
+                    throw error;
+                }
+                
+                console.log(`📊 Page response: ${data ? data.length : 0} stores`);
+                
+                if (data && data.length > 0) {
+                    allStores = allStores.concat(data);
+                    from += pageSize;
+                    hasMore = data.length === pageSize; // If we got a full page, there might be more
+                } else {
+                    hasMore = false;
+                }
             }
             
-            console.log('📊 Raw response from Supabase:');
-            console.log('  - Data type:', typeof data);
-            console.log('  - Data length:', data ? data.length : 'null');
-            console.log('  - Is array:', Array.isArray(data));
+            console.log('📊 Final response from Supabase:');
+            console.log('  - Data type:', typeof allStores);
+            console.log('  - Data length:', allStores.length);
+            console.log('  - Is array:', Array.isArray(allStores));
             
-            this.allStores = data || [];
+            this.allStores = allStores;
             this.filteredStores = [...this.allStores];
             
             console.log(`✅ Loaded ${this.allStores.length} stores from database`);
