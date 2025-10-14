@@ -1,24 +1,49 @@
 // pages/signup.js - Signup page functionality
 
+// Real-time password confirmation validation
+function validatePasswordMatch() {
+    const password = document.getElementById('signup-password').value;
+    const confirmPassword = document.getElementById('signup-confirm-password').value;
+    const messageEl = document.getElementById('signup-message');
+    
+    if (confirmPassword && password !== confirmPassword) {
+        showMessage(messageEl, 'Passwords do not match', 'error');
+    } else if (confirmPassword && password === confirmPassword) {
+        showMessage(messageEl, 'Passwords match!', 'success');
+    } else {
+        messageEl.classList.add('hidden');
+    }
+}
+
+// Add event listeners for both password fields
+document.getElementById('signup-password').addEventListener('input', validatePasswordMatch);
+document.getElementById('signup-confirm-password').addEventListener('input', validatePasswordMatch);
+
 // Handle form submission
 document.getElementById('signup-form').addEventListener('submit', async function(e) {
     e.preventDefault();
     
     const email = document.getElementById('signup-email').value;
     const password = document.getElementById('signup-password').value;
+    const confirmPassword = document.getElementById('signup-confirm-password').value;
     const fullName = document.getElementById('signup-name').value;
     const phone = document.getElementById('signup-phone').value;
     const role = document.getElementById('signup-role').value;
     const messageEl = document.getElementById('signup-message');
 
     // Basic validation
-    if (!email || !password || !fullName || !role) {
+    if (!email || !password || !confirmPassword || !fullName || !role) {
         showMessage(messageEl, 'Please fill in all required fields', 'error');
         return;
     }
 
     if (password.length < 6) {
         showMessage(messageEl, 'Password must be at least 6 characters', 'error');
+        return;
+    }
+
+    if (password !== confirmPassword) {
+        showMessage(messageEl, 'Passwords do not match. Please try again.', 'error');
         return;
     }
 
