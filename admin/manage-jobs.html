@@ -1136,6 +1136,7 @@
                     .select(`
                         *,
                         brands(name),
+                        users(full_name),
                         job_stores(stores(name, city, state)),
                         job_skus(skus(name))
                     `)
