@@ -1224,7 +1224,7 @@
         }
 
         // View job details (admin edit mode)
-        function viewJobDetails(jobId) {
+        window.viewJobDetails = function(jobId) {
             console.log('🔍 viewJobDetails called with jobId:', jobId);
             console.log('🔍 Current URL:', window.location.href);
             const newUrl = `manage-jobs.html?edit_job_id=${jobId}`;
