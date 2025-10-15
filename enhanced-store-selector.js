@@ -16,6 +16,9 @@ class StoreSelector {
         try {
             console.log('🔄 Initializing store selector...');
             
+            // Load banner options for dropdown
+            await this.loadBannerOptions();
+            
             // Don't load stores upfront - start empty
             this.allStores = [];
             this.filteredStores = [];
@@ -29,6 +32,46 @@ class StoreSelector {
         } catch (error) {
             console.error('❌ Error initializing store selector:', error);
             return false;
+        }
+    }
+
+    // Load banner options for dropdown
+    async loadBannerOptions() {
+        try {
+            console.log('🔄 Loading banner options...');
+            
+            const { data: banners, error } = await supabase
+                .from('v_distinct_banners')
+                .select('banner_name')
+                .order('banner_name', { ascending: true });
+
+            if (error) {
+                console.error('❌ Error loading banners:', error);
+                return;
+            }
+
+            console.log('✅ Loaded', banners.length, 'banner options');
+
+            // Update dropdown
+            const dropdown = document.getElementById('chain-filter');
+            if (dropdown) {
+                // Keep "All Chains" option
+                const allChainsOption = dropdown.querySelector('option[value="all"]');
+                dropdown.innerHTML = '';
+                dropdown.appendChild(allChainsOption);
+
+                // Add banner options
+                banners.forEach(banner => {
+                    const option = document.createElement('option');
+                    option.value = banner.banner_name.toLowerCase();
+                    option.textContent = banner.banner_name;
+                    dropdown.appendChild(option);
+                });
+
+                console.log('✅ Banner dropdown updated with', banners.length, 'options');
+            }
+        } catch (error) {
+            console.error('❌ Error loading banner options:', error);
         }
     }
 
