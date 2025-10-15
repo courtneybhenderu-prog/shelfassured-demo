@@ -467,8 +467,10 @@
                 addDeleteButton(jobId);
                 
                 // Show form and hide job list
-                document.getElementById('job-creation-form').style.display = 'block';
-                document.getElementById('jobs-list-section').style.display = 'none';
+                document.getElementById('create-job-section').classList.remove('hidden');
+                document.getElementById('jobs-list-section').classList.add('hidden');
+                document.getElementById('create-job-btn').textContent = 'Back to Jobs List';
+                document.getElementById('create-job-btn').onclick = showJobsList;
                 
             } catch (error) {
                 console.error('❌ Error loading job for edit:', error);
