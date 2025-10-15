@@ -1136,7 +1136,7 @@
                     .select(`
                         *,
                         brands(name),
-                        users(full_name),
+                        assigned_user:assigned_user_id(full_name),
                         job_stores(stores(name, city, state)),
                         job_skus(skus(name))
                     `)
@@ -1175,7 +1175,7 @@
 
             const html = jobs.map(job => {
                 const brandName = job.brands?.name || 'Unknown Brand';
-                const assignedUser = job.users?.full_name || 'Unassigned';
+                const assignedUser = job.assigned_user?.full_name || 'Unassigned';
                 const stores = job.job_stores?.map(js => js.stores?.name || 'Unknown Store').join(', ') || 'No stores';
                 const skus = job.job_skus?.map(js => js.skus?.name || 'Unknown SKU').join(', ') || 'No SKUs';
                 
