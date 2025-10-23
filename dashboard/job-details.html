@@ -56,6 +56,11 @@
         <div>
           <h1 class="text-2xl sm:text-3xl font-bold">Job · <span id="jobId">Loading...</span></h1>
           <p class="mt-1 text-sm" style="color:var(--text-600)">Brand: <span id="brand">Loading...</span> · Store: <span id="store">Loading...</span> · SKU: <span id="sku">Loading...</span></p>
+          <!-- Multiple assignments list (hidden by default) -->
+          <div id="multiple-assignments" class="mt-3 hidden">
+            <p class="text-sm font-medium" style="color:var(--text-600)">All Assignments:</p>
+            <ul id="assignment-list" class="mt-1 text-sm space-y-1" style="color:var(--text-500)"></ul>
+          </div>
         </div>
         <div class="flex flex-wrap items-center gap-2">
           <span class="badge">⏱ 48h standard</span>
@@ -210,31 +215,74 @@
       }
     });
 
-    // Load job details
+    // Load job details using new job_store_skus architecture
     async function loadJobDetails(jobId) {
       try {
-        const { data: job, error } = await supabase
-          .from('jobs')
-          .select(`
-            *,
-            brands(name),
-            job_stores(stores(name)),
-            job_skus(skus(name, upc))
-          `)
-          .eq('id', jobId)
-          .single();
+        // Query the new view for job assignments
+        const { data: assignments, error } = await supabase
+          .from('v_job_assignments')
+          .select('*')
+          .eq('job_id', jobId)
+          .order('store_chain', { ascending: true })
+          .order('store_name', { ascending: true })
+          .order('sku_name', { ascending: true });
 
-        if (error) throw error;
+        if (error) {
+          console.error('❌ Load job assignments failed:', error);
+          throw error;
+        }
 
-        currentJob = job;
+        if (!assignments || assignments.length === 0) {
+          throw new Error('No assignments found for this job');
+        }
+
+        const first = assignments[0];
+        currentJob = {
+          id: first.job_id,
+          title: first.job_title,
+          description: first.job_description,
+          brand_name: first.brand_name,
+          assignments: assignments
+        };
         
-        // Update UI
-        document.getElementById('jobId').textContent = job.title || 'Untitled Job';
-        document.getElementById('brand').textContent = job.brands?.name || 'Unknown Brand';
-        document.getElementById('store').textContent = job.job_stores?.[0]?.stores?.name || 'Unknown Store';
-        document.getElementById('sku').textContent = job.job_skus?.[0]?.skus?.name || 'Unknown SKU';
+        // Compose display strings
+        const storeHeader = first
+          ? `${first.store_chain} — ${first.store_name}`
+          : 'Unknown Store';
 
-        console.log('✅ Job loaded:', job);
+        const skuHeader = first
+          ? `${first.brand_name ? first.brand_name + ' — ' : ''}${first.sku_name}`
+          : 'Unknown SKU';
+
+        // Update the DOM
+        document.getElementById('jobId').textContent = first.job_title || 'Untitled Job';
+        document.getElementById('brand').textContent = first.brand_name || 'Unknown Brand';
+        document.getElementById('store').textContent = storeHeader;
+        document.getElementById('sku').textContent = skuHeader;
+
+        // Show all assignments if there are multiple
+        if (assignments.length > 1) {
+          const multipleAssignmentsDiv = document.getElementById('multiple-assignments');
+          const assignmentList = document.getElementById('assignment-list');
+          
+          if (multipleAssignmentsDiv && assignmentList) {
+            // Show the multiple assignments section
+            multipleAssignmentsDiv.classList.remove('hidden');
+            
+            // Populate the list
+            assignmentList.innerHTML = '';
+            assignments.forEach(assignment => {
+              const li = document.createElement('li');
+              li.textContent = 
+                `${assignment.store_chain} — ${assignment.store_name}: ` +
+                `${assignment.brand_name ? assignment.brand_name + ' — ' : ''}${assignment.sku_name}` +
+                `${assignment.sku_code ? ' (UPC ' + assignment.sku_code + ')' : ''}`;
+              assignmentList.appendChild(li);
+            });
+          }
+        }
+
+        console.log('✅ Job loaded with assignments:', assignments);
         
       } catch (error) {
         console.error('❌ Error loading job:', error);
