@@ -25,4 +25,21 @@ Splash (#screen1) • Create Account (#screen2) • Sign In (#screen3) • Shopp
 - `index.html` — all UI + JS
 - `docs/UX-PLAN.md` — page-by-page behavior
 - `CHANGELOG.md` — notable changes
+
+## Troubleshooting & Playbooks
+
+### Database Issues
+- **[TROUBLESHOOTING-GUIDE.md](./TROUBLESHOOTING-GUIDE.md)** - Complete guide for "relation 'jobs' does not exist" errors and SKU reuse issues
+- **[PRODUCTION-FINALIZATION-CHECKLIST.md](./PRODUCTION-FINALIZATION-CHECKLIST.md)** - Step-by-step production hardening checklist
+
+### Common Issues
+- **Job creation fails with duplicate SKUs**: See troubleshooting guide for 3-way junction table solution
+- **RLS permission errors**: Check RLS posture configuration in step3-rls-posture.sql
+- **PostgREST cache issues**: Run step1-postgrest-reload.sql
+
+### Quick Fixes
+- **Schema reload**: `NOTIFY pgrst, 'reload schema';`
+- **Health check**: Run `simple-smoke-test.sql` to verify system status
+- **Production deployment**: Follow the 6-step checklist in PRODUCTION-FINALIZATION-CHECKLIST.md
+
 # Force rebuild Fri Oct 10 18:17:28 CDT 2025
