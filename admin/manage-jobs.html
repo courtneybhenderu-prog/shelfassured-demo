@@ -936,73 +936,64 @@
                 const skuIds = await ensureSkusExist(formData.skus, brandId);
                 console.log('✅ SKU IDs:', skuIds);
                 
-                // Create jobs (one per store-SKU combination)
+                // Create ONE job record (not one per store-SKU combination)
+                const jobData = {
+                    title: formData.title,
+                    description: formData.description,
+                    brand_id: brandId,
+                    assigned_user_id: formData.assignedUserId,
+                    priority: formData.priority,
+                    due_date: formData.dueDate || null,
+                    instructions: formData.specialInstructions,
+                    status: 'pending',
+                    payout_per_store: 5.00, // Standard $5 per store
+                    created_at: new Date().toISOString()
+                };
+                
+                console.log('🔄 Creating main job record...');
+                const { data: jobRow, error: jobErr } = await supabase
+                    .from('jobs')
+                    .insert(jobData)
+                    .select()
+                    .single();
+                
+                if (jobErr) throw jobErr;
+                console.log('✅ Main job created:', jobRow.id);
+                
+                // Create assignments in job_store_skus (3-way junction table)
+                console.log('🔄 Creating job-store-sku assignments...');
+                const assignments = [];
                 for (const storeId of storeIds) {
                     for (const skuId of skuIds) {
-                        try {
-                            const jobData = {
-                                title: formData.title,
-                                description: formData.description,
-                                brand_id: brandId,
-                                assigned_user_id: formData.assignedUserId,
-                                priority: formData.priority,
-                                due_date: formData.dueDate || null,
-                                instructions: formData.specialInstructions,
-                                status: 'pending',
-                                payout_per_store: 5.00, // Standard $5 per store
-                                created_at: new Date().toISOString()
-                            };
-                            
-                            const { data: job, error } = await supabase
-                                .from('jobs')
-                                .insert(jobData)
-                                .select()
-                                .single();
-                            
-                            if (error) throw error;
-                            
-                            console.log('✅ Job created:', job.id);
-                            
-                            // Link job to store and SKU
-                            const { error: storeError } = await supabase.from('job_stores').insert({
-                                job_id: job.id,
-                                store_id: storeId
-                            });
-                            
-                            if (storeError) {
-                                console.error('❌ Error linking store:', storeError);
-                                throw storeError;
-                            }
-                            console.log('✅ Store linked:', storeId);
-                            
-                            const { error: skuError } = await supabase.from('job_skus').insert({
-                                job_id: job.id,
-                                sku_id: skuId
-                            });
-                            
-                            if (skuError) {
-                                console.error('❌ Error linking SKU:', skuError);
-                                throw skuError;
-                            }
-                            console.log('✅ SKU linked:', skuId);
-                            
-                            createdJobs.push(job);
-                            
-                        } catch (error) {
-                            console.error(`❌ Error creating job for store ${storeId}, SKU ${skuId}:`, error);
-                            errors.push(`Failed to create job for store-SKU combination: ${error.message}`);
-                        }
+                        assignments.push({
+                            job_id: jobRow.id,
+                            store_id: storeId,
+                            sku_id: skuId
+                        });
                     }
                 }
+                
+                const { error: assignmentError } = await supabase
+                    .from('job_store_skus')
+                    .upsert(assignments, { 
+                        onConflict: 'job_id,store_id,sku_id', 
+                        ignoreDuplicates: true 
+                    });
+                
+                if (assignmentError) throw assignmentError;
+                console.log('✅ Assignments created:', assignments.length);
+                
+                createdJobs.push(jobRow);
                 
                 if (errors.length > 0 && createdJobs.length === 0) {
                     throw new Error(`All jobs failed to create: ${errors.join(', ')}`);
                 }
                 
                 return {
-                    created: createdJobs.length,
-                    errors: errors.length,
-                    total: storeIds.length * skuIds.length
+                    created: createdJobs.length, // Should be 1 (one job)
+                    assignments: assignments.length, // Multiple assignments
+                    jobId: jobRow.id,
+                    errors: errors.length
                 };
                 
             } catch (error) {
