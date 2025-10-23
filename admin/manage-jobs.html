@@ -325,7 +325,7 @@
     </div>
 
     <script src="../shared/api.js?v=20250113-4"></script>
-    <script src="enhanced-store-selector.js?v=20250113-10"></script>
+    <script src="enhanced-store-selector.js?v=20250113-11"></script>
     <script>
         // Global variables
         let brands = [];
@@ -357,6 +357,9 @@
                 // Check if we're in edit mode
                 const urlParams = new URLSearchParams(window.location.search);
                 const editJobId = urlParams.get('edit_job_id');
+                
+                console.log('🔍 URL params:', window.location.search);
+                console.log('🔍 editJobId:', editJobId);
                 
                 if (editJobId) {
                     console.log('🔄 Edit mode detected for job:', editJobId);
@@ -467,8 +470,10 @@
                 addDeleteButton(jobId);
                 
                 // Show form and hide job list
-                document.getElementById('job-creation-form').style.display = 'block';
-                document.getElementById('jobs-list-section').style.display = 'none';
+                document.getElementById('create-job-section').classList.remove('hidden');
+                document.getElementById('jobs-list-section').classList.add('hidden');
+                document.getElementById('create-job-btn').textContent = 'Back to Jobs List';
+                document.getElementById('create-job-btn').onclick = showJobsList;
                 
             } catch (error) {
                 console.error('❌ Error loading job for edit:', error);
@@ -944,7 +949,7 @@
                                 due_date: formData.dueDate || null,
                                 instructions: formData.specialInstructions,
                                 status: 'pending',
-                                total_payout: 5.00, // Standard $5 job
+                                payout_per_store: 5.00, // Standard $5 per store
                                 created_at: new Date().toISOString()
                             };
                             
@@ -1136,6 +1141,7 @@
                     .select(`
                         *,
                         brands(name),
+                        assigned_user:assigned_user_id(full_name),
                         job_stores(stores(name, city, state)),
                         job_skus(skus(name))
                     `)
@@ -1174,7 +1180,7 @@
 
             const html = jobs.map(job => {
                 const brandName = job.brands?.name || 'Unknown Brand';
-                const assignedUser = job.users?.full_name || 'Unassigned';
+                const assignedUser = job.assigned_user?.full_name || 'Unassigned';
                 const stores = job.job_stores?.map(js => js.stores?.name || 'Unknown Store').join(', ') || 'No stores';
                 const skus = job.job_skus?.map(js => js.skus?.name || 'Unknown SKU').join(', ') || 'No SKUs';
                 
@@ -1218,9 +1224,12 @@
         }
 
         // View job details (admin edit mode)
-        function viewJobDetails(jobId) {
-            console.log('Opening job for edit:', jobId);
-            window.location.href = `manage-jobs.html?edit_job_id=${jobId}`;
+        window.viewJobDetails = function(jobId) {
+            console.log('🔍 viewJobDetails called with jobId:', jobId);
+            console.log('🔍 Current URL:', window.location.href);
+            const newUrl = `manage-jobs.html?edit_job_id=${jobId}`;
+            console.log('🔍 Redirecting to:', newUrl);
+            window.location.href = newUrl;
         }
 
         // Update job
