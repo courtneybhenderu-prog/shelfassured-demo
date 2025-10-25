@@ -1,0 +1,234 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>ShelfAssured • Brand Detail</title>
+  <link rel="preconnect" href="https://cdn.jsdelivr.net" />
+  <style>
+    body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Inter,sans-serif;margin:24px;background:#f6f7f9}
+    .wrap{max-width:1000px;margin:0 auto}
+    .card{background:#fff;border:1px solid #e5e7eb;border-radius:16px;box-shadow:0 1px 2px rgba(0,0,0,.04);padding:16px;margin-bottom:16px}
+    h1{font-size:22px;margin:0 0 8px}
+    h2{font-size:16px;margin:0 0 4px}
+    .hint{color:#6b7280;font-size:12px}
+    .grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+    .full{grid-column:1 / -1}
+    .row{display:flex;gap:8px;align-items:center}
+    .btn{background:#111827;color:#fff;border:0;border-radius:12px;padding:10px 14px;cursor:pointer;text-decoration:none;display:inline-block}
+    .btn.ghost{background:#fff;color:#111827;border:1px solid #e5e7eb}
+    .pill{border:1px solid #e5e7eb;border-radius:12px;padding:12px;margin-bottom:8px}
+    .list{display:flex;flex-direction:column;gap:8px}
+    .loading{text-align:center;padding:40px;color:#6b7280}
+    .error{color:#b91c1c;text-align:center;padding:40px}
+    .info-row{display:flex;margin-bottom:8px;padding:8px 0;border-bottom:1px solid #f0f0f0}
+    .info-label{font-weight:600;width:120px;color:#333;font-size:14px}
+    .info-value{color:#666;flex:1;font-size:14px}
+    .admin-section{background:#f8f9fa;padding:16px;border-radius:8px;margin-top:16px;border:1px solid #e0e0e0}
+    .admin-title{font-weight:600;margin-bottom:12px;color:#333;font-size:14px}
+    .raw-data{background:#f8f9fa;padding:12px;border-radius:8px;margin-top:16px;border:1px solid #e0e0e0}
+    .raw-title{font-weight:600;margin-bottom:8px;font-size:12px;color:#333}
+    pre{font-size:11px;white-space:pre-wrap;margin:0;color:#666;background:white;padding:12px;border-radius:4px;border:1px solid #ddd;overflow-x:auto}
+    .back-link{color:#111827;text-decoration:none;font-size:14px;margin-bottom:16px;display:inline-block}
+    .back-link:hover{text-decoration:underline}
+    .product-item{background:#f9fafb;padding:12px;border-radius:8px;border:1px solid #e5e7eb}
+    .store-item{background:#f9fafb;padding:12px;border-radius:8px;border:1px solid #e5e7eb}
+    .status-badge{display:inline-block;padding:4px 8px;border-radius:6px;font-size:11px;font-weight:500}
+    .status-unverified{background:#fef3c7;color:#92400e}
+    .status-verified{background:#d1fae5;color:#065f46}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <a href="brand-onboarding.html" class="back-link">← Back to Brand Onboarding</a>
+    
+    <div id="loading" class="loading">
+      Loading brand details...
+    </div>
+    
+    <div id="error" class="error" style="display: none;">
+      Brand not found
+    </div>
+    
+    <div id="brandDetail" style="display: none;">
+      <h1 id="brandName"></h1>
+      <p class="hint" id="brandWebsite"></p>
+      
+      <div class="card">
+        <h2>Brand Information</h2>
+        <div class="info-row">
+          <div class="info-label">Email:</div>
+          <div class="info-value" id="brandEmail"></div>
+        </div>
+        <div class="info-row">
+          <div class="info-label">Phone:</div>
+          <div class="info-value" id="brandPhone"></div>
+        </div>
+        <div class="info-row">
+          <div class="info-label">Address:</div>
+          <div class="info-value" id="brandAddress"></div>
+        </div>
+        <div class="info-row">
+          <div class="info-label">Created:</div>
+          <div class="info-value" id="brandCreated"></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>Products</h2>
+        <div id="productsList" class="list"></div>
+      </div>
+
+      <div class="card">
+        <h2>Stores</h2>
+        <div id="storesList" class="list"></div>
+      </div>
+      
+      <div class="admin-section">
+        <div class="admin-title">Admin Fields</div>
+        <div class="info-row">
+          <div class="info-label">Broker:</div>
+          <div class="info-value" id="brandBroker"></div>
+        </div>
+        <div class="info-row">
+          <div class="info-label">NDA Status:</div>
+          <div class="info-value" id="brandNda"></div>
+        </div>
+        <div class="info-row">
+          <div class="info-label">Data Source:</div>
+          <div class="info-value" id="brandDataSource"></div>
+        </div>
+        <div class="info-row">
+          <div class="info-label">Data Confidence:</div>
+          <div class="info-value" id="brandConfidence"></div>
+        </div>
+      </div>
+      
+      <div class="raw-data">
+        <div class="raw-title">Raw Data (JSON)</div>
+        <pre id="rawJson"></pre>
+      </div>
+    </div>
+  </div>
+
+  <script src="./config.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script>
+    (function(){
+      const { SUPABASE_URL, SUPABASE_ANON_KEY } = window.SA_CONFIG || {};
+      const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+      // Get brand ID from URL
+      const urlParams = new URLSearchParams(window.location.search);
+      const brandId = urlParams.get('id');
+
+      const el = (id) => document.getElementById(id);
+      const loading = el('loading');
+      const error = el('error');
+      const brandDetail = el('brandDetail');
+
+      async function loadBrandDetails() {
+        if (!brandId) {
+          loading.style.display = 'none';
+          error.style.display = 'block';
+          return;
+        }
+
+        try {
+          // Load brand details
+          const { data: brand, error: brandErr } = await supabase
+            .from('brands')
+            .select('*')
+            .eq('id', brandId)
+            .single();
+
+          if (brandErr) throw brandErr;
+          if (!brand) {
+            loading.style.display = 'none';
+            error.style.display = 'block';
+            return;
+          }
+
+          // Load products
+          const { data: products, error: productsErr } = await supabase
+            .from('products')
+            .select('*')
+            .eq('brand_id', brandId)
+            .order('created_at', { ascending: false });
+
+          if (productsErr) console.warn('Products error:', productsErr);
+
+          // Load stores
+          const { data: stores, error: storesErr } = await supabase
+            .from('stores')
+            .select('*, retailers(name)')
+            .eq('id', brandId) // Note: This might need adjustment based on your store-brand relationship
+            .order('created_at', { ascending: false });
+
+          if (storesErr) console.warn('Stores error:', storesErr);
+
+          // Populate brand info
+          el('brandName').textContent = brand.name || 'Unnamed Brand';
+          el('brandWebsite').textContent = brand.website || '';
+          el('brandEmail').textContent = brand.primary_email || '—';
+          el('brandPhone').textContent = brand.phone || '—';
+          el('brandAddress').textContent = brand.address || '—';
+          el('brandCreated').textContent = new Date(brand.created_at).toLocaleDateString();
+          
+          // Admin fields
+          el('brandBroker').textContent = brand.broker_name || '—';
+          el('brandNda').textContent = brand.nda_status || '—';
+          el('brandDataSource').textContent = brand.data_source || '—';
+          el('brandConfidence').textContent = brand.data_confidence || '—';
+          
+          // Products
+          const productsList = el('productsList');
+          if (products && products.length > 0) {
+            productsList.innerHTML = products.map(p => `
+              <div class="product-item">
+                <div style="font-weight:600;margin-bottom:4px">${p.name}</div>
+                <div style="font-size:12px;color:#6b7280">
+                  UPC/SKU: ${p.identifier} ${p.size ? '• ' + p.size : ''} ${p.suggested_retail_price ? '• $' + p.suggested_retail_price : ''}
+                  ${p.category ? '• ' + p.category : ''}
+                </div>
+              </div>
+            `).join('');
+          } else {
+            productsList.innerHTML = '<div class="hint">No products found</div>';
+          }
+
+          // Stores
+          const storesList = el('storesList');
+          if (stores && stores.length > 0) {
+            storesList.innerHTML = stores.map(s => `
+              <div class="store-item">
+                <div style="font-weight:600;margin-bottom:4px">${s.name || 'Unnamed Store'}</div>
+                <div style="font-size:12px;color:#6b7280">
+                  ${s.address || 'No address'} ${s.retailers?.name ? '• ' + s.retailers.name : ''}
+                </div>
+                <span class="status-badge status-${s.status}">${s.status}</span>
+              </div>
+            `).join('');
+          } else {
+            storesList.innerHTML = '<div class="hint">No stores found</div>';
+          }
+          
+          // Raw JSON
+          el('rawJson').textContent = JSON.stringify(brand, null, 2);
+
+          loading.style.display = 'none';
+          brandDetail.style.display = 'block';
+
+        } catch (err) {
+          console.error('Error loading brand:', err);
+          loading.style.display = 'none';
+          error.style.display = 'block';
+        }
+      }
+
+      // Load brand details on page load
+      loadBrandDetails();
+    })();
+  </script>
+</body>
+</html>

@@ -1,0 +1,606 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>ShelfAssured • Brand Onboarding (Admin)</title>
+  <link rel="preconnect" href="https://cdn.jsdelivr.net" />
+  <style>
+    body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Inter,sans-serif;margin:24px;background:#f6f7f9}
+    .wrap{max-width:1000px;margin:0 auto}
+    .card{background:#fff;border:1px solid #e5e7eb;border-radius:16px;box-shadow:0 1px 2px rgba(0,0,0,.04);padding:16px;margin-bottom:16px}
+    h1{font-size:22px;margin:0 0 8px}
+    h2{font-size:16px;margin:0 0 4px}
+    .hint{color:#6b7280;font-size:12px}
+    .grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+    .full{grid-column:1 / -1}
+    label{font-size:12px;font-weight:600;margin-bottom:6px;display:block}
+    input,select,textarea{width:100%;padding:10px 12px;border:1px solid #d1d5db;border-radius:12px}
+    textarea{min-height:84px}
+    .row{display:flex;gap:8px;align-items:center}
+    .btn{background:#111827;color:#fff;border:0;border-radius:12px;padding:10px 14px;cursor:pointer}
+    .btn.alt{background:#374151}
+    .btn.ghost{background:#fff;color:#111827;border:1px solid #e5e7eb}
+    .pill{border:1px dashed #e5e7eb;border-radius:12px;padding:12px}
+    .list{display:flex;flex-direction:column;gap:12px}
+    .kpi{display:flex;gap:8px;flex-wrap:wrap}
+    .err{color:#b91c1c;font-size:13px}
+    .ok{color:#065f46;font-size:13px}
+    code.small{font-size:11px;color:#6b7280}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>Brand Onboarding</h1>
+    <p class="hint">We stop the silent, invisible margin erosion caused by bad retail execution. Help us understand your retail landscape so we can deliver real-time shelf visibility and competitive intelligence.</p>
+
+    <div id="msg" class="hint"></div>
+
+    <form id="form" class="card">
+      <h2>Your Brand</h2>
+      <div class="grid">
+        <div>
+          <label>Brand Name *</label>
+          <input id="brand_name" placeholder="Full Business Name" required />
+        </div>
+        <div>
+          <label>Website</label>
+          <input id="brand_site" placeholder="https://www.company.com" />
+        </div>
+        <div>
+          <label>Primary Email</label>
+          <input id="brand_email" type="email" placeholder="contact@company.com" />
+        </div>
+        <div>
+          <label>Phone</label>
+          <input id="brand_phone" placeholder="(555) 123-4567" />
+        </div>
+        <div class="full">
+          <label>Address</label>
+          <input id="brand_addr" placeholder="Street, City, State, ZIP" />
+        </div>
+      </div>
+    </form>
+
+    <div class="card">
+      <div class="row" style="justify-content:space-between">
+        <div>
+          <h2>Products We'll Monitor</h2>
+          <p class="hint">Tell us which products need our eyes on the shelf. We'll track OOS, compliance, pricing, and competitive moves for each one.</p>
+        </div>
+        <div class="row">
+          <input type="file" id="productsCsv" accept=".csv" style="display:none" />
+          <button class="btn ghost" id="uploadProducts">📁 Upload CSV</button>
+          <button class="btn ghost" id="downloadProductsTemplate">📥 Template</button>
+          <button class="btn ghost" id="addProduct">+ Add Product</button>
+        </div>
+      </div>
+      <div id="products" class="list"></div>
+    </div>
+
+    <div class="card">
+      <div class="row" style="justify-content:space-between">
+        <div>
+          <h2>Retail Locations</h2>
+          <p class="hint">Point us to your battleground stores. We'll deploy our field team to monitor execution, compliance, and competitive activity.</p>
+        </div>
+        <div class="row">
+          <input type="file" id="storesCsv" accept=".csv" style="display:none" />
+          <button class="btn ghost" id="uploadStores">📁 Upload CSV</button>
+          <button class="btn ghost" id="downloadStoresTemplate">📥 Template</button>
+          <button class="btn ghost" id="addStore">+ Add Store</button>
+        </div>
+      </div>
+      <div id="stores" class="list"></div>
+    </div>
+
+    <div class="card">
+      <div class="kpi">
+        <button class="btn" id="saveAll">Deploy ShelfAssured</button>
+        <button class="btn alt" id="saveDraft">💾 Save Draft</button>
+        <button class="btn ghost" id="loadDraft">📂 Load Draft</button>
+        <span id="stat" class="hint"></span>
+        <a id="viewBrand" class="hint" style="text-decoration:underline;display:none">View brand →</a>
+      </div>
+      <div id="error" class="err"></div>
+      <div id="ok" class="ok"></div>
+      <div class="pill" style="margin-top:10px">
+        <code class="small">Mission Brief: We'll establish real-time shelf visibility across your retail network, tracking OOS, compliance, pricing integrity, and competitive moves.</code>
+      </div>
+    </div>
+  </div>
+
+  <template id="tplProduct">
+    <div class="pill">
+      <div class="grid">
+        <div>
+          <label>Product Name *</label>
+          <input data-k="name" placeholder="Specific Product Name" />
+        </div>
+        <div>
+          <label>UPC/SKU *</label>
+          <input data-k="barcode" placeholder="123456789012" />
+        </div>
+        <div>
+          <label>Size</label>
+          <input data-k="size" placeholder="16 oz" />
+        </div>
+        <div>
+          <label>Suggested Retail Price</label>
+          <input data-k="suggested_retail_price" placeholder="9.99" type="number" step="0.01" />
+        </div>
+        <div>
+          <label>Image URL</label>
+          <input data-k="image_url" placeholder="https://…" />
+        </div>
+        <div>
+          <label>Category</label>
+          <input data-k="category" placeholder="Sausage" />
+        </div>
+      </div>
+      <div class="row" style="margin-top:8px;justify-content:flex-end">
+        <button class="btn alt" data-action="remove">Remove</button>
+      </div>
+    </div>
+  </template>
+
+  <template id="tplStore">
+    <div class="pill">
+      <div class="grid">
+        <div>
+          <label>Retailer</label>
+          <input data-k="retailer" placeholder="Target, Walmart, Kroger" />
+        </div>
+        <div>
+          <label>Store Name</label>
+          <input data-k="name" placeholder="Store Location Name" />
+        </div>
+        <div>
+          <label>Address</label>
+          <input data-k="address" placeholder="Street Address" />
+        </div>
+        <div>
+          <label>City</label>
+          <input data-k="city" placeholder="Houston" />
+        </div>
+        <div>
+          <label>State & ZIP</label>
+          <input data-k="state_zip" placeholder="TX 77057-3061" />
+        </div>
+      </div>
+      <div class="row" style="margin-top:8px;justify-content:flex-end">
+        <button class="btn alt" data-action="remove">Remove</button>
+      </div>
+    </div>
+  </template>
+
+  <script src="./config.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script>
+    (function(){
+      const { SUPABASE_URL, SUPABASE_ANON_KEY } = window.SA_CONFIG || {};
+      const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+      const el = (id) => document.getElementById(id);
+      const products = el('products');
+      const stores = el('stores');
+      const stat = el('stat');
+      const ok = el('ok');
+      const err = el('error');
+      const viewBrand = el('viewBrand');
+
+      // add initial blank rows
+      function addProductRow(){
+        const tpl = el('tplProduct').content.cloneNode(true);
+        tpl.querySelector('[data-action="remove"]').onclick = (e)=>{
+          e.preventDefault(); e.target.closest('.pill').remove();
+        };
+        products.appendChild(tpl);
+      }
+      function addStoreRow(){
+        const tpl = el('tplStore').content.cloneNode(true);
+        tpl.querySelector('[data-action="remove"]').onclick = (e)=>{
+          e.preventDefault(); e.target.closest('.pill').remove();
+        };
+        stores.appendChild(tpl);
+      }
+      addProductRow();
+      addStoreRow();
+
+      el('addProduct').onclick = (e)=>{ e.preventDefault(); addProductRow(); };
+      el('addStore').onclick = (e)=>{ e.preventDefault(); addStoreRow(); };
+
+      // CSV Upload functionality
+      el('uploadProducts').onclick = (e)=>{ e.preventDefault(); el('productsCsv').click(); };
+      el('uploadStores').onclick = (e)=>{ e.preventDefault(); el('storesCsv').click(); };
+
+      el('productsCsv').onchange = (e)=>{ handleCsvUpload(e, 'products'); };
+      el('storesCsv').onchange = (e)=>{ handleCsvUpload(e, 'stores'); };
+
+      el('downloadProductsTemplate').onclick = (e)=>{ e.preventDefault(); downloadTemplate('products'); };
+      el('downloadStoresTemplate').onclick = (e)=>{ e.preventDefault(); downloadTemplate('stores'); };
+
+      // Draft functionality
+      el('saveDraft').onclick = (e)=>{ e.preventDefault(); saveDraft(); };
+      el('loadDraft').onclick = (e)=>{ e.preventDefault(); loadDraft(); };
+
+      function saveDraft() {
+        const draft = {
+          brand: {
+            name: el('brand_name').value,
+            site: el('brand_site').value,
+            email: el('brand_email').value,
+            phone: el('brand_phone').value,
+            addr: el('brand_addr').value
+          },
+          products: readProducts(),
+          stores: readStores()
+        };
+        localStorage.setItem('brandDraft', JSON.stringify(draft));
+        stat.textContent = 'Draft saved to browser storage';
+        setTimeout(() => stat.textContent = '', 3000);
+      }
+
+      function loadDraft() {
+        const draft = localStorage.getItem('brandDraft');
+        if (!draft) {
+          stat.textContent = 'No draft found';
+          setTimeout(() => stat.textContent = '', 3000);
+          return;
+        }
+        
+        const data = JSON.parse(draft);
+        
+        // Load brand data
+        el('brand_name').value = data.brand.name || '';
+        el('brand_site').value = data.brand.site || '';
+        el('brand_email').value = data.brand.email || '';
+        el('brand_phone').value = data.brand.phone || '';
+        el('brand_addr').value = data.brand.addr || '';
+        
+        // Clear existing products/stores
+        products.innerHTML = '';
+        stores.innerHTML = '';
+        
+        // Load products
+        data.products.forEach(product => {
+          addProductRow();
+          const lastRow = products.lastElementChild;
+          Object.keys(product).forEach(key => {
+            const input = lastRow.querySelector(`[data-k="${key}"]`);
+            if (input) input.value = product[key] || '';
+          });
+        });
+        
+        // Load stores
+        data.stores.forEach(store => {
+          addStoreRow();
+          const lastRow = stores.lastElementChild;
+          Object.keys(store).forEach(key => {
+            const input = lastRow.querySelector(`[data-k="${key}"]`);
+            if (input) input.value = store[key] || '';
+          });
+        });
+        
+        stat.textContent = `Loaded draft: ${data.products.length} products, ${data.stores.length} stores`;
+        setTimeout(() => stat.textContent = '', 3000);
+      }
+
+      function downloadTemplate(type) {
+        const templates = {
+          products: 'name,barcode,size,category\nProduct Name 1,123456789012,16 oz,Beverages\nProduct Name 2,123456789013,32 oz,Beverages',
+          stores: 'retailer,name,address,city,state_zip\nH-E-B,San Felipe H-E-B,5895 San Felipe Street,Houston,TX 77057-3061\nKroger,Kroger - Bunker Hill,17455 Spring Cypress Road,Houston,TX 77090'
+        };
+        
+        const blob = new Blob([templates[type]], { type: 'text/csv' });
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `${type}-template.csv`;
+        a.click();
+        window.URL.revokeObjectURL(url);
+      }
+
+      function handleCsvUpload(event, type) {
+        const file = event.target.files[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          const csv = e.target.result;
+          const lines = csv.split('\n').filter(line => line.trim());
+          const headers = lines[0].split(',').map(h => h.trim().toLowerCase());
+          
+          if (type === 'products') {
+            // Expected headers: name,barcode,size,category
+            for (let i = 1; i < lines.length; i++) {
+              const values = lines[i].split(',').map(v => v.trim());
+              const product = {};
+              headers.forEach((header, index) => {
+                product[header] = values[index] || '';
+              });
+              
+              if (product.name && product.barcode) {
+                addProductRow();
+                const lastRow = products.lastElementChild;
+                Object.keys(product).forEach(key => {
+                  const input = lastRow.querySelector(`[data-k="${key}"]`);
+                  if (input) input.value = product[key];
+                });
+              }
+            }
+          } else if (type === 'stores') {
+            // Expected headers: retailer,name,address
+            for (let i = 1; i < lines.length; i++) {
+              const values = lines[i].split(',').map(v => v.trim());
+              const store = {};
+              headers.forEach((header, index) => {
+                store[header] = values[index] || '';
+              });
+              
+              if (store.name || store.address) {
+                addStoreRow();
+                const lastRow = stores.lastElementChild;
+                Object.keys(store).forEach(key => {
+                  const input = lastRow.querySelector(`[data-k="${key}"]`);
+                  if (input) input.value = store[key];
+                });
+              }
+            }
+          }
+          
+          stat.textContent = `Loaded ${lines.length - 1} ${type} from CSV`;
+          setTimeout(() => stat.textContent = '', 3000);
+        };
+        reader.readAsText(file);
+      }
+
+      function readProducts(){
+        return Array.from(products.querySelectorAll('.pill')).map(card=>{
+          const get = k => (card.querySelector(`[data-k="${k}"]`).value||'').trim();
+          return {
+            name: get('name'),
+            barcode: get('barcode'),
+            size: get('size')||null,
+            category: get('category')||null,
+          };
+        }).filter(p=>p.name && p.barcode);
+      }
+      function readStores(){
+        return Array.from(stores.querySelectorAll('.pill')).map(card=>{
+          const get = k => (card.querySelector(`[data-k="${k}"]`).value||'').trim();
+          return {
+            retailer: get('retailer')||null,
+            name: get('name')||null,
+            address: get('address')||null,
+            city: get('city')||null,
+            state_zip: get('state_zip')||null,
+          };
+        }).filter(s=> s.name || s.address);
+      }
+
+      // Aggressive normalization functions
+      function normalizeRetailer(name) {
+        if (!name) return '';
+        return name.toLowerCase()
+          .replace(/[\u2011\u2013\u2014]/g, '-') // Unicode hyphens to ASCII
+          .replace(/heb/g, 'h-e-b')
+          .replace(/kroger/g, 'kroger')
+          .replace(/walmart/g, 'walmart')
+          .replace(/target/g, 'target')
+          .replace(/whole\s*foods/g, 'whole foods')
+          .replace(/[^a-z0-9-]/g, '') // Keep only alphanumeric and hyphens
+          .trim();
+      }
+
+      function normalizeStreet(address) {
+        if (!address) return '';
+        return address.toLowerCase()
+          .replace(/[\u2011\u2013\u2014]/g, '-') // Unicode hyphens
+          .replace(/\b(rd|road)\b/g, 'road')
+          .replace(/\b(st|street)\b/g, 'street')
+          .replace(/\b(ave|avenue)\b/g, 'avenue')
+          .replace(/\b(blvd|boulevard)\b/g, 'boulevard')
+          .replace(/\b(ste|suite)\s*#?\d*/g, '') // Remove suite/ste numbers
+          .replace(/[^a-z0-9\s]/g, '') // Keep only alphanumeric and spaces
+          .replace(/\s+/g, ' ') // Collapse whitespace
+          .trim();
+      }
+
+      function normalizeCity(city) {
+        if (!city) return '';
+        return city.toLowerCase().trim();
+      }
+
+      function normalizeState(stateZip) {
+        if (!stateZip) return '';
+        const state = stateZip.split(' ')[0];
+        return state ? state.toUpperCase() : '';
+      }
+
+      function normalizeZip(stateZip) {
+        if (!stateZip) return '';
+        const zipMatch = stateZip.match(/\d{5}/);
+        return zipMatch ? zipMatch[0] : '';
+      }
+
+      function normalizeName(name) {
+        if (!name) return '';
+        return name.toLowerCase()
+          .replace(/[\u2011\u2013\u2014]/g, '-') // Unicode hyphens
+          .replace(/\s+/g, ' ') // Collapse spaces
+          .trim();
+      }
+
+      async function findExistingStore(storeData) {
+        const retailerNorm = normalizeRetailer(storeData.retailer);
+        const streetNorm = normalizeStreet(storeData.address);
+        const cityNorm = normalizeCity(storeData.city);
+        const state = normalizeState(storeData.state_zip);
+        const zip5 = normalizeZip(storeData.state_zip);
+        const nameNorm = normalizeName(storeData.name);
+
+        console.log(`Matching: ${retailerNorm} | ${streetNorm} | ${cityNorm} | ${state} | ${zip5}`);
+
+        // Strategy 1: Address + ZIP (best signal)
+        if (streetNorm && cityNorm && state && zip5) {
+          const { data, error } = await supabase
+            .from('stores')
+            .select('id, name, store_chain, address, city, state, zip_code')
+            .eq('zip_code', zip5)
+            .eq('state', state)
+            .ilike('address', `%${streetNorm.split(' ')[0]}%`) // First word of street
+            .ilike('city', `%${cityNorm}%`)
+            .limit(1);
+          
+          if (!error && data && data.length > 0) {
+            console.log(`✅ Address+ZIP match: ${data[0].name}`);
+            return data[0].id;
+          }
+        }
+
+        // Strategy 2: Retailer + Address (no zip required)
+        if (retailerNorm && streetNorm && cityNorm && state) {
+          const { data, error } = await supabase
+            .from('stores')
+            .select('id, name, store_chain, address, city, state, zip_code')
+            .eq('state', state)
+            .ilike('store_chain', `%${storeData.retailer}%`) // Use original for fuzzy match
+            .ilike('address', `%${streetNorm.split(' ')[0]}%`)
+            .ilike('city', `%${cityNorm}%`)
+            .limit(1);
+          
+          if (!error && data && data.length > 0) {
+            console.log(`✅ Retailer+Address match: ${data[0].name}`);
+            return data[0].id;
+          }
+        }
+
+        // Strategy 3: Name + ZIP (weaker)
+        if (nameNorm && zip5) {
+          const { data, error } = await supabase
+            .from('stores')
+            .select('id, name, store_chain, address, city, state, zip_code')
+            .eq('zip_code', zip5)
+            .ilike('name', `%${nameNorm.split(' ')[0]}%`) // First word of name
+            .limit(1);
+          
+          if (!error && data && data.length > 0) {
+            console.log(`✅ Name+ZIP match: ${data[0].name}`);
+            return data[0].id;
+          }
+        }
+
+        // Strategy 4: Retailer + ZIP (guarded fallback)
+        if (retailerNorm && zip5) {
+          // First check if there's only one store for this retailer+zip
+          const { data: countData, error: countError } = await supabase
+            .from('stores')
+            .select('id', { count: 'exact' })
+            .eq('zip_code', zip5)
+            .ilike('store_chain', `%${storeData.retailer}%`);
+          
+          if (!countError && countData && countData.length === 1) {
+            console.log(`✅ Retailer+ZIP match (single store): ${countData[0].name}`);
+            return countData[0].id;
+          } else {
+            console.log(`⚠️ Multiple stores for ${storeData.retailer} in ${zip5}, skipping fallback`);
+          }
+        }
+
+        console.log(`❌ No match found for: ${storeData.name}`);
+        return null;
+      }
+
+      async function saveAll(){
+        err.textContent = ''; ok.textContent = ''; stat.textContent=''; viewBrand.style.display='none';
+
+        const name = document.getElementById('brand_name').value.trim();
+        if(!name){ err.textContent='Brand name is required.'; return; }
+        const site = document.getElementById('brand_site').value.trim() || null;
+        const email = document.getElementById('brand_email').value.trim() || null;
+        const phone = document.getElementById('brand_phone').value.trim() || null;
+        const addr = document.getElementById('brand_addr').value.trim() || null;
+
+        const prodList = readProducts();
+        const storeList = readStores();
+        if(prodList.length === 0){ err.textContent='Add at least one product with name and identifier.'; return; }
+
+        stat.textContent='Saving brand…';
+        // 1) upsert brand (public fields only)
+        const { data: brandId, error: rpcErr } = await supabase.rpc('upsert_brand_public', {
+          p_id: null,
+          p_name: name,
+          p_website: site,
+          p_primary_email: email,
+          p_phone: phone,
+          p_address: addr,
+        });
+        if(rpcErr){ err.textContent=rpcErr.message; return; }
+
+        // 2) products
+        stat.textContent='Saving products…';
+        for(const p of prodList){
+          const { error: pErr } = await supabase.from('products').upsert({
+            brand: name, // Use brand name instead of brand_id
+            name: p.name,
+            barcode: p.barcode, // Use barcode field
+            size: p.size,
+            category: p.category || 'General', // Provide default category
+            added_by: null // Will be set by trigger or default
+          }, {
+            onConflict: 'barcode',
+            ignoreDuplicates: false // Update existing records
+          });
+          if(pErr){ err.textContent = 'Product error: ' + pErr.message; return; }
+        }
+
+        // 3) stores (smart matching against existing stores)
+        stat.textContent='Matching stores against existing database…';
+        const storeIds = [];
+        for(const s of storeList){
+          // Try to find existing store first
+          const existingStoreId = await findExistingStore(s);
+          
+          if (existingStoreId) {
+            // Use existing store
+            storeIds.push(existingStoreId);
+            console.log(`Using existing store: ${s.name}`);
+          } else {
+            // Create new store only if no match found
+            const { data: newStore, error: sErr } = await supabase.from('stores').insert({
+              name: s.name,
+              address: s.address,
+              city: s.city,
+              state: s.state_zip?.split(' ')[0] || null, // Extract state from "TX 77057"
+              zip_code: s.state_zip,
+              store_chain: s.retailer,
+              is_active: true,
+              status: 'unverified'
+            }).select('id').single();
+            
+            if(sErr){ 
+              err.textContent = 'Store error: ' + sErr.message; 
+              return; 
+            }
+            storeIds.push(newStore.id);
+            console.log(`Created new store: ${s.name}`);
+          }
+        }
+
+        ok.textContent='Saved! Brand, products, and stores created.';
+        stat.textContent='';
+        viewBrand.href = './brand-detail.html?id=' + brandId;
+        viewBrand.style.display = 'inline';
+      }
+
+      document.getElementById('saveAll').onclick = async (e)=>{
+        e.preventDefault();
+        const btn = e.target; btn.disabled = true; btn.textContent = 'Saving…';
+        try { await saveAll(); }
+        finally { btn.disabled = false; btn.textContent = 'Deploy ShelfAssured'; }
+      };
+    })();
+  </script>
+</body>
+</html>

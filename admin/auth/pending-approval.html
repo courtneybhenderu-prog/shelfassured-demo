@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Account Pending Approval - ShelfAssured</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.47.5/dist/umd/supabase.min.js"></script>
+    <link rel="stylesheet" href="../shared/styles.css">
+</head>
+<body>
+    <div class="min-h-screen bg-gray-100 flex items-center justify-center">
+        <div class="max-w-md w-full bg-white rounded-lg shadow-lg p-8">
+            <!-- Logo/Brand -->
+            <div class="text-center mb-8">
+                <h1 class="text-2xl font-bold text-gray-900">ShelfAssured</h1>
+                <p class="text-gray-600 mt-2">Shelf Intelligence Platform</p>
+            </div>
+
+            <!-- Pending Approval Message -->
+            <div class="text-center">
+                <div class="w-16 h-16 bg-yellow-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <svg class="w-8 h-8 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    </svg>
+                </div>
+                
+                <h2 class="text-xl font-semibold text-gray-900 mb-2">Account Pending Approval</h2>
+                <p class="text-gray-600 mb-6">
+                    Thank you for signing up as a Shelfer! Your account is currently under review by our admin team. 
+                    You'll receive an email notification once your account is approved.
+                </p>
+
+                <!-- What to Expect -->
+                <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+                    <h3 class="text-sm font-medium text-blue-900 mb-2">What happens next?</h3>
+                    <ul class="text-sm text-blue-800 text-left space-y-1">
+                        <li>• Admin reviews your profile information</li>
+                        <li>• Approval typically takes 24-48 hours</li>
+                        <li>• You'll receive an email when approved</li>
+                        <li>• Then you can start accepting jobs!</li>
+                    </ul>
+                </div>
+
+                <!-- Contact Support -->
+                <div class="bg-gray-50 border border-gray-200 rounded-lg p-4 mb-6">
+                    <h3 class="text-sm font-medium text-gray-900 mb-2">Need help?</h3>
+                    <p class="text-sm text-gray-600 mb-2">
+                        If you have questions about your account or need assistance, please contact our support team.
+                    </p>
+                    <button onclick="contactSupport()" class="text-sm text-blue-600 hover:text-blue-800 font-medium">
+                        Contact Support
+                    </button>
+                </div>
+
+                <!-- Actions -->
+                <div class="space-y-3">
+                    <button onclick="checkStatus()" class="w-full btn-gray">
+                        Check Approval Status
+                    </button>
+                    <button onclick="signOut()" class="w-full text-sm text-gray-500 hover:text-gray-700">
+                        Sign Out
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Include shared API -->
+    <script src="../shared/api.js"></script>
+    
+    <script>
+        let currentUser = null;
+        let userProfile = null;
+
+        // Initialize page
+        document.addEventListener('DOMContentLoaded', async function() {
+            console.log('🔧 Pending Approval page initialized');
+            await initializePage();
+        });
+
+        // Initialize page
+        async function initializePage() {
+            try {
+                // Get current user
+                const { data: { user } } = await supabase.auth.getUser();
+                if (!user) {
+                    window.location.href = '../auth/signin.html';
+                    return;
+                }
+                currentUser = user;
+
+                // Get user profile
+                const { data: profile, error } = await supabase
+                    .from('users')
+                    .select('role, approval_status, full_name')
+                    .eq('id', user.id)
+                    .single();
+
+                if (error || !profile) {
+                    console.error('Error fetching user profile:', error);
+                    window.location.href = '../auth/signin.html';
+                    return;
+                }
+                userProfile = profile;
+
+                // Check if user should be on this page
+                if (profile.approval_status === 'approved') {
+                    // Redirect to appropriate dashboard
+                    if (profile.role === 'admin') {
+                        window.location.href = '../admin/dashboard.html';
+                    } else if (profile.role === 'brand_client') {
+                        window.location.href = '../dashboard/brand-client.html';
+                    } else {
+                        window.location.href = '../dashboard/shelfer.html';
+                    }
+                    return;
+                }
+
+                if (profile.approval_status === 'rejected') {
+                    // Show rejection message
+                    showRejectionMessage();
+                    return;
+                }
+
+                if (profile.role !== 'shelfer') {
+                    // Non-shelfer users shouldn't be here
+                    window.location.href = '../auth/signin.html';
+                    return;
+                }
+
+            } catch (error) {
+                console.error('Error initializing page:', error);
+                window.location.href = '../auth/signin.html';
+            }
+        }
+
+        // Show rejection message
+        function showRejectionMessage() {
+            const container = document.querySelector('.text-center');
+            container.innerHTML = `
+                <div class="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <svg class="w-8 h-8 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                </div>
+                
+                <h2 class="text-xl font-semibold text-gray-900 mb-2">Account Not Approved</h2>
+                <p class="text-gray-600 mb-6">
+                    Unfortunately, your Shelfer account was not approved at this time. 
+                    If you believe this is an error, please contact our support team.
+                </p>
+
+                <div class="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
+                    <h3 class="text-sm font-medium text-red-900 mb-2">Next Steps</h3>
+                    <ul class="text-sm text-red-800 text-left space-y-1">
+                        <li>• Contact support if you believe this is an error</li>
+                        <li>• You can reapply after addressing any issues</li>
+                        <li>• Consider signing up as a Brand Client instead</li>
+                    </ul>
+                </div>
+
+                <div class="space-y-3">
+                    <button onclick="contactSupport()" class="w-full btn-red">
+                        Contact Support
+                    </button>
+                    <button onclick="signOut()" class="w-full text-sm text-gray-500 hover:text-gray-700">
+                        Sign Out
+                    </button>
+                </div>
+            `;
+        }
+
+        // Check approval status
+        async function checkStatus() {
+            try {
+                const { data: profile, error } = await supabase
+                    .from('users')
+                    .select('approval_status, approved_at, rejection_reason')
+                    .eq('id', currentUser.id)
+                    .single();
+
+                if (error) {
+                    console.error('Error checking status:', error);
+                    alert('Error checking status. Please try again.');
+                    return;
+                }
+
+                if (profile.approval_status === 'approved') {
+                    alert('Great news! Your account has been approved. Redirecting...');
+                    window.location.href = '../dashboard/shelfer.html';
+                } else if (profile.approval_status === 'rejected') {
+                    alert('Your account was not approved. Please contact support for more information.');
+                    showRejectionMessage();
+                } else {
+                    alert('Your account is still pending approval. Please check back later.');
+                }
+
+            } catch (error) {
+                console.error('Error checking status:', error);
+                alert('Error checking status. Please try again.');
+            }
+        }
+
+        // Contact support
+        function contactSupport() {
+            // TODO: Implement support contact form
+            alert('Support contact form - Coming soon!');
+        }
+
+        // Sign out
+        async function signOut() {
+            try {
+                await supabase.auth.signOut();
+                window.location.href = '../auth/signin.html';
+            } catch (error) {
+                console.error('Error signing out:', error);
+                window.location.href = '../auth/signin.html';
+            }
+        }
+    </script>
+</body>
+</html>

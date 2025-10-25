@@ -1,0 +1,72 @@
+<!doctype html><html><head>
+  <meta charset="utf-8" />
+  <title>Confirming…</title>
+</head><body>
+  <p>Confirming your request…</p>
+  <script src="../shared/supabase.min.js"></script>
+  <script src="../shared/api.js"></script>
+  <script>
+  (async () => {
+    // guard against loops: process once per unique URL
+    const onceKey = 'sa_confirmed_once';
+    const sig = location.href.split(/[?#]/)[1] || '';
+    if (localStorage.getItem(onceKey) === sig) {
+      // already processed this URL
+    } else {
+      localStorage.setItem(onceKey, sig);
+      try {
+        // v2 primary path (PKCE): ?code=...&type=...
+        await supabase.auth.exchangeCodeForSession(location.href);
+      } catch (e) {
+        // fallback for legacy hash links: #access_token=...
+        try {
+          if (location.hash && location.hash.includes('access_token')) {
+            // older method supported by v2 for hash fragments
+            await supabase.auth.getSessionFromUrl({ storeSession: true });
+            // clean the hash so refreshes don't reprocess
+            history.replaceState(null, '', location.pathname);
+          }
+        } catch (e2) {
+          console.error('Confirm fallback failed', e2);
+        }
+      }
+    }
+
+    // Ensure user profile exists in public.users table
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user) {
+      try {
+        await ensureProfile(user);
+        console.log('✅ Profile created/updated in public.users');
+      } catch (error) {
+        console.error('❌ Error creating profile:', error);
+      }
+    }
+
+    // route by role (safe fallback to shelfer)
+    const mdRole = user?.user_metadata?.role || 'shelfer';
+    let role = 'shelfer'; // default
+    
+    if (mdRole === 'admin') {
+      role = 'admin';
+    } else if (mdRole === 'brand' || mdRole === 'brand_client') {
+      role = 'brand_client';
+    }
+    
+    const base = location.origin.includes('localhost')
+      ? 'http://localhost:8000'
+      : 'https://courtneybhenderu-prog.github.io/shelfassured-demo';
+
+    let redirectUrl;
+    if (role === 'admin') {
+      redirectUrl = `${base}/admin/barcode-capture.html`;
+    } else if (role === 'brand_client') {
+      redirectUrl = `${base}/dashboard/brand-client.html`;
+    } else {
+      redirectUrl = `${base}/dashboard/shelfer.html`;
+    }
+
+    location.replace(redirectUrl);
+  })();
+  </script>
+</body></html>
