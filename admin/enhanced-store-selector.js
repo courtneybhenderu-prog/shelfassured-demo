@@ -73,7 +73,8 @@ class StoreSelector {
                 // Add banner options
                 banners.forEach(banner => {
                     const option = document.createElement('option');
-                    option.value = banner.banner_name.toLowerCase();
+                    // Use the original banner name for value to match store_chain
+                    option.value = banner.banner_name;
                     option.textContent = banner.banner_name;
                     dropdown.appendChild(option);
                 });
@@ -287,20 +288,16 @@ class StoreSelector {
         } else {
             this.filteredStores = baseStores.filter(store => {
                 const storeChain = store.store_chain || store.chain; // Try both property names
-                const storeName = store.name || '';
                 
-                // Normalize chain names for better matching
-                const normalizedChain = chain.toLowerCase().replace(/[-\s]/g, '');
-                const normalizedStoreChain = (storeChain || '').toLowerCase().replace(/[-\s]/g, '');
-                const normalizedStoreName = storeName.toLowerCase().replace(/[-\s]/g, '');
+                // Normalize both for comparison - remove spaces and hyphens, convert to lowercase
+                const normalizedChain = (chain || '').toLowerCase().replace(/[-\s]/g, '').trim();
+                const normalizedStoreChain = (storeChain || '').toLowerCase().replace(/[-\s]/g, '').trim();
                 
-                // Check both store_chain and name for matches
-                const chainMatch = normalizedStoreChain.includes(normalizedChain);
-                const nameMatch = normalizedStoreName.includes(normalizedChain);
+                // Direct match on normalized chain
+                const matches = normalizedStoreChain === normalizedChain || normalizedStoreChain.includes(normalizedChain);
                 
-                const matches = chainMatch || nameMatch;
                 if (matches) {
-                    console.log('✅ Match found:', store.name, '-> chain:', storeChain, 'name match:', nameMatch);
+                    console.log('✅ Match found:', store.name, '-> chain:', storeChain);
                 }
                 return matches;
             });
