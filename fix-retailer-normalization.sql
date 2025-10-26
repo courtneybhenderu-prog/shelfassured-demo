@@ -44,7 +44,7 @@ alter table stores
 update stores s
 set retailer_id = ra.retailer_id
 from retailer_aliases ra
-where lower(coalesce(s.store_chain, s.retailer_norm)) = ra.alias
+where lower(coalesce(s.store_chain, '')) = ra.alias
   and s.retailer_id is null;
 
 -- 7. Backfill normalized address fields
