@@ -600,9 +600,9 @@
                 city: s.city,
                 state: state || (s.state_zip?.split(' ')[0] || null),
                 zip_code: s.state_zip || zip5,
+                state_zip: s.state_zip,
                 street_norm,
                 city_norm,
-                state,
                 zip5,
                 is_active: true,
                 status: 'unverified'
