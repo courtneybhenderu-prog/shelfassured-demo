@@ -167,6 +167,10 @@
           <label>State & ZIP</label>
           <input data-k="state_zip" placeholder="TX 77057-3061" />
         </div>
+        <div>
+          <label>Metro Area</label>
+          <input data-k="metro" placeholder="Austin-Round Rock, TX MSA" />
+        </div>
       </div>
       <div class="row" style="margin-top:8px;justify-content:flex-end">
         <button class="btn alt" data-action="remove">Remove</button>
@@ -330,7 +334,7 @@
               }
             }
           } else if (type === 'stores') {
-            // Expected headers: retailer,name,address
+            // Expected headers: retailer,name,address,city,state_zip,metro
             for (let i = 1; i < lines.length; i++) {
               const values = lines[i].split(',').map(v => v.trim());
               const store = {};
@@ -375,6 +379,7 @@
             address: get('address')||null,
             city: get('city')||null,
             state_zip: get('state_zip')||null,
+            metro: get('metro')||null,
           };
         }).filter(s=> s.name || s.address);
       }
@@ -607,6 +612,7 @@
               zip_code: s.state_zip || zip5,
               street_norm,
               city_norm,
+              metro: s.metro,
               status: 'unverified'
             };
             

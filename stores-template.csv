@@ -1,6 +1,6 @@
-retailer,name,address
-Target,Target Store #1234,123 Main St, Anytown, TX 12345
-Walmart,Walmart Supercenter,456 Oak Ave, Anytown, TX 12345
-Kroger,Kroger Marketplace,789 Pine St, Anytown, TX 12345
-CVS,CVS Pharmacy,321 Elm St, Anytown, TX 12345
+retailer,name,address,city,state_zip,metro
+H-E-B,HEB - ALVIN,207 E S ST,ALVIN,TX 77511,Houston-Sugar Land-Baytown, TX MSA
+H-E-B,HEB - ANGLETON,1239 E MULBERRY ST,ANGLETON,TX 77515,Houston-Sugar Land-Baytown, TX MSA
+H-E-B,HEB - AUSTIN 12,5801 W Ben White Blvd,AUSTIN,TX 78757,Austin-Round Rock, TX MSA
+Kroger,Kroger - Bunker Hill,17455 Spring Cypress Road,HOUSTON,TX 77090,Houston-Sugar Land-Baytown, TX MSA
 
