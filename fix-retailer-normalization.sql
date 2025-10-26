@@ -58,16 +58,34 @@ update stores
 set zip5 = left(regexp_replace(zip_code, '\D', '', 'g'), 5)
 where zip5 is null and zip_code is not null;
 
--- 8. Drop old index if it exists
+-- 8. Deduplicate stores (keep the first one, delete others)
+delete from stores
+where id in (
+  select id from (
+    select id, row_number() over (
+      partition by retailer_id, street_norm, city_norm, state, zip5 
+      order by created_at
+    ) as rn
+    from stores
+    where retailer_id is not null 
+      and street_norm is not null 
+      and city_norm is not null 
+      and state is not null 
+      and zip5 is not null
+  ) sub
+  where rn > 1
+);
+
+-- 9. Drop old index if it exists
 drop index if exists stores_unique_norm;
 
--- 9. Create new unique index using retailer_id
+-- 10. Create new unique index using retailer_id
 create unique index if not exists stores_unique_norm
 on stores (retailer_id, street_norm, city_norm, state, zip5)
 where retailer_id is not null and street_norm is not null 
   and city_norm is not null and state is not null and zip5 is not null;
 
--- 10. Verify
+-- 11. Verify
 select 
   count(*) as total_stores,
   count(retailer_id) as stores_with_retailer_id,
