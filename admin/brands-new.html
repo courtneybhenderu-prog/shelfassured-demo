@@ -573,76 +573,67 @@
         stat.textContent='Matching stores against existing database…';
         const storeIds = [];
         for(const s of storeList){
-          // Try to find existing store first
-          const existingStoreId = await findExistingStore(s);
-          
-          if (existingStoreId) {
-            // Use existing store
-            storeIds.push(existingStoreId);
-            console.log(`Using existing store: ${s.name}`);
-          } else {
-            // Upsert new store with normalized fields
-            try {
-              const retailer_id = await resolveRetailerId(s.retailer);
-              if (!retailer_id) {
-                console.warn(`Unknown retailer: ${s.retailer}, trying to create anyway`);
-              }
-              
-              const street_norm = normStreet(s.address);
-              const city_norm = normText(s.city);
-              const state = (s.state_zip || '').trim().split(/\s+/)[0]?.toUpperCase() || null;
-              const zip5 = toZip5(s.state_zip);
-              
-              const payload = {
-                retailer_id,
-                name: s.name,
-                address: s.address,
-                city: s.city,
-                state: state,
-                zip_code: s.state_zip || zip5,
-                street_norm,
-                city_norm,
-                zip5,
-                status: 'unverified'
-              };
-              
-              // Check if store already exists first
-              const { data: existingStore } = await supabase
-                .from('stores')
-                .select('id')
-                .eq('retailer_id', retailer_id)
-                .eq('street_norm', street_norm)
-                .eq('city_norm', city_norm)
-                .eq('state', state)
-                .maybeSingle();
-              
-              let upsertStore;
-              if (existingStore) {
-                upsertStore = existingStore;
-                console.log(`Store already exists: ${s.name}`);
-              } else {
-                const { data: newStore, error: sErr } = await supabase
-                  .from('stores')
-                  .insert(payload)
-                  .select('id')
-                  .single();
-                
-                if(sErr){ 
-                  err.textContent = 'Store error: ' + sErr.message; 
-                  console.error('Store insert error:', sErr);
-                  return; 
-                }
-                
-                upsertStore = newStore;
-                console.log(`Created new store: ${s.name}`);
-              }
-              
-              storeIds.push(upsertStore.id);
-            } catch (error) {
-              console.error('Error processing store:', error);
-              err.textContent = 'Store error: ' + error.message;
+          try {
+            const retailer_id = await resolveRetailerId(s.retailer);
+            if (!retailer_id) {
+              err.textContent = `Unknown retailer: ${s.retailer}. Please add retailers to retailer_aliases table first.`;
               return;
             }
+            
+            const street_norm = normStreet(s.address);
+            const city_norm = normText(s.city);
+            const state = (s.state_zip || '').trim().split(/\s+/)[0]?.toUpperCase() || null;
+            const zip5 = toZip5(s.state_zip);
+            
+            const payload = {
+              retailer_id,
+              name: s.name,
+              address: s.address,
+              city: s.city,
+              state: state,
+              zip_code: s.state_zip || zip5,
+              street_norm,
+              city_norm,
+              zip5,
+              status: 'unverified'
+            };
+            
+            // Check if store already exists first
+            const { data: existingStore } = await supabase
+              .from('stores')
+              .select('id')
+              .eq('retailer_id', retailer_id)
+              .eq('street_norm', street_norm)
+              .eq('city_norm', city_norm)
+              .eq('state', state)
+              .maybeSingle();
+            
+            let upsertStore;
+            if (existingStore) {
+              upsertStore = existingStore;
+              console.log(`Store already exists: ${s.name}`);
+            } else {
+              const { data: newStore, error: sErr } = await supabase
+                .from('stores')
+                .insert(payload)
+                .select('id')
+                .single();
+              
+              if(sErr){ 
+                err.textContent = 'Store error: ' + sErr.message; 
+                console.error('Store insert error:', sErr);
+                return; 
+              }
+              
+              upsertStore = newStore;
+              console.log(`Created new store: ${s.name}`);
+            }
+            
+            storeIds.push(upsertStore.id);
+          } catch (error) {
+            console.error('Error processing store:', error);
+            err.textContent = 'Store error: ' + error.message;
+            return;
           }
         }
 
