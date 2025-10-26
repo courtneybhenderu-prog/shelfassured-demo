@@ -609,7 +609,7 @@
               const { data: upsertStore, error: sErr } = await supabase
                 .from('stores')
                 .upsert(payload, { 
-                  onConflict: 'retailer_id,street_norm,city_norm,state,zip5',
+                  onConflict: 'retailer_id,street_norm,city_norm,state',
                   ignoreDuplicates: false
                 })
                 .select('id')
