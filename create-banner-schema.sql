@@ -19,13 +19,20 @@ CREATE TABLE IF NOT EXISTS retailer_banner_aliases (
 INSERT INTO retailers(name) VALUES 
   ('H-E-B'),
   ('Kroger'),
-  ('Sprouts Farmers Market')
+  ('Sprouts Farmers Market'),
+  ('Albertsons'),
+  ('Whole Foods Market')
 ON CONFLICT (name) DO NOTHING;
 
--- 4. Insert retailer_banners (H-E-B, Kroger divisions, etc.)
+-- 4. Insert retailer_banners (title case, not ALL CAPS)
 INSERT INTO retailer_banners(retailer_id, name)
 SELECT r.id, 'H-E-B'
 FROM retailers r WHERE r.name = 'H-E-B'
+ON CONFLICT (retailer_id, name) DO NOTHING;
+
+INSERT INTO retailer_banners(retailer_id, name)
+SELECT r.id, 'Albertsons'
+FROM retailers r WHERE r.name = 'Albertsons'
 ON CONFLICT (retailer_id, name) DO NOTHING;
 
 INSERT INTO retailer_banners(retailer_id, name)
@@ -44,7 +51,7 @@ SELECT r.id, 'Sprouts Farmers Market'
 FROM retailers r WHERE r.name = 'Sprouts Farmers Market'
 ON CONFLICT (retailer_id, name) DO NOTHING;
 
--- 5. Insert aliases for banner matching
+-- 5. Insert aliases for banner matching (all lowercase for case-insensitive matching)
 INSERT INTO retailer_banner_aliases(alias, banner_id)
 SELECT alias, b.id
 FROM retailer_banners b
@@ -52,11 +59,16 @@ CROSS JOIN (VALUES
   ('heb', 'H-E-B'),
   ('h-e-b', 'H-E-B'),
   ('h e b', 'H-E-B'),
+  ('he b', 'H-E-B'),
+  ('albertsons', 'Albertsons'),
   ('tom thumb', 'Tom Thumb'),
   ('tomthumb', 'Tom Thumb'),
   ('kroger', 'Kroger'),
   ('sprouts', 'Sprouts Farmers Market'),
-  ('sprouts farmers market', 'Sprouts Farmers Market')
+  ('sprouts farmers market', 'Sprouts Farmers Market'),
+  ('whole foods market', 'Whole Foods Market'),
+  ('whole foods', 'Whole Foods Market'),
+  ('wfm', 'Whole Foods Market')
 ) AS al(alias, banner_name)
 WHERE b.name = al.banner_name
 ON CONFLICT (alias) DO NOTHING;
