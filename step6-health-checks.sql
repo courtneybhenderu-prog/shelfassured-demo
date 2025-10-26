@@ -63,3 +63,4 @@ SELECT
     MIN(created_at) as earliest_assignment,
     MAX(created_at) as latest_assignment
 FROM job_store_skus;
+

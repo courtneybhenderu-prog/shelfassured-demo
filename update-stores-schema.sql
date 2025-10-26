@@ -1,8 +1,7 @@
 -- Update stores schema for brand onboarding
 -- Run this in Supabase SQL editor
 
--- Add generated columns for backwards compatibility
-ALTER TABLE stores ADD COLUMN IF NOT EXISTS state_zip text;
+-- Add status column if it doesn't exist
 ALTER TABLE stores ADD COLUMN IF NOT EXISTS status text DEFAULT 'unverified';
 
 -- Create generated column for zip5 (if it doesn't exist already)
@@ -18,18 +17,14 @@ BEGIN
   END IF;
 END $$;
 
--- Update state_zip generated column
-ALTER TABLE stores 
-  DROP COLUMN IF EXISTS state_zip CASCADE;
+-- Drop existing state_zip column if it exists
+ALTER TABLE stores DROP COLUMN IF EXISTS state_zip CASCADE;
 
+-- Add state_zip as generated column for backwards compatibility
 ALTER TABLE stores 
   ADD COLUMN state_zip text GENERATED ALWAYS AS (
     state || ' ' || zip_code
   ) STORED;
-
--- Create unique index for brands (normalized name + website)
-CREATE UNIQUE INDEX IF NOT EXISTS brands_unique_name_site
-ON brands (lower(name), coalesce(website, ''));
 
 -- Reload schema
 NOTIFY pgrst, 'reload schema';

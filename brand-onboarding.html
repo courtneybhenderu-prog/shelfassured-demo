@@ -379,45 +379,18 @@
         }).filter(s=> s.name || s.address);
       }
 
-      // New normalization functions with retailer alias lookup
-      const toZip5 = (s='') => (s.match(/\d/g) || []).join('').slice(0,5);
-      const normText = s => (s||'').toLowerCase().normalize('NFKC').replace(/\s+/g,' ').trim();
-      const normStreet = s => normText(s).replace(/[.,]/g,'').replace(/\b(ste|suite|unit)\b.*$/,'');
-      const normName = s => normText(s).replace(/[\u2010-\u2015]/g,'-');
-
-      async function resolveBannerId(retailerRaw){
-        const alias = normName(retailerRaw);
-        // Try retailer_banner_aliases first
-        const { data: bbaRow } = await supabase
-          .from('retailer_banner_aliases')
-          .select('banner_id')
-          .eq('alias', alias)
-          .maybeSingle();
-        if (bbaRow?.banner_id) return bbaRow?.banner_id;
-        
-        // Fallback to retailers table
-        const { data: rRow } = await supabase
-          .from('retailer_aliases')
-          .select('retailer_id')
-          .eq('alias', alias)
-          .maybeSingle();
-        if (rRow?.retailer_id) {
-          // Get banner_id from retailer_id
-          const { data: banner } = await supabase
-            .from('retailer_banners')
-            .select('id')
-            .eq('retailer_id', rRow.retailer_id)
-            .limit(1)
-            .maybeSingle();
-          return banner?.id || null;
-        }
-        return null;
-      }
-
-      // Legacy normalization functions (kept for backward compatibility)
+      // Aggressive normalization functions
       function normalizeRetailer(name) {
         if (!name) return '';
-        return normName(name);
+        return name.toLowerCase()
+          .replace(/[\u2011\u2013\u2014]/g, '-') // Unicode hyphens to ASCII
+          .replace(/heb/g, 'h-e-b')
+          .replace(/kroger/g, 'kroger')
+          .replace(/walmart/g, 'walmart')
+          .replace(/target/g, 'target')
+          .replace(/whole\s*foods/g, 'whole foods')
+          .replace(/[^a-z0-9-]/g, '') // Keep only alphanumeric and hyphens
+          .trim();
       }
 
       function normalizeStreet(address) {
@@ -586,66 +559,32 @@
         stat.textContent='Matching stores against existing database…';
         const storeIds = [];
         for(const s of storeList){
-          try {
-            const banner_id = await resolveBannerId(s.retailer);
-            if (!banner_id) {
-              err.textContent = `Unknown retailer: ${s.retailer}. Please add retailers to retailer_banner_aliases table first.`;
-              return;
-            }
-            
-            const street_norm = normStreet(s.address);
-            const city_norm = normText(s.city);
-            const state = (s.state_zip || '').trim().split(/\s+/)[0]?.toUpperCase() || null;
-            const zip5 = toZip5(s.state_zip);
-            
-            const payload = {
-              banner_id,
+          // Try to find existing store first
+          const existingStoreId = await findExistingStore(s);
+          
+          if (existingStoreId) {
+            // Use existing store
+            storeIds.push(existingStoreId);
+            console.log(`Using existing store: ${s.name}`);
+          } else {
+            // Create new store only if no match found
+            const { data: newStore, error: sErr } = await supabase.from('stores').insert({
               name: s.name,
               address: s.address,
               city: s.city,
-              state: state,
-              zip_code: s.state_zip || zip5,
-              street_norm,
-              city_norm,
+              state: s.state_zip?.split(' ')[0] || null, // Extract state from "TX 77057"
+              zip_code: s.state_zip,
+              store_chain: s.retailer,
+              is_active: true,
               status: 'unverified'
-            };
+            }).select('id').single();
             
-            // Check if store already exists first (using unique index)
-            const { data: existingStore } = await supabase
-              .from('stores')
-              .select('id')
-              .eq('banner_id', banner_id)
-              .eq('street_norm', street_norm)
-              .eq('city_norm', city_norm)
-              .eq('state', state)
-              .maybeSingle();
-            
-            let upsertStore;
-            if (existingStore) {
-              upsertStore = existingStore;
-              console.log(`Store already exists: ${s.name}`);
-            } else {
-              const { data: newStore, error: sErr } = await supabase
-                .from('stores')
-                .insert(payload)
-                .select('id')
-                .single();
-              
-              if(sErr){ 
-                err.textContent = 'Store error: ' + sErr.message; 
-                console.error('Store insert error:', sErr);
-                return; 
-              }
-              
-              upsertStore = newStore;
-              console.log(`Created new store: ${s.name}`);
+            if(sErr){ 
+              err.textContent = 'Store error: ' + sErr.message; 
+              return; 
             }
-            
-            storeIds.push(upsertStore.id);
-          } catch (error) {
-            console.error('Error processing store:', error);
-            err.textContent = 'Store error: ' + error.message;
-            return;
+            storeIds.push(newStore.id);
+            console.log(`Created new store: ${s.name}`);
           }
         }
 

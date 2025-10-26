@@ -1,0 +1,5 @@
+name,identifier,size,suggested_retail_price,image_url,category
+Product Name 1,123456789012,16 oz,9.99,https://example.com/image1.jpg,Beverages
+Product Name 2,123456789013,32 oz,12.99,https://example.com/image2.jpg,Beverages
+Product Name 3,123456789014,12 oz,7.99,,Snacks
+

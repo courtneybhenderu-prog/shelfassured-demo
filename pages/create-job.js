@@ -317,33 +317,111 @@ async function handleFormSubmit(event) {
         // Get current user
         const { data: { user } } = await supabase.auth.getUser();
         
-        // Create job object
-        const job = {
+        // Ensure brand exists - for now we'll use a default brand
+        // TODO: Implement brand selection in UI
+        let brandId;
+        const { data: brandData, error: brandError } = await supabase
+            .from('brands')
+            .select('id')
+            .limit(1)
+            .single();
+        
+        if (brandError) {
+            console.error('❌ Error fetching brand:', brandError);
+            showMessage(messageEl, 'Error loading brands: ' + brandError.message, 'error');
+            return;
+        }
+        
+        brandId = brandData?.id;
+        
+        if (!brandId) {
+            showMessage(messageEl, 'No brands available. Please create a brand first.', 'error');
+            return;
+        }
+        
+        // Create main job record
+        const jobData = {
             title,
             description,
             instructions: instructions || null,
+            brand_id: brandId,
             client_id: user.id,
-            cost_per_job: costPerJob,
-            total_cost: costPerJob * storeIds.length,
             status: 'pending',
-            created_at: new Date().toISOString(),
-            store_ids: storeIds,
-            skus: skus
+            payout_per_store: costPerJob,
+            created_at: new Date().toISOString()
         };
         
-        console.log('📝 Creating job:', job);
+        console.log('📝 Creating job:', jobData);
         
-        // Save job to database
-        const result = await saSet('jobs', job);
+        // Insert job into database
+        const { data: jobRow, error: jobError } = await supabase
+            .from('jobs')
+            .insert(jobData)
+            .select()
+            .single();
         
-        if (result.success) {
-            showMessage(messageEl, 'Job created successfully! Redirecting to dashboard...', 'success');
-            setTimeout(() => {
-                window.location.href = 'brand-client.html';
-            }, 2000);
-        } else {
-            showMessage(messageEl, 'Error creating job: ' + result.error, 'error');
+        if (jobError) {
+            console.error('❌ Job creation error:', jobError);
+            showMessage(messageEl, 'Error creating job: ' + jobError.message, 'error');
+            return;
         }
+        
+        console.log('✅ Main job created:', jobRow.id);
+        
+        // Get SKU IDs from product names/barcodes
+        const skuIds = [];
+        for (const skuName of skus) {
+            // Try to find existing SKU by name or barcode
+            const { data: skuData } = await supabase
+                .from('skus')
+                .select('id')
+                .or(`name.ilike.%${skuName}%,upc.eq.${skuName}`)
+                .limit(1)
+                .single();
+            
+            if (skuData) {
+                skuIds.push(skuData.id);
+            }
+        }
+        
+        if (skuIds.length === 0) {
+            showMessage(messageEl, 'No matching SKUs found. Please add products first.', 'error');
+            return;
+        }
+        
+        // Create job_store_sku assignments
+        const assignments = [];
+        for (const storeId of storeIds) {
+            for (const skuId of skuIds) {
+                assignments.push({
+                    job_id: jobRow.id,
+                    store_id: storeId,
+                    sku_id: skuId,
+                    status: 'pending'
+                });
+            }
+        }
+        
+        console.log(`📝 Creating ${assignments.length} assignments...`);
+        
+        const { error: assignmentError } = await supabase
+            .from('job_store_skus')
+            .upsert(assignments, {
+                onConflict: 'job_id,store_id,sku_id',
+                ignoreDuplicates: true
+            });
+        
+        if (assignmentError) {
+            console.error('❌ Assignment error:', assignmentError);
+            showMessage(messageEl, 'Error creating assignments: ' + assignmentError.message, 'error');
+            return;
+        }
+        
+        console.log('✅ Job and assignments created successfully');
+        showMessage(messageEl, 'Job created successfully! Redirecting to dashboard...', 'success');
+        setTimeout(() => {
+            window.location.href = 'brand-client.html';
+        }, 2000);
         
     } catch (error) {
         console.error('Error creating job:', error);

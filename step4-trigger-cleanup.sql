@@ -38,3 +38,4 @@ DROP TRIGGER IF EXISTS recalculate_payout_on_sku_change ON public.job_skus;
 DROP FUNCTION IF EXISTS public.recalculate_job_payout() CASCADE;
 DROP FUNCTION IF EXISTS public.calculate_job_payout() CASCADE;
 */
+

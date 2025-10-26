@@ -73,3 +73,4 @@ JOIN stores s ON s.id = jss.store_id
 JOIN skus sk ON sk.id = jss.sku_id
 ORDER BY jss.created_at DESC
 LIMIT 5;
+

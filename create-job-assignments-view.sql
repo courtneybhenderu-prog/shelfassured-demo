@@ -50,3 +50,4 @@ GRANT SELECT ON public.v_job_assignments TO authenticated;
 
 -- Add comment for documentation
 COMMENT ON VIEW public.v_job_assignments IS 'View providing job assignment details with store and SKU information for the new job_store_skus architecture';
+

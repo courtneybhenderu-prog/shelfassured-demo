@@ -33,3 +33,4 @@ SELECT
     'job_store_skus table created successfully' as status,
     COUNT(*) as existing_records
 FROM public.job_store_skus;
+

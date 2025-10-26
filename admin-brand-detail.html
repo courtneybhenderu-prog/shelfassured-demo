@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Brand Detail - Admin</title>
+    <script src="./config.js"></script>
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+        }
+        .subtitle {
+            color: #666;
+            font-size: 14px;
+            margin-bottom: 30px;
+        }
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #666;
+        }
+        .error {
+            color: #dc3545;
+            text-align: center;
+            padding: 40px;
+        }
+        .brand-info {
+            margin-bottom: 30px;
+        }
+        .info-row {
+            display: flex;
+            margin-bottom: 10px;
+            padding: 10px 0;
+            border-bottom: 1px solid #f0f0f0;
+        }
+        .info-label {
+            font-weight: 600;
+            width: 120px;
+            color: #333;
+        }
+        .info-value {
+            color: #666;
+            flex: 1;
+        }
+        .admin-section {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            margin-top: 30px;
+            border: 1px solid #e0e0e0;
+        }
+        .admin-title {
+            font-weight: 600;
+            margin-bottom: 15px;
+            color: #333;
+            font-size: 16px;
+        }
+        .raw-data {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 30px;
+            border: 1px solid #e0e0e0;
+        }
+        .raw-title {
+            font-weight: 600;
+            margin-bottom: 10px;
+            font-size: 14px;
+            color: #333;
+        }
+        pre {
+            font-size: 11px;
+            white-space: pre-wrap;
+            margin: 0;
+            color: #666;
+            background: white;
+            padding: 15px;
+            border-radius: 4px;
+            border: 1px solid #ddd;
+            overflow-x: auto;
+        }
+        .back-link {
+            color: #007bff;
+            text-decoration: none;
+            font-size: 14px;
+            margin-bottom: 20px;
+            display: inline-block;
+        }
+        .back-link:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="admin-brand-new.html" class="back-link">← Back to New Brand</a>
+        
+        <div id="loading" class="loading">
+            Loading brand details...
+        </div>
+        
+        <div id="error" class="error" style="display: none;">
+            Brand not found
+        </div>
+        
+        <div id="brandDetail" style="display: none;">
+            <h1 id="brandName"></h1>
+            <p class="subtitle" id="brandWebsite"></p>
+            
+            <div class="brand-info">
+                <div class="info-row">
+                    <div class="info-label">Email:</div>
+                    <div class="info-value" id="brandEmail"></div>
+                </div>
+                <div class="info-row">
+                    <div class="info-label">Phone:</div>
+                    <div class="info-value" id="brandPhone"></div>
+                </div>
+                <div class="info-row">
+                    <div class="info-label">Address:</div>
+                    <div class="info-value" id="brandAddress"></div>
+                </div>
+                <div class="info-row">
+                    <div class="info-label">Created:</div>
+                    <div class="info-value" id="brandCreated"></div>
+                </div>
+            </div>
+            
+            <div class="admin-section">
+                <div class="admin-title">Admin Fields</div>
+                <div class="info-row">
+                    <div class="info-label">Broker:</div>
+                    <div class="info-value" id="brandBroker"></div>
+                </div>
+                <div class="info-row">
+                    <div class="info-label">NDA Status:</div>
+                    <div class="info-value" id="brandNda"></div>
+                </div>
+                <div class="info-row">
+                    <div class="info-label">Data Source:</div>
+                    <div class="info-value" id="brandDataSource"></div>
+                </div>
+                <div class="info-row">
+                    <div class="info-label">Data Confidence:</div>
+                    <div class="info-value" id="brandConfidence"></div>
+                </div>
+            </div>
+            
+            <div class="raw-data">
+                <div class="raw-title">Raw Data (JSON)</div>
+                <pre id="rawJson"></pre>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Initialize Supabase
+        const { SUPABASE_URL, SUPABASE_ANON_KEY } = window.SA_CONFIG;
+        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        // Get brand ID from URL
+        const urlParams = new URLSearchParams(window.location.search);
+        const brandId = urlParams.get('id');
+
+        // Elements
+        const loading = document.getElementById('loading');
+        const error = document.getElementById('error');
+        const brandDetail = document.getElementById('brandDetail');
+
+        async function loadBrandDetails() {
+            if (!brandId) {
+                loading.style.display = 'none';
+                error.style.display = 'block';
+                return;
+            }
+
+            try {
+                const { data, error: fetchError } = await supabase
+                    .from('brands')
+                    .select('*')
+                    .eq('id', brandId)
+                    .single();
+
+                if (fetchError) throw fetchError;
+
+                if (!data) {
+                    loading.style.display = 'none';
+                    error.style.display = 'block';
+                    return;
+                }
+
+                // Populate the page
+                document.getElementById('brandName').textContent = data.name || 'Unnamed Brand';
+                document.getElementById('brandWebsite').textContent = data.website || '';
+                document.getElementById('brandEmail').textContent = data.primary_email || '—';
+                document.getElementById('brandPhone').textContent = data.phone || '—';
+                document.getElementById('brandAddress').textContent = data.address || '—';
+                document.getElementById('brandCreated').textContent = new Date(data.created_at).toLocaleDateString();
+                
+                // Admin fields
+                document.getElementById('brandBroker').textContent = data.broker_name || '—';
+                document.getElementById('brandNda').textContent = data.nda_status || '—';
+                document.getElementById('brandDataSource').textContent = data.data_source || '—';
+                document.getElementById('brandConfidence').textContent = data.data_confidence || '—';
+                
+                // Raw JSON
+                document.getElementById('rawJson').textContent = JSON.stringify(data, null, 2);
+
+                loading.style.display = 'none';
+                brandDetail.style.display = 'block';
+
+            } catch (err) {
+                console.error('Error loading brand:', err);
+                loading.style.display = 'none';
+                error.style.display = 'block';
+            }
+        }
+
+        // Load brand details on page load
+        loadBrandDetails();
+    </script>
+</body>
+</html>

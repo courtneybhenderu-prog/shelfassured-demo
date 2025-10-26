@@ -44,3 +44,4 @@ BEGIN
         RAISE NOTICE 'submission_photos table does not exist - skipping FK addition';
     END IF;
 END $$;
+
