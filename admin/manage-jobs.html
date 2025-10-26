@@ -556,7 +556,13 @@
                 console.log('Brand input element:', brandInput);
                 if (brandInput) {
                     brandInput.addEventListener('input', handleBrandInput);
-                    brandInput.addEventListener('blur', hideBrandSuggestions);
+                    // Use mousedown to prevent blur event from interfering with clicks
+                    brandInput.addEventListener('blur', function(e) {
+                        // Small delay to allow click events on suggestions to fire first
+                        setTimeout(() => {
+                            hideBrandSuggestions();
+                        }, 200);
+                    });
                     console.log('✅ Brand autocomplete setup complete');
                 } else {
                     console.warn('⚠️ Brand input element not found');
@@ -645,7 +651,9 @@
                     const div = document.createElement('div');
                     div.className = 'p-3 hover:bg-gray-50 cursor-pointer border-b border-gray-200 last:border-b-0';
                     div.textContent = brand.name;
-                    div.addEventListener('click', () => {
+                    // Use mousedown instead of click to prevent blur event issues
+                    div.addEventListener('mousedown', (e) => {
+                        e.preventDefault(); // Prevent blur event on input
                         document.getElementById('brand-name').value = brand.name;
                         hideBrandSuggestions();
                         updateJobSummary();
