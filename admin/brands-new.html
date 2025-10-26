@@ -606,23 +606,38 @@
                 status: 'unverified'
               };
               
-              const { data: upsertStore, error: sErr } = await supabase
+              // Check if store already exists first
+              const { data: existingStore } = await supabase
                 .from('stores')
-                .upsert(payload, { 
-                  onConflict: 'retailer_id,street_norm,city_norm,state',
-                  ignoreDuplicates: false
-                })
                 .select('id')
-                .single();
+                .eq('retailer_id', retailer_id)
+                .eq('street_norm', street_norm)
+                .eq('city_norm', city_norm)
+                .eq('state', state)
+                .maybeSingle();
               
-              if(sErr){ 
-                err.textContent = 'Store error: ' + sErr.message; 
-                console.error('Store upsert error:', sErr);
-                return; 
+              let upsertStore;
+              if (existingStore) {
+                upsertStore = existingStore;
+                console.log(`Store already exists: ${s.name}`);
+              } else {
+                const { data: newStore, error: sErr } = await supabase
+                  .from('stores')
+                  .insert(payload)
+                  .select('id')
+                  .single();
+                
+                if(sErr){ 
+                  err.textContent = 'Store error: ' + sErr.message; 
+                  console.error('Store insert error:', sErr);
+                  return; 
+                }
+                
+                upsertStore = newStore;
+                console.log(`Created new store: ${s.name}`);
               }
               
               storeIds.push(upsertStore.id);
-              console.log(`Created/Upserted store: ${s.name}`);
             } catch (error) {
               console.error('Error processing store:', error);
               err.textContent = 'Store error: ' + error.message;
