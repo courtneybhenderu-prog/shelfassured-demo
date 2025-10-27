@@ -201,8 +201,8 @@ class StoreSelector {
         let query = supabase
             .from('stores')
             .select('*')
-            .eq('state', 'TX')
-            .eq('is_active', true);
+            .eq('state', 'TX');
+            // Removed is_active filter
         
         // Apply chain filter at database level (exact match)
         query = this.filterByChainQuery(query, selectedChain);
