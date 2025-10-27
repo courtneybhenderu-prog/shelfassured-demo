@@ -1,7 +1,6 @@
-// Enhanced Store Selection for Job Creation Form
-// This replaces the manual store entry with smart search and GPS integration
+// Enhanced Store Selection for Job Creation Form - FIXED VERSION
+// Uses banner_id instead of store_chain for filtering
 
-// Store search and filtering functionality
 class StoreSelector {
     constructor() {
         this.allStores = [];
@@ -9,6 +8,7 @@ class StoreSelector {
         this.selectedStores = [];
         this.searchTerm = '';
         this.currentLocation = null;
+        this.currentBannerFilter = null;
         this.isInitialized = false;
     }
 
@@ -45,14 +45,15 @@ class StoreSelector {
         }
     }
 
-    // Load banner options for dropdown
+    // Load banner options for dropdown - NOW USES banner_id
     async loadBannerOptions() {
         try {
             console.log('🔄 Loading banner options...');
             
+            // New view returns banner_id and banner_name
             const { data: banners, error } = await supabase
                 .from('v_distinct_banners')
-                .select('banner_name')
+                .select('banner_id, banner_name')
                 .order('banner_name', { ascending: true });
 
             if (error) {
@@ -70,11 +71,10 @@ class StoreSelector {
                 dropdown.innerHTML = '';
                 dropdown.appendChild(allChainsOption);
 
-                // Add banner options
+                // Add banner options with banner_id as value
                 banners.forEach(banner => {
                     const option = document.createElement('option');
-                    // Use the original banner name for value to match store_chain
-                    option.value = banner.banner_name;
+                    option.value = banner.banner_id;  // Use UUID as value
                     option.textContent = banner.banner_name;
                     dropdown.appendChild(option);
                 });
@@ -156,7 +156,7 @@ class StoreSelector {
             await this.loadStoresFromDatabase();
         }
         
-        // Start with all stores or current chain filter
+        // Start with all stores or current banner filter
         let baseStores = [...this.allStores];
         
         // Apply search filter if there's a search term
@@ -169,30 +169,20 @@ class StoreSelector {
                     (store.metro && store.metro.toLowerCase().includes(this.searchTerm)) ||
                     (store.METRO && store.METRO.toLowerCase().includes(this.searchTerm));
                 
-                // Debug logging for metro matches
-                if (this.searchTerm === 'austin' && (store.metro || store.METRO)) {
-                    console.log(`🔍 Metro check for ${store.name}:`, {
-                        metro: store.metro,
-                        METRO: store.METRO,
-                        matches: matches
-                    });
-                }
-                
                 return matches;
             });
         }
         
-        // Apply current chain filter if one is active
-        if (this.currentChainFilter && this.currentChainFilter !== 'all') {
+        // Apply current banner filter if one is active
+        if (this.currentBannerFilter && this.currentBannerFilter !== 'all') {
             baseStores = baseStores.filter(store => {
-                const storeChain = store.store_chain || store.chain;
-                return storeChain && storeChain.toLowerCase().includes(this.currentChainFilter.toLowerCase());
+                return store.banner_id === this.currentBannerFilter;
             });
         }
         
         this.filteredStores = baseStores;
         
-        console.log(`🔍 Search "${term}" + Chain "${this.currentChainFilter || 'all'}" = ${this.filteredStores.length} stores`);
+        console.log(`🔍 Search "${term}" + Banner "${this.currentBannerFilter || 'all'}" = ${this.filteredStores.length} stores`);
         
         this.renderStoreList();
         this.updateCounts();
@@ -230,23 +220,16 @@ class StoreSelector {
                 if (data && data.length > 0) {
                     allStores = allStores.concat(data);
                     from += pageSize;
-                    hasMore = data.length === pageSize; // If we got a full page, there might be more
+                    hasMore = data.length === pageSize;
                 } else {
                     hasMore = false;
                 }
             }
             
-            console.log('📊 Final response from Supabase:');
-            console.log('  - Data type:', typeof allStores);
-            console.log('  - Data length:', allStores.length);
-            console.log('  - Is array:', Array.isArray(allStores));
+            console.log(`✅ Loaded ${allStores.length} stores from database`);
             
             this.allStores = allStores;
             this.filteredStores = [...this.allStores];
-            
-            console.log(`✅ Loaded ${this.allStores.length} stores from database`);
-            console.log('🔍 First few stores:', this.allStores.slice(0, 3).map(s => s.name));
-            console.log('🔍 Last few stores:', this.allStores.slice(-3).map(s => s.name));
             
             this.renderStoreList();
             this.updateCounts();
@@ -257,51 +240,36 @@ class StoreSelector {
         }
     }
 
-    // Filter stores by chain/banner
+    // Filter stores by banner - NOW USES banner_id
     filterByChain(chain) {
-        console.log('🔍 Filtering by chain:', chain);
+        console.log('🔍 Filtering by banner_id:', chain);
         
-        // Store the current chain filter
-        this.currentChainFilter = chain;
+        // Store the current banner filter
+        this.currentBannerFilter = chain;
         
         // Safety check
         if (!this.allStores || this.allStores.length === 0) {
             console.warn('⚠️ No stores loaded yet, loading stores first...');
             this.loadStoresFromDatabase().then(() => {
-                this.filterByChain(chain); // Retry after loading
+                this.filterByChain(chain);
             });
             return;
         }
         
         console.log('📊 Total stores available:', this.allStores.length);
         
-        // Update button active states
-        this.updateActiveButton(chain);
-        
         // Start with all stores
         let baseStores = [...this.allStores];
         
-        // Apply chain filter
+        // Apply banner filter using banner_id
         if (!chain || chain === 'all') {
             this.filteredStores = baseStores;
             console.log('✅ Showing all stores:', this.filteredStores.length);
         } else {
             this.filteredStores = baseStores.filter(store => {
-                const storeChain = store.store_chain || store.chain; // Try both property names
-                
-                // Normalize both for comparison - remove spaces and hyphens, convert to lowercase
-                const normalizedChain = (chain || '').toLowerCase().replace(/[-\s]/g, '').trim();
-                const normalizedStoreChain = (storeChain || '').toLowerCase().replace(/[-\s]/g, '').trim();
-                
-                // Direct match on normalized chain
-                const matches = normalizedStoreChain === normalizedChain || normalizedStoreChain.includes(normalizedChain);
-                
-                if (matches) {
-                    console.log('✅ Match found:', store.name, '-> chain:', storeChain);
-                }
-                return matches;
+                return store.banner_id === chain;
             });
-            console.log('🎯 Filtered stores for', chain + ':', this.filteredStores.length);
+            console.log('🎯 Filtered stores for banner:', this.filteredStores.length);
         }
         
         // Apply current search filter if there's a search term
@@ -319,23 +287,6 @@ class StoreSelector {
         
         this.renderStoreList();
         this.updateCounts();
-    }
-
-    // Update active button visual state
-    updateActiveButton(activeChain) {
-        // Remove active class from all buttons
-        const buttons = document.querySelectorAll('[onclick*="filterByChain"]');
-        buttons.forEach(button => {
-            button.classList.remove('bg-blue-600', 'ring-2', 'ring-blue-500');
-            button.classList.add('bg-green-600');
-        });
-        
-        // Add active class to clicked button
-        const activeButton = document.querySelector(`[onclick*="filterByChain('${activeChain}')"]`);
-        if (activeButton) {
-            activeButton.classList.remove('bg-green-600');
-            activeButton.classList.add('bg-blue-600', 'ring-2', 'ring-blue-500');
-        }
     }
 
     // Add store to selection
@@ -370,15 +321,10 @@ class StoreSelector {
 
     // Clear all selections
     clearAll() {
-        console.log('🧹 Clear All button clicked');
-        console.log('📊 Selected stores before clear:', this.selectedStores.length);
-        
         this.selectedStores = [];
         this.renderSelectedStores();
         this.updateCounts();
         this.updateJobSummary();
-        
-        console.log('✅ All stores cleared');
     }
 
     // Render the store list with search results
@@ -395,15 +341,12 @@ class StoreSelector {
             const isSelected = this.selectedStores.find(s => s.id === store.id);
             const distance = this.calculateDistance(store);
             
-            // Use banner name instead of store number for display
-            const displayName = this.getDisplayName(store);
-            
             return `
                 <div class="store-item p-3 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer ${isSelected ? 'bg-blue-50 border-blue-300' : ''}" 
                      onclick="storeSelector.toggleStore('${store.id}')">
                     <div class="flex justify-between items-start">
                         <div class="flex-1">
-                            <div class="font-medium text-gray-900">${displayName}</div>
+                            <div class="font-medium text-gray-900">${store.name}</div>
                             <div class="text-sm text-gray-600">${this.getFormattedAddress(store)}</div>
                             ${store.phone ? `<div class="text-sm text-gray-500">${store.phone}</div>` : ''}
                         </div>
@@ -419,14 +362,7 @@ class StoreSelector {
         container.innerHTML = html;
     }
 
-    // Get display name for store (use Column E - STORE from Google Sheet)
-    getDisplayName(store) {
-        // Use the 'name' field which should contain Column E (STORE) from Google Sheet
-        // This gives us clean names like "HEB - ALVIN", "WHOLE FOODS MARKET - CEDAR PARK"
-        return store.name || 'Unknown Store';
-    }
-
-    // Get formatted address (concatenate G+H+I+J: ADDRESS + CITY + STATE + ZIP)
+    // Get formatted address
     getFormattedAddress(store) {
         const parts = [];
         if (store.address) parts.push(store.address);
@@ -448,11 +384,10 @@ class StoreSelector {
         }
 
         const html = this.selectedStores.map(store => {
-            const displayName = this.getDisplayName(store);
             return `
                 <div class="selected-store-item p-2 bg-green-100 border border-green-300 rounded-lg flex justify-between items-center">
                     <div class="flex-1">
-                        <div class="font-medium text-green-800">${displayName}</div>
+                        <div class="font-medium text-green-800">${store.name}</div>
                         <div class="text-sm text-green-600">${this.getFormattedAddress(store)}</div>
                     </div>
                     <button onclick="storeSelector.removeStore('${store.id}')" 
@@ -494,7 +429,7 @@ class StoreSelector {
         const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
         const distance = R * c;
 
-        return Math.round(distance * 10) / 10; // Round to 1 decimal place
+        return Math.round(distance * 10) / 10;
     }
 
     // Convert degrees to radians
@@ -504,7 +439,6 @@ class StoreSelector {
 
     // Update job summary with selected stores
     updateJobSummary() {
-        // This will be called by the existing updateJobSummary function
         if (typeof window.updateJobSummary === 'function') {
             window.updateJobSummary();
         }
@@ -514,114 +448,7 @@ class StoreSelector {
     getSelectedStores() {
         return this.selectedStores;
     }
-
-    // Add new store (for future implementation)
-    async addNewStore(storeData) {
-        try {
-            console.log('🔄 Adding new store:', storeData);
-            
-            // Auto-geocode address to get GPS coordinates
-            const coordinates = await this.geocodeAddress(storeData.address, storeData.city, storeData.state);
-            
-            const newStore = {
-                name: storeData.name,
-                address: storeData.address,
-                city: storeData.city,
-                state: storeData.state,
-                zip_code: storeData.zip_code,
-                chain: storeData.chain || 'Unknown',
-                banner: storeData.banner || storeData.name,
-                store_number: storeData.store_number || '',
-                phone: storeData.phone || '',
-                metro: storeData.metro || '',
-                country: 'US',
-                latitude: coordinates.lat,
-                longitude: coordinates.lng,
-                source: 'user_added', // Flag as user-added
-                is_active: true,
-                created_at: new Date().toISOString(),
-                updated_at: new Date().toISOString()
-            };
-
-            const { data, error } = await supabase
-                .from('stores')
-                .insert([newStore])
-                .select()
-                .single();
-
-            if (error) throw error;
-
-            // Add to local arrays
-            this.allStores.push(data);
-            this.filteredStores.push(data);
-            
-            // Re-render
-            this.renderStoreList();
-            this.updateCounts();
-
-            console.log('✅ New store added:', data);
-            
-            // Notify admin (future implementation)
-            await this.notifyAdminNewStore(data);
-            
-            return data;
-        } catch (error) {
-            console.error('❌ Error adding new store:', error);
-            throw error;
-        }
-    }
-
-    // Geocode address to get GPS coordinates
-    async geocodeAddress(address, city, state) {
-        try {
-            const fullAddress = `${address}, ${city}, ${state}`;
-            console.log('📍 Geocoding address:', fullAddress);
-            
-            const response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(fullAddress)}&limit=1&countrycodes=us`);
-            const data = await response.json();
-            
-            if (data && data.length > 0) {
-                const result = data[0];
-                console.log('✅ Geocoding successful:', result);
-                
-                // Validate coordinates are in Texas (rough bounds)
-                const lat = parseFloat(result.lat);
-                const lng = parseFloat(result.lon);
-                
-                if (lat >= 25.5 && lat <= 36.5 && lng >= -106.5 && lng <= -93.5) {
-                    return { lat, lng };
-                } else {
-                    console.warn('⚠️ Coordinates outside Texas bounds, using fallback');
-                }
-            }
-            
-            throw new Error('Address not found or outside Texas');
-        } catch (error) {
-            console.error('❌ Geocoding failed:', error);
-            // Return default coordinates (Austin, TX) as fallback
-            return { lat: 30.2672, lng: -97.7431 };
-        }
-    }
-
-    // Notify admin of new store (future implementation)
-    async notifyAdminNewStore(store) {
-        try {
-            // This could send an email notification or create a notification record
-            console.log('📧 Admin notification: New store added by user:', store.name);
-            
-            // Future: Send email notification to admin
-            // Future: Create notification record in database
-            // Future: Update admin dashboard with pending review items
-            
-        } catch (error) {
-            console.error('❌ Error sending admin notification:', error);
-        }
-    }
 }
-
-// Initialize store selector
-// Global store selector instance
-let storeSelector;
 
 // Initialize when DOM is loaded
 document.addEventListener('DOMContentLoaded', async function() {
@@ -629,13 +456,9 @@ document.addEventListener('DOMContentLoaded', async function() {
     
     // Wait a bit for other scripts to load
     setTimeout(async () => {
-        storeSelector = new StoreSelector();
+        window.storeSelector = new StoreSelector();
         
-        // Make storeSelector globally accessible
-        window.storeSelector = storeSelector;
-        
-        // Initialize store selector (don't load stores until search)
-        const initialized = await storeSelector.loadStores();
+        const initialized = await window.storeSelector.loadStores();
         if (!initialized) {
             console.error('❌ Failed to initialize store selector');
             return;
@@ -643,7 +466,7 @@ document.addEventListener('DOMContentLoaded', async function() {
 
         // Try to get current location
         try {
-            await storeSelector.getCurrentLocation();
+            await window.storeSelector.getCurrentLocation();
             console.log('📍 Location-based store suggestions enabled');
         } catch (error) {
             console.log('📍 Location not available - using search only');
@@ -653,7 +476,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         const searchInput = document.getElementById('store-search');
         if (searchInput) {
             searchInput.addEventListener('input', async (e) => {
-                await storeSelector.searchStores(e.target.value);
+                await window.storeSelector.searchStores(e.target.value);
             });
         }
 
@@ -661,13 +484,11 @@ document.addEventListener('DOMContentLoaded', async function() {
         const chainFilter = document.getElementById('chain-filter');
         if (chainFilter) {
             chainFilter.addEventListener('change', (e) => {
-                storeSelector.filterByChain(e.target.value);
+                window.storeSelector.filterByChain(e.target.value);
             });
         }
 
         console.log('✅ Enhanced store selector initialized');
-    }, 1000); // Wait 1 second for other scripts to load
+    }, 1000);
 });
 
-// Export for global access
-window.storeSelector = storeSelector;
