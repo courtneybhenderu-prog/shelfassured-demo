@@ -6,15 +6,24 @@ SELECT column_name, data_type
 FROM information_schema.columns
 WHERE table_name='stores' ORDER BY 1;
 
--- 2. sample rows for sanity
-SELECT id, name AS store_display, banner_id, metro, metro_norm, address, city, state, zip_code
+-- 2. sample rows for sanity (using current schema)
+SELECT id, name AS store_display, banner, store_chain, metro, address, city, state, zip_code
 FROM stores ORDER BY created_at DESC NULLS LAST LIMIT 25;
 
--- 3. banners available (will error if tables don't exist yet)
-SELECT rb.id AS banner_id, rb.name AS banner_name, r.name AS parent
-FROM retailer_banners rb 
-JOIN retailers r ON r.id = rb.retailer_id
-ORDER BY banner_name;
+-- 3. Check if retailer_banners table exists
+SELECT 
+  table_name, 
+  COUNT(*) as column_count
+FROM information_schema.columns
+WHERE table_name IN ('retailers', 'retailer_banners', 'retailer_aliases', 'retailer_banner_aliases')
+GROUP BY table_name
+ORDER BY table_name;
+
+-- 3b. If retailer_banners exists, show banners available
+-- SELECT rb.id AS banner_id, rb.name AS banner_name, r.name AS parent
+-- FROM retailer_banners rb 
+-- JOIN retailers r ON r.id = rb.retailer_id
+-- ORDER BY banner_name;
 
 -- 4. view output used by selector
 SELECT * FROM v_distinct_banners ORDER BY 1;
