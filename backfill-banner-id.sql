@@ -2,18 +2,36 @@
 -- This matches stores to retailer_banners based on banner/store_chain values
 
 -- Update stores to link banner_id based on existing banner/store_chain values
-UPDATE stores s
-SET banner_id = rb.id
-FROM retailer_banners rb
-WHERE 
-  s.banner_id IS NULL
+-- Handle normalized matching (HEB = H-E-B, remove hyphens/spaces for comparison)
+
+WITH normalized_banners AS (
+  SELECT 
+    s.id as store_id,
+    rb.id as banner_id,
+    rb.name as banner_name
+  FROM stores s
+  CROSS JOIN retailer_banners rb
+  WHERE s.banner_id IS NULL AND s.is_active = true
   AND (
-    UPPER(TRIM(COALESCE(s.banner, ''))) = UPPER(TRIM(rb.name))
-    OR UPPER(TRIM(COALESCE(s.store_chain, ''))) = UPPER(TRIM(rb.name))
-    OR UPPER(TRIM(COALESCE(s.banner, ''))) LIKE '%' || UPPER(TRIM(rb.name)) || '%'
-    OR UPPER(TRIM(COALESCE(s.store_chain, ''))) LIKE '%' || UPPER(TRIM(rb.name)) || '%'
+    -- Direct match
+    UPPER(REGEXP_REPLACE(COALESCE(s.banner, ''), '[^A-Z0-9]', '', 'g')) = 
+    UPPER(REGEXP_REPLACE(rb.name, '[^A-Z0-9]', '', 'g'))
+    OR
+    UPPER(REGEXP_REPLACE(COALESCE(s.store_chain, ''), '[^A-Z0-9]', '', 'g')) = 
+    UPPER(REGEXP_REPLACE(rb.name, '[^A-Z0-9]', '', 'g'))
+    OR
+    -- Fuzzy match
+    UPPER(REGEXP_REPLACE(COALESCE(s.banner, ''), '[^A-Z0-9]', '', 'g')) LIKE 
+    '%' || UPPER(REGEXP_REPLACE(rb.name, '[^A-Z0-9]', '', 'g')) || '%'
+    OR
+    UPPER(REGEXP_REPLACE(COALESCE(s.store_chain, ''), '[^A-Z0-9]', '', 'g')) LIKE 
+    '%' || UPPER(REGEXP_REPLACE(rb.name, '[^A-Z0-9]', '', 'g')) || '%'
   )
-  AND s.is_active = true;
+)
+UPDATE stores s
+SET banner_id = nb.banner_id
+FROM normalized_banners nb
+WHERE s.id = nb.store_id;
 
 -- Report progress
 SELECT 
