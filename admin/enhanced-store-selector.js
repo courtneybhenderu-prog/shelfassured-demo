@@ -45,22 +45,22 @@ class StoreSelector {
         }
     }
 
-    // Load banner options for dropdown
+    // Load chain options for dropdown
     async loadBannerOptions() {
         try {
-            console.log('🔄 Loading banner options...');
+            console.log('🔄 Loading chain options from stores...');
             
-            const { data: banners, error } = await supabase
-                .from('v_distinct_banners')
-                .select('banner_name')
-                .order('banner_name', { ascending: true });
+            const { data: chains, error } = await supabase
+                .from('v_store_chains')
+                .select('chain_value, chain_label, store_count')
+                .order('chain_label', { ascending: true });
 
             if (error) {
-                console.error('❌ Error loading banners:', error);
+                console.error('❌ Error loading chains:', error);
                 return;
             }
 
-            console.log('✅ Loaded', banners.length, 'banner options');
+            console.log('✅ Loaded', chains.length, 'chain options from actual stores');
 
             // Update dropdown
             const dropdown = document.getElementById('chain-filter');
@@ -70,18 +70,18 @@ class StoreSelector {
                 dropdown.innerHTML = '';
                 dropdown.appendChild(allChainsOption);
 
-                // Add banner options
-                banners.forEach(banner => {
+                // Add chain options with counts
+                chains.forEach(chain => {
                     const option = document.createElement('option');
-                    option.value = banner.banner_name.toLowerCase();
-                    option.textContent = banner.banner_name;
+                    option.value = chain.chain_value;
+                    option.textContent = `${chain.chain_label} (${chain.store_count})`;
                     dropdown.appendChild(option);
                 });
 
-                console.log('✅ Banner dropdown updated with', banners.length, 'options');
+                console.log('✅ Chain dropdown updated with', chains.length, 'options');
             }
         } catch (error) {
-            console.error('❌ Error loading banner options:', error);
+            console.error('❌ Error loading chain options:', error);
         }
     }
 
@@ -274,9 +274,6 @@ class StoreSelector {
         
         console.log('📊 Total stores available:', this.allStores.length);
         
-        // Update button active states
-        this.updateActiveButton(chain);
-        
         // Start with all stores
         let baseStores = [...this.allStores];
         
@@ -286,23 +283,7 @@ class StoreSelector {
             console.log('✅ Showing all stores:', this.filteredStores.length);
         } else {
             this.filteredStores = baseStores.filter(store => {
-                const storeChain = store.store_chain || store.chain; // Try both property names
-                const storeName = store.name || '';
-                
-                // Normalize chain names for better matching
-                const normalizedChain = chain.toLowerCase().replace(/[-\s]/g, '');
-                const normalizedStoreChain = (storeChain || '').toLowerCase().replace(/[-\s]/g, '');
-                const normalizedStoreName = storeName.toLowerCase().replace(/[-\s]/g, '');
-                
-                // Check both store_chain and name for matches
-                const chainMatch = normalizedStoreChain.includes(normalizedChain);
-                const nameMatch = normalizedStoreName.includes(normalizedChain);
-                
-                const matches = chainMatch || nameMatch;
-                if (matches) {
-                    console.log('✅ Match found:', store.name, '-> chain:', storeChain, 'name match:', nameMatch);
-                }
-                return matches;
+                return store.store_chain === chain; // Exact match on store_chain
             });
             console.log('🎯 Filtered stores for', chain + ':', this.filteredStores.length);
         }
