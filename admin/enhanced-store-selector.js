@@ -50,10 +50,10 @@ class StoreSelector {
         try {
             console.log('🔄 Loading banner options...');
             
-            // New view returns banner_id and banner_name
+            // Load banner_id, banner_name, and store_count from view
             const { data: banners, error } = await supabase
                 .from('v_distinct_banners')
-                .select('banner_id, banner_name')
+                .select('banner_id, banner_name, store_count')
                 .order('banner_name', { ascending: true });
 
             if (error) {
@@ -75,7 +75,7 @@ class StoreSelector {
                 banners.forEach(banner => {
                     const option = document.createElement('option');
                     option.value = banner.banner_id;  // Use UUID as value
-                    option.textContent = banner.banner_name;
+                    option.textContent = `${banner.banner_name} (${banner.store_count})`;  // Show store count
                     dropdown.appendChild(option);
                 });
 
@@ -341,13 +341,16 @@ class StoreSelector {
             const isSelected = this.selectedStores.find(s => s.id === store.id);
             const distance = this.calculateDistance(store);
             
+            // Use stores.name (not banner name) - this is the store display name from CSV STORE column
+            const address = this.getFormattedAddress(store);
+            
             return `
                 <div class="store-item p-3 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer ${isSelected ? 'bg-blue-50 border-blue-300' : ''}" 
                      onclick="storeSelector.toggleStore('${store.id}')">
                     <div class="flex justify-between items-start">
                         <div class="flex-1">
-                            <div class="font-medium text-gray-900">${store.name}</div>
-                            <div class="text-sm text-gray-600">${this.getFormattedAddress(store)}</div>
+                            <div class="font-medium text-gray-900">${store.name || 'Unnamed Store'}</div>
+                            <div class="text-sm text-gray-600">${address}</div>
                             ${store.phone ? `<div class="text-sm text-gray-500">${store.phone}</div>` : ''}
                         </div>
                         <div class="text-right">
