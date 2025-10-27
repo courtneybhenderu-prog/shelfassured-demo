@@ -151,8 +151,8 @@ class StoreSelector {
             let query = supabase
                 .from('stores')
                 .select('id, name, address, city, state, zip_code, store_chain, metro')
-                .eq('state', 'TX')
-                .eq('is_active', true);
+                .eq('state', 'TX');
+                // Removed is_active filter temporarily to see if that's the issue
             
             // Apply search filters (including metro)
             if (this.searchTerm) {
