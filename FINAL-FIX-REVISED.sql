@@ -55,7 +55,11 @@ ON CONFLICT (alias) DO NOTHING;
 -- Trader Joe's (straight + curly apostrophes) and variant
 INSERT INTO retailer_banner_aliases(alias, banner_id)
 SELECT LOWER(x.alias), rb.id
-FROM (VALUES ('trader joe''s'), ('trader joe's'), ('trader joes')) x(alias)
+FROM (VALUES 
+  ('trader joe''s'),          -- straight apostrophe, escaped
+  (U&'trader joe\2019s'),     -- curly apostrophe ' (U+2019)
+  ('trader joes')             -- no apostrophe
+) AS x(alias)
 JOIN retailer_banners rb ON rb.name = 'Trader Joe''s'
 ON CONFLICT (alias) DO NOTHING;
 
