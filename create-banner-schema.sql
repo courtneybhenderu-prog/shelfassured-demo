@@ -26,7 +26,14 @@ INSERT INTO retailers(name) VALUES
   ('Target'),
   ('Brookshires'),
   ('Costco'),
-  ('Trader Joes')
+  ('Trader Joes'),
+  ('Fiesta Mart'),
+  ('Independent Grocers'),
+  ('Lowes Markets'),
+  ('Randalls'),
+  ('Randalls'),
+  ('Market Street'),
+  ('Natural Grocers')
 ON CONFLICT (name) DO NOTHING;
 
 -- 4. Insert retailer_banners (title case, not ALL CAPS)
@@ -80,6 +87,54 @@ ON CONFLICT (retailer_id, name) DO NOTHING;
 INSERT INTO retailer_banners(retailer_id, name)
 SELECT r.id, 'Trader Joes'
 FROM retailers r WHERE r.name = 'Trader Joes'
+ON CONFLICT (retailer_id, name) DO NOTHING;
+
+-- Whole Foods Market banner
+INSERT INTO retailer_banners(retailer_id, name)
+SELECT r.id, 'Whole Foods Market'
+FROM retailers r WHERE r.name = 'Whole Foods Market'
+ON CONFLICT (retailer_id, name) DO NOTHING;
+
+-- Sprouts banner
+INSERT INTO retailer_banners(retailer_id, name)
+SELECT r.id, 'Sprouts Farmers Market'
+FROM retailers r WHERE r.name = 'Sprouts Farmers Market'
+ON CONFLICT (retailer_id, name) DO NOTHING;
+
+-- Fiesta Mart banner
+INSERT INTO retailer_banners(retailer_id, name)
+SELECT r.id, 'Fiesta Mart'
+FROM retailers r WHERE r.name = 'Fiesta Mart'
+ON CONFLICT (retailer_id, name) DO NOTHING;
+
+-- Lowes Markets banner
+INSERT INTO retailer_banners(retailer_id, name)
+SELECT r.id, 'Lowes Markets'
+FROM retailers r WHERE r.name = 'Lowes Markets'
+ON CONFLICT (retailer_id, name) DO NOTHING;
+
+-- Randalls banner
+INSERT INTO retailer_banners(retailer_id, name)
+SELECT r.id, 'Randalls'
+FROM retailers r WHERE r.name = 'Randalls'
+ON CONFLICT (retailer_id, name) DO NOTHING;
+
+-- Market Street banner
+INSERT INTO retailer_banners(retailer_id, name)
+SELECT r.id, 'Market Street'
+FROM retailers r WHERE r.name = 'Market Street'
+ON CONFLICT (retailer_id, name) DO NOTHING;
+
+-- Natural Grocers banner
+INSERT INTO retailer_banners(retailer_id, name)
+SELECT r.id, 'Natural Grocers'
+FROM retailers r WHERE r.name = 'Natural Grocers'
+ON CONFLICT (retailer_id, name) DO NOTHING;
+
+-- Tom Thumb (under Kroger)
+INSERT INTO retailer_banners(retailer_id, name)
+SELECT r.id, 'Tom Thumb'
+FROM retailers r WHERE r.name = 'Kroger'
 ON CONFLICT (retailer_id, name) DO NOTHING;
 
 INSERT INTO retailer_banners(retailer_id, name)
