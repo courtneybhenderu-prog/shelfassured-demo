@@ -45,22 +45,22 @@ class StoreSelector {
         }
     }
 
-    // Load chain options for dropdown - using actual store_chain values
+    // Load banner options for dropdown
     async loadBannerOptions() {
         try {
-            console.log('🔄 Loading chain options from stores...');
+            console.log('🔄 Loading banner options...');
             
-            const { data: chains, error } = await supabase
-                .from('v_store_chains')
-                .select('chain_value, chain_label, store_count')
-                .order('chain_label', { ascending: true });
+            const { data: banners, error } = await supabase
+                .from('v_distinct_banners')
+                .select('banner_name')
+                .order('banner_name', { ascending: true });
 
             if (error) {
-                console.error('❌ Error loading chains:', error);
+                console.error('❌ Error loading banners:', error);
                 return;
             }
 
-            console.log('✅ Loaded', chains.length, 'chain options from actual stores');
+            console.log('✅ Loaded', banners.length, 'banner options');
 
             // Update dropdown
             const dropdown = document.getElementById('chain-filter');
@@ -70,18 +70,18 @@ class StoreSelector {
                 dropdown.innerHTML = '';
                 dropdown.appendChild(allChainsOption);
 
-                // Add chain options - value matches store_chain field exactly
-                chains.forEach(chain => {
+                // Add banner options
+                banners.forEach(banner => {
                     const option = document.createElement('option');
-                    option.value = chain.chain_value;  // Use exact store_chain value for filtering
-                    option.textContent = `${chain.chain_label} (${chain.store_count})`;
+                    option.value = banner.banner_name.toLowerCase();
+                    option.textContent = banner.banner_name;
                     dropdown.appendChild(option);
                 });
 
-                console.log('✅ Chain dropdown updated with', chains.length, 'options');
+                console.log('✅ Banner dropdown updated with', banners.length, 'options');
             }
         } catch (error) {
-            console.error('❌ Error loading chain options:', error);
+            console.error('❌ Error loading banner options:', error);
         }
     }
 
@@ -286,8 +286,23 @@ class StoreSelector {
             console.log('✅ Showing all stores:', this.filteredStores.length);
         } else {
             this.filteredStores = baseStores.filter(store => {
-                // Exact match on store_chain (dropdown value = filter value)
-                return store.store_chain === chain;
+                const storeChain = store.store_chain || store.chain; // Try both property names
+                const storeName = store.name || '';
+                
+                // Normalize chain names for better matching
+                const normalizedChain = chain.toLowerCase().replace(/[-\s]/g, '');
+                const normalizedStoreChain = (storeChain || '').toLowerCase().replace(/[-\s]/g, '');
+                const normalizedStoreName = storeName.toLowerCase().replace(/[-\s]/g, '');
+                
+                // Check both store_chain and name for matches
+                const chainMatch = normalizedStoreChain.includes(normalizedChain);
+                const nameMatch = normalizedStoreName.includes(normalizedChain);
+                
+                const matches = chainMatch || nameMatch;
+                if (matches) {
+                    console.log('✅ Match found:', store.name, '-> chain:', storeChain, 'name match:', nameMatch);
+                }
+                return matches;
             });
             console.log('🎯 Filtered stores for', chain + ':', this.filteredStores.length);
         }
