@@ -21,7 +21,12 @@ INSERT INTO retailers(name) VALUES
   ('Kroger'),
   ('Sprouts Farmers Market'),
   ('Albertsons'),
-  ('Whole Foods Market')
+  ('Whole Foods Market'),
+  ('Walmart'),
+  ('Target'),
+  ('Brookshires'),
+  ('Costco'),
+  ('Trader Joes')
 ON CONFLICT (name) DO NOTHING;
 
 -- 4. Insert retailer_banners (title case, not ALL CAPS)
@@ -33,6 +38,48 @@ ON CONFLICT (retailer_id, name) DO NOTHING;
 INSERT INTO retailer_banners(retailer_id, name)
 SELECT r.id, 'Albertsons'
 FROM retailers r WHERE r.name = 'Albertsons'
+ON CONFLICT (retailer_id, name) DO NOTHING;
+
+-- Walmart banners
+INSERT INTO retailer_banners(retailer_id, name)
+SELECT r.id, bb.name
+FROM retailers r 
+CROSS JOIN (VALUES 
+  ('Walmart'),
+  ('Walmart Supercenter'),
+  ('Walmart Neighborhood Market'),
+  ('Walmart Fuel Station')
+) AS bb(name)
+WHERE r.name = 'Walmart'
+ON CONFLICT (retailer_id, name) DO NOTHING;
+
+-- Target banner
+INSERT INTO retailer_banners(retailer_id, name)
+SELECT r.id, 'Target'
+FROM retailers r WHERE r.name = 'Target'
+ON CONFLICT (retailer_id, name) DO NOTHING;
+
+-- Brookshires banners
+INSERT INTO retailer_banners(retailer_id, name)
+SELECT r.id, bb.name
+FROM retailers r 
+CROSS JOIN (VALUES 
+  ('Brookshires'),
+  ('Brookshire Brothers')
+) AS bb(name)
+WHERE r.name = 'Brookshires'
+ON CONFLICT (retailer_id, name) DO NOTHING;
+
+-- Costco banner
+INSERT INTO retailer_banners(retailer_id, name)
+SELECT r.id, 'Costco'
+FROM retailers r WHERE r.name = 'Costco'
+ON CONFLICT (retailer_id, name) DO NOTHING;
+
+-- Trader Joes banner
+INSERT INTO retailer_banners(retailer_id, name)
+SELECT r.id, 'Trader Joes'
+FROM retailers r WHERE r.name = 'Trader Joes'
 ON CONFLICT (retailer_id, name) DO NOTHING;
 
 INSERT INTO retailer_banners(retailer_id, name)
