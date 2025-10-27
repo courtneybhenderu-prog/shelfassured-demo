@@ -146,45 +146,45 @@ class StoreSelector {
     async searchStores(term) {
         this.searchTerm = term.toLowerCase();
         
-        // If we haven't loaded stores yet and user is searching, load them now
-        if (this.allStores.length === 0 && this.searchTerm) {
-            await this.loadStoresFromDatabase();
-        }
+        // Build query for search
+        let query = supabase
+            .from('stores')
+            .select('id, name, address, city, state, zip_code, store_chain, metro')
+            .eq('state', 'TX')
+            .eq('is_active', true);
         
-        // Start with all stores or current chain filter
-        let baseStores = [...this.allStores];
-        
-        // Apply search filter if there's a search term
+        // Apply search filters (including metro)
         if (this.searchTerm) {
-            baseStores = baseStores.filter(store => {
-                const matches = store.name.toLowerCase().includes(this.searchTerm) ||
-                    store.city.toLowerCase().includes(this.searchTerm) ||
-                    store.address.toLowerCase().includes(this.searchTerm) ||
-                    store.zip_code.includes(this.searchTerm) ||
-                    (store.metro && store.metro.toLowerCase().includes(this.searchTerm)) ||
-                    (store.METRO && store.METRO.toLowerCase().includes(this.searchTerm));
-                
-                // Debug logging for metro matches
-                if (this.searchTerm === 'austin' && (store.metro || store.METRO)) {
-                    console.log(`🔍 Metro check for ${store.name}:`, {
-                        metro: store.metro,
-                        METRO: store.METRO,
-                        matches: matches
-                    });
-                }
-                
-                return matches;
-            });
+            query = query.or(`name.ilike.%${this.searchTerm}%,city.ilike.%${this.searchTerm}%,address.ilike.%${this.searchTerm}%,zip_code.ilike.%${this.searchTerm}%,metro.ilike.%${this.searchTerm}%`);
         }
         
-        // Note: Chain filter now applied at database level in buildStoreQuery()
+        // Apply chain filter
+        query = this.filterByChainQuery(query, this.currentChainFilter);
         
-        this.filteredStores = baseStores;
+        // Execute query
+        const { data, error } = await query.limit(100);
+        
+        if (error) {
+            console.error('Search error:', error);
+            this.showError('Failed to search stores');
+            return;
+        }
+        
+        this.allStores = data || [];
+        this.filteredStores = [...this.allStores];
         
         console.log(`🔍 Search "${term}" + Chain "${this.currentChainFilter || 'all'}" = ${this.filteredStores.length} stores`);
         
         this.renderStoreList();
         this.updateCounts();
+    }
+
+    // Helper function to apply chain filter to query (exact match)
+    filterByChainQuery(query, selectedChain) {
+        if (selectedChain && selectedChain !== 'all' && selectedChain !== 'All Chains') {
+            return query.eq('store_chain', selectedChain);
+        }
+        return query;
     }
 
     // Build query with optional chain filter
@@ -196,9 +196,7 @@ class StoreSelector {
             .eq('is_active', true);
         
         // Apply chain filter at database level (exact match)
-        if (selectedChain && selectedChain !== 'all' && selectedChain !== 'All Chains') {
-            query = query.eq('store_chain', selectedChain);
-        }
+        query = this.filterByChainQuery(query, selectedChain);
         
         return query.order('name');
     }
