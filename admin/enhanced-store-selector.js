@@ -177,12 +177,7 @@ class StoreSelector {
             });
         }
         
-        // Apply current chain filter if one is active (EXACT match)
-        if (this.currentChainFilter && this.currentChainFilter !== 'all') {
-            baseStores = baseStores.filter(store => {
-                return store.store_chain === this.currentChainFilter;
-            });
-        }
+        // Note: Chain filter now applied at database level in buildStoreQuery()
         
         this.filteredStores = baseStores;
         
@@ -190,6 +185,22 @@ class StoreSelector {
         
         this.renderStoreList();
         this.updateCounts();
+    }
+
+    // Build query with optional chain filter
+    buildStoreQuery(selectedChain) {
+        let query = supabase
+            .from('stores')
+            .select('*')
+            .eq('state', 'TX')
+            .eq('is_active', true);
+        
+        // Apply chain filter at database level (exact match)
+        if (selectedChain && selectedChain !== 'all' && selectedChain !== 'All Chains') {
+            query = query.eq('store_chain', selectedChain);
+        }
+        
+        return query.order('name');
     }
 
     // Load stores from database when needed
@@ -206,12 +217,8 @@ class StoreSelector {
             while (hasMore) {
                 console.log(`📄 Loading page ${Math.floor(from/pageSize) + 1} (records ${from + 1} to ${from + pageSize})`);
                 
-                const { data, error } = await supabase
-                    .from('stores')
-                    .select('*')
-                    .eq('state', 'TX')
-                    .eq('is_active', true)
-                    .order('name')
+                const query = this.buildStoreQuery(this.currentChainFilter);
+                const { data, error } = await query
                     .range(from, from + pageSize - 1);
 
                 if (error) {
@@ -258,50 +265,10 @@ class StoreSelector {
         // Store the current chain filter
         this.currentChainFilter = chain;
         
-        // Safety check
-        if (!this.allStores || this.allStores.length === 0) {
-            console.warn('⚠️ No stores loaded yet, loading stores first...');
-            this.loadStoresFromDatabase().then(() => {
-                this.filterByChain(chain); // Retry after loading
-            });
-            return;
-        }
-        
-        console.log('📊 Total stores available:', this.allStores.length);
-        
-        // Update button active states
-        this.updateActiveButton(chain);
-        
-        // Start with all stores
-        let baseStores = [...this.allStores];
-        
-        // Apply chain filter
-        if (!chain || chain === 'all') {
-            this.filteredStores = baseStores;
-            console.log('✅ Showing all stores:', this.filteredStores.length);
-        } else {
-            // EXACT match on store_chain field
-            this.filteredStores = baseStores.filter(store => {
-                return store.store_chain === chain;
-            });
-            console.log('🎯 Filtered stores for', chain + ':', this.filteredStores.length);
-        }
-        
-        // Apply current search filter if there's a search term
-        if (this.searchTerm) {
-            this.filteredStores = this.filteredStores.filter(store => 
-                store.name.toLowerCase().includes(this.searchTerm) ||
-                store.city.toLowerCase().includes(this.searchTerm) ||
-                store.address.toLowerCase().includes(this.searchTerm) ||
-                store.zip_code.includes(this.searchTerm) ||
-                (store.metro && store.metro.toLowerCase().includes(this.searchTerm)) ||
-                (store.METRO && store.METRO.toLowerCase().includes(this.searchTerm))
-            );
-            console.log(`🔍 After search "${this.searchTerm}": ${this.filteredStores.length} stores`);
-        }
-        
-        this.renderStoreList();
-        this.updateCounts();
+        // Re-query database with chain filter applied
+        this.allStores = [];
+        this.filteredStores = [];
+        this.loadStoresFromDatabase();
     }
 
     // Update active button visual state
