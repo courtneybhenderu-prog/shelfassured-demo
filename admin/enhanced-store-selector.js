@@ -154,9 +154,9 @@ class StoreSelector {
                 .eq('state', 'TX')
                 .eq('is_active', true);
             
-            // Apply search filters (including metro) - make search broader
+            // Apply search filters (including metro)
             if (this.searchTerm) {
-                query = query.or(`name.ilike.%${this.searchTerm}%,city.ilike.%${this.searchTerm}%,address.ilike.%${this.searchTerm}%,zip_code.ilike.%${this.searchTerm}%,metro.ilike.%${this.searchTerm}%,state.ilike.%${this.searchTerm}%`);
+                query = query.or(`name.ilike.%${this.searchTerm}%,city.ilike.%${this.searchTerm}%,address.ilike.%${this.searchTerm}%,zip_code.ilike.%${this.searchTerm}%,metro.ilike.%${this.searchTerm}%`);
             }
             
             // Apply chain filter
