@@ -146,37 +146,46 @@ class StoreSelector {
     async searchStores(term) {
         this.searchTerm = term.toLowerCase();
         
-        // Build query for search
-        let query = supabase
-            .from('stores')
-            .select('id, name, address, city, state, zip_code, store_chain, metro')
-            .eq('state', 'TX')
-            .eq('is_active', true);
-        
-        // Apply search filters (including metro)
-        if (this.searchTerm) {
-            query = query.or(`name.ilike.%${this.searchTerm}%,city.ilike.%${this.searchTerm}%,address.ilike.%${this.searchTerm}%,zip_code.ilike.%${this.searchTerm}%,metro.ilike.%${this.searchTerm}%`);
+        try {
+            // Build query for search
+            let query = supabase
+                .from('stores')
+                .select('id, name, address, city, state, zip_code, store_chain, metro')
+                .eq('state', 'TX')
+                .eq('is_active', true);
+            
+            // Apply search filters (including metro) - make search broader
+            if (this.searchTerm) {
+                query = query.or(`name.ilike.%${this.searchTerm}%,city.ilike.%${this.searchTerm}%,address.ilike.%${this.searchTerm}%,zip_code.ilike.%${this.searchTerm}%,metro.ilike.%${this.searchTerm}%,state.ilike.%${this.searchTerm}%`);
+            }
+            
+            // Apply chain filter
+            query = this.filterByChainQuery(query, this.currentChainFilter);
+            
+            console.log('🔍 Query built, executing...');
+            
+            // Execute query with higher limit
+            const { data, error } = await query.limit(500);
+            
+            if (error) {
+                console.error('Search error:', error);
+                this.showError('Failed to search stores');
+                return;
+            }
+            
+            console.log(`✅ Search returned ${data?.length || 0} stores`);
+            
+            this.allStores = data || [];
+            this.filteredStores = [...this.allStores];
+            
+            console.log(`🔍 Search "${term}" + Chain "${this.currentChainFilter || 'all'}" = ${this.filteredStores.length} stores`);
+            
+            this.renderStoreList();
+            this.updateCounts();
+        } catch (error) {
+            console.error('❌ Search failed:', error);
+            this.showError('Search failed. Please try again.');
         }
-        
-        // Apply chain filter
-        query = this.filterByChainQuery(query, this.currentChainFilter);
-        
-        // Execute query
-        const { data, error } = await query.limit(100);
-        
-        if (error) {
-            console.error('Search error:', error);
-            this.showError('Failed to search stores');
-            return;
-        }
-        
-        this.allStores = data || [];
-        this.filteredStores = [...this.allStores];
-        
-        console.log(`🔍 Search "${term}" + Chain "${this.currentChainFilter || 'all'}" = ${this.filteredStores.length} stores`);
-        
-        this.renderStoreList();
-        this.updateCounts();
     }
 
     // Helper function to apply chain filter to query (exact match)
