@@ -40,8 +40,17 @@
       <h2>Your Brand</h2>
       <div class="grid">
         <div>
+          <label>Select Existing Brand (optional)</label>
+          <div class="relative">
+            <input type="text" id="brand_search" placeholder="Search for existing brand..." autocomplete="off" />
+            <div id="brand-suggestions" class="absolute z-10 w-full bg-white border border-gray-300 rounded-lg shadow-lg hidden mt-1 max-h-48 overflow-y-auto"></div>
+          </div>
+          <p class="hint" style="font-size:11px;margin-top:4px;">Or create a new brand by entering name below</p>
+        </div>
+        <div>
           <label>Brand Name *</label>
           <input id="brand_name" placeholder="Full Business Name" required />
+          <input type="hidden" id="brand_id" />
         </div>
         <div>
           <label>Website</label>
@@ -559,43 +568,198 @@
         if(prodList.length === 0){ err.textContent='Add at least one product with name and identifier.'; return; }
 
         stat.textContent='Saving brand…';
-        // 1) upsert brand (public fields only)
-        const { data: brandId, error: rpcErr } = await supabase.rpc('upsert_brand_public', {
-          p_id: null,
-          p_name: name,
-          p_website: site,
-          p_primary_email: email,
-          p_phone: phone,
-          p_address: addr,
-        });
-        if(rpcErr){ err.textContent=rpcErr.message; return; }
-
-        // 2) products
-        stat.textContent='Saving products…';
-        for(const p of prodList){
-          const { error: pErr } = await supabase.from('products').upsert({
-            brand: name, // Use brand name instead of brand_id
-            name: p.name,
-            barcode: p.barcode, // Use barcode field
-            size: p.size,
-            category: p.category || 'General', // Provide default category
-            added_by: null // Will be set by trigger or default
-          }, {
-            onConflict: 'barcode',
-            ignoreDuplicates: false // Update existing records
+        
+        // Check if existing brand was selected
+        const existingBrandId = document.getElementById('brand_id').value;
+        let brandId;
+        
+        if (existingBrandId) {
+          // Update existing brand
+          brandId = existingBrandId;
+          const { error: updateErr } = await supabase.rpc('upsert_brand_public', {
+            p_id: brandId,
+            p_name: name,
+            p_website: site,
+            p_primary_email: email,
+            p_phone: phone,
+            p_address: addr,
           });
-          if(pErr){ err.textContent = 'Product error: ' + pErr.message; return; }
+          if(updateErr){ err.textContent=updateErr.message; return; }
+        } else {
+          // Create new brand or upsert by name
+          const { data: brandResult, error: rpcErr } = await supabase.rpc('upsert_brand_public', {
+            p_id: null,
+            p_name: name,
+            p_website: site,
+            p_primary_email: email,
+            p_phone: phone,
+            p_address: addr,
+          });
+          if(rpcErr){ err.textContent=rpcErr.message; return; }
+          brandId = brandResult;
         }
 
-        // 3) stores (smart matching against existing stores)
+        // 2) products - upsert by SKU (globally unique) with duplicate prevention
+        stat.textContent='Saving products…';
+        const productIds = [];
+        const productLabels = {}; // Track brand-specific labels
+        const duplicateSkus = []; // Track duplicates to warn user
+        
+        for(const p of prodList){
+          const sku = (p.barcode || p.sku || '').trim();
+          const productName = (p.name || '').trim();
+          const productUPC = sku; // UPC is same as SKU in our schema
+          
+          if(!sku || !productName) {
+            console.warn('Skipping product with missing SKU or name');
+            continue;
+          }
+          
+          // Step 1: Check if product exists by SKU (globally unique)
+          const { data: existingProduct } = await supabase
+            .from('products')
+            .select('id, name, upc, sku')
+            .eq('sku', sku)
+            .maybeSingle();
+          
+          let productId;
+          
+          if (existingProduct) {
+            // Product exists - check if already linked to this brand
+            const { data: existingLink } = await supabase
+              .from('brand_products')
+              .select('id, product_label')
+              .eq('brand_id', brandId)
+              .eq('product_id', existingProduct.id)
+              .maybeSingle();
+            
+            if (existingLink) {
+              // Already linked to this brand - skip or update label
+              console.log(`Product ${sku} already linked to this brand`);
+              duplicateSkus.push({ sku, name: existingProduct.name, reason: 'Already linked to this brand' });
+              productId = existingProduct.id; // Use existing product ID for linking
+            } else {
+              // Product exists but not linked to this brand - link it
+              productId = existingProduct.id;
+              console.log(`Linking existing product ${sku} to brand ${brandId}`);
+            }
+            
+            // Store brand-specific label if CSV name differs
+            if (productName && existingProduct.name && productName !== existingProduct.name) {
+              productLabels[productId] = productName;
+            }
+          } else {
+            // Product doesn't exist - create minimal product
+            const { data: newProduct, error: insErr } = await supabase
+              .from('products')
+              .insert({
+                sku: sku,
+                name: productName,
+                upc: productUPC,
+                category: p.category || 'General'
+              })
+              .select('id')
+              .single();
+            
+            if (insErr) {
+              if (insErr.code === '23505') {
+                // Unique constraint violation - product was created between check and insert
+                // Retry fetch
+                const { data: retryProduct } = await supabase
+                  .from('products')
+                  .select('id, name, upc, sku')
+                  .eq('sku', sku)
+                  .maybeSingle();
+                
+                if (retryProduct) {
+                  productId = retryProduct.id;
+                  duplicateSkus.push({ sku, name: retryProduct.name, reason: 'Created by another process' });
+                } else {
+                  err.textContent = 'Product error: ' + insErr.message;
+                  return;
+                }
+              } else {
+                err.textContent = 'Product error: ' + insErr.message;
+                return;
+              }
+            } else {
+              productId = newProduct.id;
+            }
+          }
+          
+          productIds.push(productId);
+        }
+        
+        // Warn about duplicates if any
+        if (duplicateSkus.length > 0) {
+          const dupList = duplicateSkus.map(d => `${d.name} (SKU: ${d.sku})`).join(', ');
+          console.warn('⚠️ Duplicate products detected:', dupList);
+          stat.textContent = `Note: ${duplicateSkus.length} product(s) were already in the system`;
+          setTimeout(() => { if (stat.textContent.includes('Note:')) stat.textContent = ''; }, 5000);
+        }
+        
+        // Step 3: Link products to brand via brand_products (skip if already linked)
+        stat.textContent='Linking products to brand…';
+        
+        // Filter out products already linked to this brand to avoid duplicates
+        const linksToCreate = [];
+        for (const productId of productIds) {
+          // Check if already linked
+          const { data: existingLink } = await supabase
+            .from('brand_products')
+            .select('id')
+            .eq('brand_id', brandId)
+            .eq('product_id', productId)
+            .maybeSingle();
+          
+          if (!existingLink) {
+            linksToCreate.push({
+              brand_id: brandId,
+              product_id: productId,
+              product_label: productLabels[productId] || null
+            });
+          } else {
+            // Already linked - update product_label if different
+            if (productLabels[productId]) {
+              await supabase
+                .from('brand_products')
+                .update({ product_label: productLabels[productId] })
+                .eq('id', existingLink.id);
+            }
+          }
+        }
+        
+        if (linksToCreate.length > 0) {
+          const { error: bpErr } = await supabase
+            .from('brand_products')
+            .upsert(linksToCreate, {
+              onConflict: 'brand_id,product_id',
+              ignoreDuplicates: false
+            });
+          
+          if (bpErr) {
+            err.textContent = 'Brand products link error: ' + bpErr.message;
+            return;
+          }
+        }
+
+        // 3) stores (smart matching against existing stores, then link via brand_stores)
         stat.textContent='Matching stores against existing database…';
         const storeIds = [];
+        const unmatchedStores = [];
+        
         for(const s of storeList){
           try {
             const banner_id = await resolveBannerId(s.retailer);
             if (!banner_id) {
-              err.textContent = `Unknown retailer: ${s.retailer}. Please add retailers to retailer_banner_aliases table first.`;
-              return;
+              // Don't block - collect as unmatched
+              unmatchedStores.push({
+                retailer: s.retailer,
+                name: s.name,
+                address: s.address,
+                reason: 'Retailer not found in retailer_banner_aliases'
+              });
+              continue;
             }
             
             const street_norm = normStreet(s.address);
@@ -603,63 +767,197 @@
             const state = (s.state_zip || '').trim().split(/\s+/)[0]?.toUpperCase() || null;
             const zip5 = toZip5(s.state_zip);
             
-            const payload = {
-              banner_id,
-              name: s.name,
-              address: s.address,
-              city: s.city,
-              state: state,
-              zip_code: s.state_zip || zip5,
-              street_norm,
-              city_norm,
-              metro: s.metro,
-              status: 'unverified'
-            };
+            // Try to find existing store first
+            let storeId = await findExistingStore(s);
             
-            // Check if store already exists first (using unique index)
-            const { data: existingStore } = await supabase
-              .from('stores')
-              .select('id')
-              .eq('banner_id', banner_id)
-              .eq('street_norm', street_norm)
-              .eq('city_norm', city_norm)
-              .eq('state', state)
-              .maybeSingle();
-            
-            let upsertStore;
-            if (existingStore) {
-              upsertStore = existingStore;
-              console.log(`Store already exists: ${s.name}`);
-            } else {
-              const { data: newStore, error: sErr } = await supabase
-                .from('stores')
-                .insert(payload)
-                .select('id')
-                .single();
-              
-              if(sErr){ 
-                err.textContent = 'Store error: ' + sErr.message; 
-                console.error('Store insert error:', sErr);
-                return; 
+            if (!storeId) {
+              // Store doesn't exist - create only if we have enough info
+              if (s.address && s.city && state && zip5) {
+                const payload = {
+                  banner_id,
+                  name: s.name || `${s.retailer} - ${s.city}`,
+                  address: s.address,
+                  city: s.city,
+                  state: state,
+                  zip_code: zip5,
+                  street_norm,
+                  city_norm,
+                  metro: s.metro,
+                  status: 'unverified'
+                };
+                
+                const { data: newStore, error: sErr } = await supabase
+                  .from('stores')
+                  .insert(payload)
+                  .select('id')
+                  .single();
+                
+                if(sErr){ 
+                  // Don't block - collect as unmatched
+                  unmatchedStores.push({
+                    retailer: s.retailer,
+                    name: s.name,
+                    address: s.address,
+                    reason: sErr.message
+                  });
+                  continue;
+                }
+                
+                storeId = newStore.id;
+                console.log(`Created new store: ${s.name || payload.name}`);
+              } else {
+                // Not enough info to create - collect as unmatched
+                unmatchedStores.push({
+                  retailer: s.retailer,
+                  name: s.name,
+                  address: s.address,
+                  reason: 'Insufficient address data to create store'
+                });
+                continue;
               }
-              
-              upsertStore = newStore;
-              console.log(`Created new store: ${s.name}`);
             }
             
-            storeIds.push(upsertStore.id);
+            storeIds.push(storeId);
           } catch (error) {
             console.error('Error processing store:', error);
-            err.textContent = 'Store error: ' + error.message;
-            return;
+            unmatchedStores.push({
+              retailer: s.retailer || 'Unknown',
+              name: s.name || 'Unknown',
+              address: s.address || 'Unknown',
+              reason: error.message
+            });
+            // Don't block - continue processing other stores
           }
         }
-
-        ok.textContent='Saved! Brand, products, and stores created.';
+        
+        // Step 4: Link matched stores to brand via brand_stores
+        stat.textContent='Linking stores to brand…';
+        const brandStoreLinks = storeIds.map(storeId => ({
+          brand_id: brandId,
+          store_id: storeId,
+          source: 'csv'
+        }));
+        
+        if (brandStoreLinks.length > 0) {
+          const { error: bsErr } = await supabase
+            .from('brand_stores')
+            .upsert(brandStoreLinks, {
+              onConflict: 'brand_id,store_id',
+              ignoreDuplicates: false
+            });
+          
+          if (bsErr) {
+            console.warn('Brand stores link error:', bsErr);
+            // Don't block - this is secondary data
+          }
+        }
+        
+        // Step 5: Show success message with unmatched stores count
+        const productCount = productIds.length;
+        const storeCount = storeIds.length;
+        const unmatchedCount = unmatchedStores.length;
+        
+        let successMsg = `Saved! Brand created • ${productCount} products linked • ${storeCount} stores linked`;
+        if (unmatchedCount > 0) {
+          successMsg += ` • ${unmatchedCount} unmatched stores to review`;
+          console.warn('Unmatched stores:', unmatchedStores);
+          // Store unmatched in localStorage for admin review (optional)
+          localStorage.setItem(`unmatched_stores_${brandId}`, JSON.stringify(unmatchedStores));
+        }
+        
+        ok.textContent = successMsg;
         stat.textContent='';
         viewBrand.href = './brand-detail.html?id=' + brandId;
         viewBrand.style.display = 'inline';
       }
+
+      // Brand search/autocomplete for selecting existing brands
+      let allBrands = [];
+      async function loadBrands() {
+        const { data, error } = await supabase
+          .from('brands')
+          .select('id, name')
+          .order('name');
+        if (!error && data) {
+          allBrands = data;
+        }
+      }
+      
+      const brandSearch = el('brand_search');
+      const brandSuggestions = el('brand-suggestions');
+      const brandNameInput = el('brand_name');
+      const brandIdInput = el('brand_id');
+      
+      if (brandSearch) {
+        brandSearch.addEventListener('input', function(e) {
+          const query = e.target.value.toLowerCase().trim();
+          if (query.length < 2) {
+            brandSuggestions.classList.add('hidden');
+            return;
+          }
+          
+          const matches = allBrands.filter(brand => 
+            brand.name.toLowerCase().includes(query)
+          );
+          
+          if (matches.length > 0) {
+            brandSuggestions.innerHTML = '';
+            matches.forEach(brand => {
+              const div = document.createElement('div');
+              div.className = 'p-3 hover:bg-gray-50 cursor-pointer border-b border-gray-200 last:border-b-0';
+              div.textContent = brand.name;
+              div.addEventListener('mousedown', (e) => {
+                e.preventDefault();
+                brandIdInput.value = brand.id;
+                brandNameInput.value = brand.name;
+                brandSearch.value = brand.name;
+                brandSuggestions.classList.add('hidden');
+                
+                // Load existing products for this brand
+                loadBrandProducts(brand.id);
+              });
+              brandSuggestions.appendChild(div);
+            });
+            brandSuggestions.classList.remove('hidden');
+          } else {
+            brandSuggestions.classList.add('hidden');
+          }
+        });
+        
+        brandSearch.addEventListener('blur', function() {
+          setTimeout(() => brandSuggestions.classList.add('hidden'), 200);
+        });
+      }
+      
+      // Load products for existing brand when selected
+      async function loadBrandProducts(brandId) {
+        const { data: brandProducts } = await supabase
+          .from('brand_products')
+          .select('products(id, name, sku, upc), product_label')
+          .eq('brand_id', brandId);
+        
+        if (brandProducts && brandProducts.length > 0) {
+          // Clear existing product rows
+          products.innerHTML = '';
+          
+          // Add existing products to form
+          brandProducts.forEach(bp => {
+            const product = bp.products;
+            if (!product) return;
+            
+            addProductRow();
+            const lastRow = products.lastElementChild;
+            lastRow.querySelector('[data-k="name"]').value = bp.product_label || product.name || '';
+            lastRow.querySelector('[data-k="barcode"]').value = product.sku || product.upc || '';
+          });
+          
+          stat.textContent = `Loaded ${brandProducts.length} existing products for this brand`;
+          setTimeout(() => { stat.textContent = ''; }, 3000);
+        }
+      }
+      
+      // Initialize: load brands for search
+      loadBrands();
 
       document.getElementById('saveAll').onclick = async (e)=>{
         e.preventDefault();

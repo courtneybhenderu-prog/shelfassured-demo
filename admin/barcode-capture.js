@@ -538,34 +538,119 @@ async function handleFormSubmit(event) {
     console.log('💾 Saving product:', productData);
     
     try {
-        // Check if barcode already exists
-        const { data: existing, error: checkError } = await supabase
-            .from('products')
-            .select('id, name, brand')
-            .eq('barcode', productData.barcode)
-            .single();
+        const barcode = productData.barcode.trim();
+        const brandName = productData.brand.trim();
         
-        if (existing) {
-            const confirmOverwrite = confirm(`Product with barcode ${productData.barcode} already exists:\n\n${existing.brand} - ${existing.name}\n\nDo you want to overwrite it?`);
-            if (!confirmOverwrite) {
-                return;
-            }
-        }
-        
-        // Save to database
-        const { data, error } = await supabase
-            .from('products')
-            .upsert(productData, { onConflict: 'barcode' })
-            .select()
-            .single();
-        
-        if (error) {
-            console.error('Database error:', error);
-            showMessage('Error saving product: ' + error.message, 'error');
+        if (!barcode || !brandName) {
+            showMessage('Barcode and brand name are required', 'error');
             return;
         }
         
-        console.log('✅ Product saved successfully:', data);
+        // Step 1: Check if product exists by SKU (globally unique) - use sku or barcode column
+        const { data: existingProduct, error: checkError } = await supabase
+            .from('products')
+            .select('id, name, sku, barcode, brand')
+            .or(`sku.eq.${barcode},barcode.eq.${barcode}`)
+            .maybeSingle();
+        
+        let productId;
+        
+        if (existingProduct) {
+            // Product exists - don't create duplicate, just link to brand
+            const existingName = existingProduct.name || 'Unknown';
+            const existingBrand = existingProduct.brand || 'Unknown';
+            
+            const shouldLink = confirm(
+                `Product with SKU ${barcode} already exists:\n\n` +
+                `Brand: ${existingBrand}\n` +
+                `Name: ${existingName}\n\n` +
+                `This product will be linked to "${brandName}" instead of creating a duplicate.\n\n` +
+                `Continue?`
+            );
+            
+            if (!shouldLink) {
+                return;
+            }
+            
+            productId = existingProduct.id;
+            
+            // Update sku if barcode column exists but sku is null
+            if (!existingProduct.sku && barcode) {
+                await supabase
+                    .from('products')
+                    .update({ sku: barcode })
+                    .eq('id', productId);
+            }
+        } else {
+            // Product doesn't exist - create it with both barcode and sku
+            const newProductData = {
+                ...productData,
+                sku: barcode,  // Set sku = barcode for global uniqueness
+                barcode: barcode
+            };
+            
+            const { data: newProduct, error: insertError } = await supabase
+                .from('products')
+                .insert(newProductData)
+                .select('id')
+                .single();
+            
+            if (insertError) {
+                if (insertError.code === '23505') {
+                    // Unique constraint - product was created between check and insert
+                    // Retry fetch
+                    const { data: retryProduct } = await supabase
+                        .from('products')
+                        .select('id')
+                        .or(`sku.eq.${barcode},barcode.eq.${barcode}`)
+                        .maybeSingle();
+                    
+                    if (retryProduct) {
+                        productId = retryProduct.id;
+                        showMessage('Product already exists - linking to brand', 'warning');
+                    } else {
+                        throw insertError;
+                    }
+                } else {
+                    throw insertError;
+                }
+            } else {
+                productId = newProduct.id;
+            }
+        }
+        
+        // Step 2: Link product to brand via brand_products (if brand exists)
+        if (productId && brandName) {
+            // Find brand by name
+            const { data: brand, error: brandError } = await supabase
+                .from('brands')
+                .select('id')
+                .ilike('name', brandName)
+                .maybeSingle();
+            
+            if (brand && !brandError) {
+                // Brand exists - link product
+                const { error: linkError } = await supabase
+                    .from('brand_products')
+                    .upsert({
+                        brand_id: brand.id,
+                        product_id: productId
+                    }, {
+                        onConflict: 'brand_id,product_id',
+                        ignoreDuplicates: false
+                    });
+                
+                if (linkError) {
+                    console.warn('Could not link product to brand:', linkError);
+                } else {
+                    console.log(`✅ Linked product to brand: ${brandName}`);
+                }
+            } else {
+                console.log(`⚠️ Brand "${brandName}" not found - product saved but not linked`);
+            }
+        }
+        
+        console.log('✅ Product saved successfully:', productId);
         showMessage('Product saved successfully!', 'success');
         
         // Clear form
