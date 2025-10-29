@@ -4,12 +4,30 @@
 document.addEventListener('DOMContentLoaded', function() {
     // Check if user previously selected "Remember Me"
     const rememberedEmail = localStorage.getItem('rememberedEmail');
+    const rememberedPassword = localStorage.getItem('rememberedPassword');
     const rememberMeChecked = localStorage.getItem('rememberMe') === 'true';
     
     if (rememberedEmail && rememberMeChecked) {
         document.getElementById('login-email').value = rememberedEmail;
         document.getElementById('remember-me').checked = true;
+        
+        // Restore password if it was saved (base64 encoded)
+        if (rememberedPassword) {
+            try {
+                const decodedPassword = atob(rememberedPassword);
+                document.getElementById('login-password').value = decodedPassword;
+            } catch (error) {
+                console.warn('⚠️ Could not decode remembered password');
+            }
+        }
     }
+    
+    // Clear saved password if user unchecks "Remember me"
+    document.getElementById('remember-me').addEventListener('change', function(e) {
+        if (!e.target.checked) {
+            localStorage.removeItem('rememberedPassword');
+        }
+    });
 });
 
 // Handle forgot password
@@ -75,9 +93,12 @@ document.addEventListener('DOMContentLoaded', function() {
             if (rememberMe) {
                 localStorage.setItem('rememberedEmail', email);
                 localStorage.setItem('rememberMe', 'true');
+                // Save password (base64 encoded for basic obfuscation)
+                localStorage.setItem('rememberedPassword', btoa(password));
             } else {
                 localStorage.removeItem('rememberedEmail');
                 localStorage.removeItem('rememberMe');
+                localStorage.removeItem('rememberedPassword');
             }
             
             // Ensure profile exists and get role
