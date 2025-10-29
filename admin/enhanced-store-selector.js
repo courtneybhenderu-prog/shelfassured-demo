@@ -45,37 +45,132 @@ class StoreSelector {
         }
     }
 
-    // Load chain options directly from stores table
+    // Load chain options by extracting from STORE column
     async loadBannerOptions() {
-        const { data, error } = await supabase
+        console.log('🔄 Loading chains from STORE column...');
+        
+        // First, get all columns to see what's actually available
+        const { data: sampleData, error: sampleError } = await supabase
             .from('stores')
-            .select('store_chain')
-            .not('store_chain', 'is', null)
-            .neq('store_chain', '')
-            .order('store_chain', { ascending: true });
-
-        if (error) {
-            console.error('loadBannerOptions error:', error);
+            .select('*')
+            .eq('state', 'TX')
+            .limit(5);
+        
+        if (sampleData && sampleData.length > 0) {
+            console.log('🔍 First store sample (all columns):', sampleData[0]);
+            console.log('🔍 First store keys:', Object.keys(sampleData[0]));
+        }
+        
+        // Get STORE column - get ALL stores with STORE populated (paginate to get all 2,334)
+        let allStoresData = [];
+        let page = 0;
+        const pageSize = 1000;
+        let hasMore = true;
+        
+        while (hasMore) {
+            const { data: pageData, error: pageError } = await supabase
+                .from('stores')
+                .select('STORE')
+                .not('STORE', 'is', null)
+                .neq('STORE', '')
+                .order('STORE', { ascending: true })
+                .range(page * pageSize, (page + 1) * pageSize - 1);
+            
+            if (pageError) {
+                console.error('❌ Error loading page', page, ':', pageError);
+                if (page === 0) {
+                    // First page failed, try without pagination
+                    const { data: data2, error: error2 } = await supabase
+                        .from('stores')
+                        .select('STORE')
+                        .not('STORE', 'is', null)
+                        .neq('STORE', '')
+                        .order('STORE', { ascending: true })
+                        .limit(1000);
+                    if (error2) {
+                        console.error('❌ Fallback also failed:', error2);
+                        return [];
+                    }
+                    allStoresData = data2 || [];
+                    break;
+                }
+                break;
+            }
+            
+            if (pageData && pageData.length > 0) {
+                allStoresData = allStoresData.concat(pageData);
+                hasMore = pageData.length === pageSize;
+                page++;
+                console.log(`📄 Loaded page ${page}, total so far: ${allStoresData.length}`);
+            } else {
+                hasMore = false;
+            }
+        }
+        
+        const data = allStoresData;
+        
+        if (!data || data.length === 0) {
+            console.warn('⚠️ No store data returned');
             return [];
         }
 
-        const unique = [...new Set((data || []).map(r => r.store_chain))];
-        // Value MUST equal the exact store_chain used in WHERE
+        // Check what keys are actually in the response
+        if (data && data.length > 0) {
+            console.log('🔍 Sample row keys:', Object.keys(data[0]));
+            console.log('🔍 Sample row:', data[0]);
+            console.log(`📊 Total stores loaded: ${data.length}`);
+        }
+
+        // Extract chain name (banner)
+        // If STORE has " - ", extract part before it (e.g., "United Supermarkets - Andrews" → "United Supermarkets")
+        // If STORE has no " - ", use whole value (e.g., "BIG 8 FOODS" → "BIG 8 FOODS")
+        const extractChain = (storeName) => {
+            if (!storeName) return null;
+            const trimmed = storeName.trim();
+            const dashIndex = trimmed.indexOf(' - ');
+            if (dashIndex > 0) {
+                return trimmed.substring(0, dashIndex).trim();
+            }
+            return trimmed; // No dash, use whole value as chain
+        };
+
+        // Extract unique chains from all stores
+        const unique = [...new Set(data.map(r => {
+            const storeValue = r.STORE || r.store || r.name || r['STORE'];
+            return extractChain(storeValue);
+        }).filter(Boolean))];
+        
+        console.log('📊 Found', unique.length, 'unique chains (expected: 72)');
+        console.log('📊 First 10 chains:', unique.slice(0, 10));
+        console.log('📊 Last 10 chains:', unique.slice(-10));
+        
         const options = [{ value: 'all', label: 'All Chains' }]
             .concat(unique.map(chain => ({ value: chain, label: chain })));
 
-        console.log('✅ Loaded', options.length - 1, 'chain options from stores');
+        console.log('✅ Loaded', options.length - 1, 'chain options from STORE column');
 
         // Populate dropdown
         const dropdown = document.getElementById('chain-filter');
         if (dropdown) {
             dropdown.innerHTML = '';
+            let addedCount = 0;
             options.forEach(opt => {
                 const option = document.createElement('option');
                 option.value = opt.value;
                 option.textContent = opt.label;
                 dropdown.appendChild(option);
+                addedCount++;
             });
+            console.log(`✅ Added ${addedCount} options to dropdown (should be ${options.length})`);
+            console.log('✅ Dropdown now has', dropdown.options.length, 'total options');
+            
+            // Log last few options to verify
+            if (dropdown.options.length > 0) {
+                const lastFew = Array.from(dropdown.options).slice(-5).map(opt => opt.textContent);
+                console.log('📋 Last 5 options in dropdown:', lastFew);
+            }
+        } else {
+            console.warn('⚠️ Chain filter dropdown not found!');
         }
 
         return options;
@@ -147,35 +242,52 @@ class StoreSelector {
         this.searchTerm = term.toLowerCase();
         
         try {
-            // Build query for search
-            let query = supabase
-                .from('stores')
-                .select('id, name, address, city, state, zip_code, store_chain, metro')
-                .eq('state', 'TX');
-                // Removed is_active filter temporarily to see if that's the issue
+            console.log('🔍 Query built, executing with pagination...');
             
-            // Apply search filters (including metro)
-            if (this.searchTerm) {
-                query = query.or(`name.ilike.%${this.searchTerm}%,city.ilike.%${this.searchTerm}%,address.ilike.%${this.searchTerm}%,zip_code.ilike.%${this.searchTerm}%,metro.ilike.%${this.searchTerm}%`);
+            // Use pagination to get ALL matching stores (not just first 2000)
+            let allResults = [];
+            let from = 0;
+            const pageSize = 1000;
+            let hasMore = true;
+            
+            while (hasMore) {
+                // Rebuild query for each page to avoid Supabase query builder issues
+                let pageQuery = supabase
+                    .from('stores')
+                    .select('id, name, STORE, address, city, state, zip_code, metro, METRO, metro_norm')
+                    .not('STORE', 'is', null)
+                    .neq('STORE', '');
+                
+                // Apply search filters
+                if (this.searchTerm) {
+                    pageQuery = pageQuery.or(`STORE.ilike.%${this.searchTerm}%,name.ilike.%${this.searchTerm}%,city.ilike.%${this.searchTerm}%,address.ilike.%${this.searchTerm}%,zip_code.ilike.%${this.searchTerm}%,metro.ilike.%${this.searchTerm}%,METRO.ilike.%${this.searchTerm}%,metro_norm.ilike.%${this.searchTerm}%`);
+                }
+                
+                // Apply chain filter
+                pageQuery = this.filterByChainQuery(pageQuery, this.currentChainFilter);
+                
+                const { data: pageData, error: pageError } = await pageQuery
+                    .range(from, from + pageSize - 1);
+                
+                if (pageError) {
+                    console.error('Search error:', pageError);
+                    this.showError('Failed to search stores');
+                    return;
+                }
+                
+                if (pageData && pageData.length > 0) {
+                    allResults = allResults.concat(pageData);
+                    from += pageSize;
+                    hasMore = pageData.length === pageSize; // If we got a full page, there might be more
+                    console.log(`📄 Loaded page ${Math.floor(from/pageSize)}, total so far: ${allResults.length} stores`);
+                } else {
+                    hasMore = false;
+                }
             }
             
-            // Apply chain filter
-            query = this.filterByChainQuery(query, this.currentChainFilter);
+            console.log(`✅ Search returned ${allResults.length} stores (paginated)`);
             
-            console.log('🔍 Query built, executing...');
-            
-            // Execute query with higher limit
-            const { data, error } = await query.limit(500);
-            
-            if (error) {
-                console.error('Search error:', error);
-                this.showError('Failed to search stores');
-                return;
-            }
-            
-            console.log(`✅ Search returned ${data?.length || 0} stores`);
-            
-            this.allStores = data || [];
+            this.allStores = allResults;
             this.filteredStores = [...this.allStores];
             
             console.log(`🔍 Search "${term}" + Chain "${this.currentChainFilter || 'all'}" = ${this.filteredStores.length} stores`);
@@ -188,10 +300,11 @@ class StoreSelector {
         }
     }
 
-    // Helper function to apply chain filter to query (exact match)
+    // Helper function to apply chain filter to query (matches chain from STORE column)
     filterByChainQuery(query, selectedChain) {
         if (selectedChain && selectedChain !== 'all' && selectedChain !== 'All Chains') {
-            return query.eq('store_chain', selectedChain);
+            // Filter by STORE starting with chain name + " - "
+            return query.ilike('STORE', `${selectedChain} - %`);
         }
         return query;
     }
@@ -201,13 +314,14 @@ class StoreSelector {
         let query = supabase
             .from('stores')
             .select('*')
-            .eq('state', 'TX');
-            // Removed is_active filter
+            .not('STORE', 'is', null)  // Only stores with STORE populated
+            .neq('STORE', '');
+            // Removed state filter
         
         // Apply chain filter at database level (exact match)
         query = this.filterByChainQuery(query, selectedChain);
         
-        return query.order('name');
+        return query.order('STORE');
     }
 
     // Load stores from database when needed
@@ -376,11 +490,11 @@ class StoreSelector {
         container.innerHTML = html;
     }
 
-    // Get display name for store (use Column E - STORE from Google Sheet)
+    // Get display name for store (use STORE column)
     getDisplayName(store) {
-        // Use the 'name' field which should contain Column E (STORE) from Google Sheet
-        // This gives us clean names like "HEB - ALVIN", "WHOLE FOODS MARKET - CEDAR PARK"
-        return store.name || 'Unknown Store';
+        // Use the STORE column (uppercase) which contains values like "99 RANCH MARKET - AUSTIN"
+        // Supabase may return it as lowercase 'store'
+        return store.STORE || store.store || store.name || 'Unknown Store';
     }
 
     // Get formatted address (concatenate G+H+I+J: ADDRESS + CITY + STATE + ZIP)
