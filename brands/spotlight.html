@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Brand Spotlight - ShelfAssured</title>
+    
+    <!-- Feature Flag: Set to true when Shelfer access is enabled -->
+    <script>
+        window.BRAND_SPOTLIGHT_ENABLED = false; // Currently disabled for Shelfers
+    </script>
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.47.5/dist/umd/supabase.min.js"></script>
+    <link rel="stylesheet" href="../shared/styles.css">
+</head>
+<body>
+    <div class="min-h-screen bg-gray-100">
+        <!-- Header -->
+        <div class="bg-white shadow-sm border-b">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="flex justify-between items-center py-4">
+                    <div class="flex items-center">
+                        <h1 class="text-2xl font-bold text-gray-900">Brand Spotlight</h1>
+                        <div class="ml-4 flex items-center space-x-2">
+                            <span class="px-2 py-1 bg-yellow-100 text-yellow-800 text-xs font-medium rounded-full">FEATURE FLAGGED</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+            <div class="bg-white rounded-lg shadow p-6">
+                <div class="text-center">
+                    <div class="text-gray-400 text-6xl mb-4">🚧</div>
+                    <h2 class="text-2xl font-semibold text-gray-900 mb-2">Feature Coming Soon</h2>
+                    <p class="text-gray-600 mb-4">
+                        This page will provide Shelfers with read-only access to brand information and product catalogs.
+                    </p>
+                    <p class="text-sm text-gray-500">
+                        Feature flag: <code class="bg-gray-100 px-2 py-1 rounded">BRAND_SPOTLIGHT_ENABLED = false</code>
+                    </p>
+                    <div class="mt-6">
+                        <a href="../dashboard/shelfer.html" class="text-blue-600 hover:text-blue-800 underline">
+                            ← Back to Shelfer Dashboard
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Include shared API -->
+    <script src="../shared/api.js?v=20250113-4"></script>
+    
+    <script>
+        // Future implementation: Check if feature is enabled
+        document.addEventListener('DOMContentLoaded', async function() {
+            if (!window.BRAND_SPOTLIGHT_ENABLED) {
+                console.log('ℹ️ Brand Spotlight feature is disabled');
+                return;
+            }
+            
+            // Future: Implement Shelfer read-only brand access
+            // - Check user role (should be 'shelfer')
+            // - Get brand ID from URL parameter (?brand=:id)
+            // - Display brand information, products, stores (read-only)
+            // - No edit/delete capabilities
+            
+            console.log('✅ Brand Spotlight feature enabled');
+        });
+    </script>
+</body>
+</html>
+

@@ -461,21 +461,27 @@ document.addEventListener('DOMContentLoaded', async function() {
       const prof = await ensureProfile(user);
       const role = prof?.role ?? user?.user_metadata?.role ?? 'shelfer';
       
+      // Check for role mismatch
       if (role !== window.SA_PAGE_ROLE) {
-        console.log('❌ Role mismatch:', role, 'vs', window.SA_PAGE_ROLE);
-        // Redirect to correct dashboard
-        const base = location.origin.includes('localhost')
-          ? 'http://localhost:8000'
-          : 'https://courtneybhenderu-prog.github.io/shelfassured-demo';
-        
-        if (role === 'admin') {
-          window.location.href = `${base}/admin/dashboard.html`;
-        } else if (role === 'brand_client') {
-          window.location.href = `${base}/dashboard/brand-client.html`;
+        // Allow admin override if page explicitly allows it
+        if (role === 'admin' && window.SA_ALLOW_ADMIN_OVERRIDE === true) {
+          console.log('✅ Admin override allowed for', window.SA_PAGE_ROLE, 'page');
         } else {
-          window.location.href = `${base}/dashboard/shelfer.html`;
+          console.log('❌ Role mismatch:', role, 'vs', window.SA_PAGE_ROLE);
+          // Redirect to correct dashboard
+          const base = location.origin.includes('localhost')
+            ? 'http://localhost:8000'
+            : 'https://courtneybhenderu-prog.github.io/shelfassured-demo';
+          
+          if (role === 'admin') {
+            window.location.href = `${base}/admin/dashboard.html`;
+          } else if (role === 'brand_client') {
+            window.location.href = `${base}/dashboard/brand-client.html`;
+          } else {
+            window.location.href = `${base}/dashboard/shelfer.html`;
+          }
+          return;
         }
-        return;
       }
       
       console.log('✅ Role matches page requirement:', role);

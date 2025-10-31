@@ -248,11 +248,15 @@
                         <label class="block text-sm font-medium text-gray-700 mb-2">Products to Check *</label>
                         <div id="sku-selection" class="space-y-2">
                             <div class="space-y-2">
-                                <input type="text" id="product-name" placeholder="Product name (e.g., Original Boudain)" 
-                                       class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                                <div class="relative">
+                                    <input type="text" id="product-name" placeholder="Product name (e.g., Original Boudain)" 
+                                           class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                                    <div id="product-suggestions" class="absolute z-10 w-full bg-white border border-gray-300 rounded-lg shadow-lg hidden mt-1 max-h-60 overflow-y-auto"></div>
+                                </div>
                                 <input type="text" id="product-sku" placeholder="SKU/UPC (optional, e.g., 0123456789012)" 
                                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
                                 <button type="button" onclick="addSkuInput()" class="px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">Add Product</button>
+                                <div id="available-products" class="mt-3 p-2 bg-gray-50 rounded hidden"></div>
                             </div>
                         </div>
                         <p class="mt-1 text-sm text-gray-500">Add products to audit - SKU/UPC can be added later in store if not known</p>
@@ -354,12 +358,14 @@
                 
                 console.log('✅ User authenticated:', user.email);
                 
-                // Check if we're in edit mode
+                // Check if we're in edit mode or have brand_id preset
                 const urlParams = new URLSearchParams(window.location.search);
                 const editJobId = urlParams.get('edit_job_id');
+                const presetBrandId = urlParams.get('brand_id');
                 
                 console.log('🔍 URL params:', window.location.search);
                 console.log('🔍 editJobId:', editJobId);
+                console.log('🔍 presetBrandId:', presetBrandId);
                 
                 if (editJobId) {
                     console.log('🔄 Edit mode detected for job:', editJobId);
@@ -367,6 +373,12 @@
                 } else {
                     console.log('🔄 Create mode - loading initial data...');
                     await loadInitialData();
+                    
+                    // Preselect brand if brand_id is provided in URL
+                    if (presetBrandId) {
+                        console.log('🔄 Preselecting brand from URL:', presetBrandId);
+                        await preselectBrand(presetBrandId);
+                    }
                 }
                 
                 // Setup form event listeners
@@ -404,7 +416,7 @@
                         brands(name),
                         job_stores(stores(id, name, city, state)),
                         job_skus(skus(id, name, upc)),
-                        users(full_name)
+                        assigned_user:assigned_user_id(full_name)
                     `)
                     .eq('id', jobId)
                     .single();
@@ -421,42 +433,64 @@
                 console.log('✅ Job loaded for edit:', job);
                 
                 // Populate form fields
-                document.getElementById('job-title').value = job.title || '';
-                document.getElementById('job-description').value = job.description || '';
-                document.getElementById('brand-input').value = job.brands?.name || '';
+                const titleEl = document.getElementById('job-title');
+                const descEl = document.getElementById('job-description');
+                const brandEl = document.getElementById('brand-name');
+                if (titleEl) titleEl.value = job.title || '';
+                if (descEl) descEl.value = job.description || '';
+                if (brandEl) brandEl.value = job.brands?.name || '';
                 
                 // Set priority
                 if (job.priority) {
-                    document.getElementById('priority').value = job.priority;
+                    const prEl = document.getElementById('priority');
+                    if (prEl) prEl.value = job.priority;
                 }
                 
                 // Set due date
                 if (job.due_date) {
                     const dueDate = new Date(job.due_date).toISOString().split('T')[0];
-                    document.getElementById('due-date').value = dueDate;
+                    const dueEl = document.getElementById('due-date');
+                    if (dueEl) dueEl.value = dueDate;
                 }
                 
                 // Set assigned user
-                if (job.assigned_to) {
-                    document.getElementById('assigned-user').value = job.assigned_to;
+                if (job.assigned_user_id) {
+                    const auEl = document.getElementById('assigned-user');
+                    if (auEl) auEl.value = job.assigned_user_id;
                 }
                 
                 // Set additional notes
-                if (job.additional_notes) {
-                    document.getElementById('additional-notes').value = job.additional_notes;
+                if (job.instructions) {
+                    const notesEl = document.getElementById('special-instructions');
+                    if (notesEl) notesEl.value = job.instructions;
                 }
                 
-                // Populate stores
-                if (job.job_stores && job.job_stores.length > 0) {
-                    selectedStores = job.job_stores.map(js => js.stores);
-                    updateSelectedStoresDisplay();
+                // Populate stores (prefer job_store_skus if present; fallback to job_stores)
+                const storesFromJSKS = (job.job_store_skus || []).map(r => r.stores).filter(Boolean);
+                const storesFromJS = (job.job_stores || []).map(r => r.stores).filter(Boolean);
+                const uniqueStoresMap = new Map();
+                [...storesFromJSKS, ...storesFromJS].forEach(s => { if (s?.id) uniqueStoresMap.set(s.id, s); });
+                selectedStores = Array.from(uniqueStoresMap.values());
+                updateSelectedStoresDisplay();
+                if (window.storeSelector && typeof window.storeSelector.setSelectedStores === 'function') {
+                    try { 
+                        window.storeSelector.setSelectedStores(selectedStores);
+                        // Load stores so they appear in available stores list
+                        setTimeout(() => {
+                            if (window.storeSelector && typeof window.storeSelector.loadStoresFromDatabase === 'function') {
+                                window.storeSelector.loadStoresFromDatabase();
+                            }
+                        }, 500);
+                    } catch (_) {}
                 }
-                
-                // Populate SKUs
-                if (job.job_skus && job.job_skus.length > 0) {
-                    selectedSkus = job.job_skus.map(js => js.skus);
-                    updateSelectedSkusDisplay();
-                }
+
+                // Populate SKUs (prefer job_store_skus if present; fallback to job_skus)
+                const skusFromJSKS = (job.job_store_skus || []).map(r => r.skus).filter(Boolean);
+                const skusFromJK = (job.job_skus || []).map(r => r.skus).filter(Boolean);
+                const uniqueSkuMap = new Map();
+                [...skusFromJSKS, ...skusFromJK].forEach(k => { if (k?.id) uniqueSkuMap.set(k.id, k); });
+                selectedSkus = Array.from(uniqueSkuMap.values()).map(k => ({ name: k.name, sku: k.upc || null }));
+                updateSkuDisplay();
                 
                 // Change form title and button
                 document.querySelector('h2').textContent = 'Edit Job';
@@ -528,6 +562,63 @@
             }
         }
 
+        // Preselect brand from brand_id parameter
+        async function preselectBrand(brandId) {
+            try {
+                // Find brand in loaded brands array
+                const brand = brands.find(b => b.id === brandId);
+                
+                if (!brand) {
+                    console.warn('⚠️ Brand not found in loaded brands, fetching...');
+                    // Try to fetch it directly
+                    const { data, error } = await supabase
+                        .from('brands')
+                        .select('id, name')
+                        .eq('id', brandId)
+                        .single();
+                    
+                    if (error || !data) {
+                        console.error('❌ Error fetching brand:', error);
+                        return;
+                    }
+                    
+                    // Add to brands array for future use
+                    brands.push(data);
+                    
+                    // Set brand input
+                    const brandInput = document.getElementById('brand-name');
+                    if (brandInput) {
+                        brandInput.value = data.name;
+                        currentBrandId = data.id;
+                        console.log('Job form brand context:', data.id, data.name);
+                    }
+                    
+                    // Load brand products
+                    if (currentBrandId) {
+                        loadBrandProducts(currentBrandId);
+                    }
+                    
+                    return;
+                }
+                
+                // Brand found in loaded array
+                const brandInput = document.getElementById('brand-name');
+                if (brandInput) {
+                    brandInput.value = brand.name;
+                    currentBrandId = brand.id;
+                    console.log('Job form brand context:', brand.id, brand.name);
+                }
+                
+                // Load brand products
+                if (currentBrandId) {
+                    loadBrandProducts(currentBrandId);
+                }
+                
+            } catch (error) {
+                console.error('❌ Error preselecting brand:', error);
+            }
+        }
+
         // Populate user dropdown (filtered to Courtney and Marc only)
         function populateUserDropdown() {
             const select = document.getElementById('assigned-user');
@@ -566,6 +657,22 @@
                     console.log('✅ Brand autocomplete setup complete');
                 } else {
                     console.warn('⚠️ Brand input element not found');
+                }
+
+                console.log('🔄 Setting up product autocomplete...');
+                // Product autocomplete
+                const productInput = document.getElementById('product-name');
+                console.log('Product input element:', productInput);
+                if (productInput) {
+                    productInput.addEventListener('input', handleProductInput);
+                    productInput.addEventListener('blur', function(e) {
+                        setTimeout(() => {
+                            hideProductSuggestions();
+                        }, 200);
+                    });
+                    console.log('✅ Product autocomplete setup complete');
+                } else {
+                    console.warn('⚠️ Product input element not found');
                 }
                 
                 console.log('🔄 Setting up form submission...');
@@ -674,6 +781,145 @@
             document.getElementById('brand-suggestions').classList.add('hidden');
         }
 
+        // Product input handling
+        let productsCache = [];
+        let productsCachePromise = null;
+
+        async function loadProducts() {
+            if (productsCache.length > 0) return productsCache;
+            if (productsCachePromise) return productsCachePromise;
+            
+            productsCachePromise = (async () => {
+                try {
+                    const { data, error } = await supabase
+                        .from('products')
+                        .select('id, name, sku, upc')
+                        .order('name');
+                    
+                    if (error) throw error;
+                    
+                    productsCache = data || [];
+                    return productsCache;
+                } catch (error) {
+                    console.error('Error loading products:', error);
+                    return [];
+                } finally {
+                    productsCachePromise = null;
+                }
+            })();
+            
+            return productsCachePromise;
+        }
+
+        async function handleProductInput(event) {
+            const query = event.target.value.toLowerCase().trim();
+            console.log('🔍 Product input:', query);
+            if (query.length < 2) {
+                hideProductSuggestions();
+                return;
+            }
+
+            console.log('📦 Loading products...');
+            const allProducts = await loadProducts();
+            console.log('✅ Products loaded:', allProducts.length);
+            
+            // If a brand is selected, filter products linked to that brand via brand_products
+            let matches = [];
+            if (currentBrandId) {
+                console.log('🏷️ Filtering by brand:', currentBrandId);
+                try {
+                    // Get product IDs linked to the selected brand
+                    const { data: brandProducts, error } = await supabase
+                        .from('brand_products')
+                        .select('product_id')
+                        .eq('brand_id', currentBrandId);
+                    
+                    if (error) {
+                        console.error('Error fetching brand products:', error);
+                    } else {
+                        console.log('📋 Brand products found:', brandProducts?.length || 0);
+                    }
+                    
+                    if (!error && brandProducts && brandProducts.length > 0) {
+                        const linkedProductIds = brandProducts.map(bp => bp.product_id);
+                        matches = allProducts
+                            .filter(p => linkedProductIds.includes(p.id))
+                            .filter(p => p.name && p.name.toLowerCase().includes(query))
+                            .slice(0, 20); // Limit to 20 results
+                        console.log('✅ Matches from brand:', matches.length);
+                    }
+                } catch (error) {
+                    console.error('Error filtering products by brand:', error);
+                }
+            }
+            
+            // If no brand selected or no matches from brand, search all products
+            if (matches.length === 0) {
+                console.log('🔍 Searching all products...');
+                matches = allProducts
+                    .filter(p => p.name && p.name.toLowerCase().includes(query))
+                    .slice(0, 20);
+                console.log('✅ All product matches:', matches.length);
+            }
+            
+            console.log('🎯 Final matches:', matches.length);
+            showProductSuggestions(matches);
+        }
+
+        // Show product suggestions
+        function showProductSuggestions(matches) {
+            console.log('🎨 Showing product suggestions:', matches.length);
+            const container = document.getElementById('product-suggestions');
+            
+            if (!container) {
+                console.error('❌ Product suggestions container not found!');
+                return;
+            }
+            
+            container.innerHTML = '';
+            
+            if (matches.length === 0) {
+                container.innerHTML = '<div class="p-3 text-gray-500">No matching products found</div>';
+            } else {
+                console.log('📝 Adding', matches.length, 'product suggestions to dropdown');
+                matches.forEach(product => {
+                    const div = document.createElement('div');
+                    div.className = 'p-3 hover:bg-gray-50 cursor-pointer border-b border-gray-200 last:border-b-0';
+                    div.innerHTML = `
+                        <div class="font-medium">${escapeHtml(product.name || 'Unnamed Product')}</div>
+                        ${product.sku ? `<div class="text-xs text-gray-500">SKU: ${escapeHtml(product.sku)}</div>` : ''}
+                    `;
+                    div.addEventListener('mousedown', (e) => {
+                        e.preventDefault();
+                        document.getElementById('product-name').value = product.name;
+                        if (product.sku) {
+                            document.getElementById('product-sku').value = product.sku;
+                        }
+                        hideProductSuggestions();
+                    });
+                    container.appendChild(div);
+                });
+            }
+            
+            container.classList.remove('hidden');
+            console.log('✅ Dropdown should now be visible');
+        }
+
+        // Hide product suggestions
+        function hideProductSuggestions() {
+            const container = document.getElementById('product-suggestions');
+            if (container) {
+                container.classList.add('hidden');
+            }
+        }
+
+        // Helper function to escape HTML
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
         // Handle all stores checkbox
         function handleAllStoresChange(event) {
             const storeSelection = document.getElementById('store-selection');
@@ -713,7 +959,7 @@
         // Load products from brand_products when brand is selected
         async function loadBrandProducts(brandId) {
             try {
-                stat.textContent = 'Loading brand products...';
+                console.log('📦 Loading products for brand:', brandId);
                 
                 // Fetch products linked to this brand via brand_products
                 const { data: brandProducts, error } = await supabase
@@ -731,42 +977,55 @@
                     .eq('brand_id', brandId);
                 
                 if (error) {
-                    console.warn('Could not load brand products:', error);
-                    stat.textContent = '';
+                    console.error('Error fetching brand products:', error);
                     return;
                 }
                 
-                // Clear existing selected products (optional - user may want to keep manually added)
-                // For now, we'll pre-fill but not clear - user can remove if needed
+                // Render available products list with "+ Add" buttons; do NOT auto-add
+                const avail = document.getElementById('available-products');
+                if (!avail) return;
                 
-                // Add products to selectedSkus (avoid duplicates)
-                if (brandProducts && brandProducts.length > 0) {
-                    brandProducts.forEach(bp => {
-                        const product = bp.products;
-                        if (!product) return;
-                        
-                        // Check if already added
-                        const exists = selectedSkus.find(s => s.name === (bp.product_label || product.name));
-                        if (!exists) {
-                            selectedSkus.push({
-                                name: bp.product_label || product.name, // Use product_label if available, else products.name
-                                sku: product.sku || product.upc || '',
-                                product_id: product.id // Store for later use
-                            });
-                        }
-                    });
-                    
-                    updateSkuDisplay();
-                    stat.textContent = `Loaded ${brandProducts.length} products for this brand`;
-                    setTimeout(() => { stat.textContent = ''; }, 3000);
-                } else {
-                    stat.textContent = 'No products linked to this brand yet';
-                    setTimeout(() => { stat.textContent = ''; }, 3000);
+                if (!brandProducts || brandProducts.length === 0) {
+                    avail.classList.remove('hidden');
+                    avail.innerHTML = '<div class="text-sm text-gray-500">No available products for this brand yet</div>';
+                    return;
                 }
+                
+                const items = brandProducts
+                    .map(bp => ({
+                        id: bp.products?.id || bp.product_id,
+                        name: bp.product_label || bp.products?.name || 'Unknown',
+                        sku: bp.products?.sku || bp.products?.upc || ''
+                    }))
+                    .filter(p => p.name && p.name !== 'Unknown');
+                
+                avail.classList.remove('hidden');
+                avail.innerHTML = `
+                    <div class="text-sm font-medium text-gray-700 mb-1">Available Products:</div>
+                    <div class="flex flex-wrap gap-2">
+                        ${items.map(p => `
+                            <span class=\"px-2 py-1 bg-gray-100 text-gray-800 text-xs rounded-full flex items-center gap-1\">
+                                <span>${p.name}${p.sku ? ` (${p.sku})` : ''}</span>
+                                <button type=\"button\" class=\"text-blue-600 hover:text-blue-800\" onclick=\"addAvailableProduct('${encodeURIComponent(p.name)}','${encodeURIComponent(p.sku || '')}')\">+ Add</button>
+                            </span>
+                        `).join('')}
+                    </div>
+                `;
+                console.log('✅ Available products rendered:', items.length);
             } catch (error) {
                 console.error('Error loading brand products:', error);
-                stat.textContent = '';
             }
+        }
+
+        // Add from available list into Selected Products
+        function addAvailableProduct(encodedName, encodedSku) {
+            const name = decodeURIComponent(encodedName);
+            const sku = decodeURIComponent(encodedSku);
+            const exists = selectedSkus.find(s => s.name === name);
+            if (exists) return;
+            selectedSkus.push({ name, sku: sku || null });
+            updateSkuDisplay();
+            updateJobSummary();
         }
         
         // Check if store is in brand_stores (non-blocking warning)
@@ -996,6 +1255,14 @@
                 if (!validateForm()) {
                     return;
                 }
+                // Confirmation if creating multiple jobs (one per store)
+                const selectedStores = storeSelector ? storeSelector.getSelectedStores() : [];
+                if (selectedStores.length > 1) {
+                    const skusCount = selectedSkus.length;
+                    const totalJobs = selectedStores.length; // one per store
+                    const confirmed = confirm(`This will create ${totalJobs} job(s) with ${skusCount} product(s) each. Continue?`);
+                    if (!confirmed) return;
+                }
                 
                 // Show loading state
                 setLoadingState(true);
@@ -1099,66 +1366,52 @@
                 const skuIds = await ensureSkusExist(formData.skus, brandId);
                 console.log('✅ SKU IDs:', skuIds);
                 
-                // Create ONE job record (not one per store-SKU combination)
-                const jobData = {
-                    title: formData.title,
-                    description: formData.description,
-                    brand_id: brandId,
-                    assigned_user_id: formData.assignedUserId,
-                    priority: formData.priority,
-                    due_date: formData.dueDate || null,
-                    instructions: formData.specialInstructions,
-                    status: 'pending',
-                    payout_per_store: 5.00, // Standard $5 per store
-                    created_at: new Date().toISOString()
-                };
-                
-                console.log('🔄 Creating main job record...');
-                const { data: jobRow, error: jobErr } = await supabase
-                    .from('jobs')
-                    .insert(jobData)
-                    .select()
-                    .single();
-                
-                if (jobErr) throw jobErr;
-                console.log('✅ Main job created:', jobRow.id);
-                
-                // Create assignments in job_store_skus (3-way junction table)
-                console.log('🔄 Creating job-store-sku assignments...');
-                const assignments = [];
+                // Create ONE job per store with the same product set
+                let totalAssignments = 0;
                 for (const storeId of storeIds) {
-                    for (const skuId of skuIds) {
-                        assignments.push({
-                            job_id: jobRow.id,
-                            store_id: storeId,
-                            sku_id: skuId
-                        });
-                    }
+                    const jobData = {
+                        title: formData.title,
+                        description: formData.description,
+                        brand_id: brandId,
+                        assigned_user_id: formData.assignedUserId,
+                        priority: formData.priority,
+                        due_date: formData.dueDate || null,
+                        instructions: formData.specialInstructions,
+                        status: 'pending',
+                        payout_per_store: 5.00,
+                        created_at: new Date().toISOString()
+                    };
+                    const { data: jobRow, error: jobErr } = await supabase
+                        .from('jobs')
+                        .insert(jobData)
+                        .select()
+                        .single();
+                    if (jobErr) throw jobErr;
+                    
+                    const assignments = skuIds.map(skuId => ({
+                        job_id: jobRow.id,
+                        store_id: storeId,
+                        sku_id: skuId
+                    }));
+                    const { error: assignmentError } = await supabase
+                        .from('job_store_skus')
+                        .upsert(assignments, { onConflict: 'job_id,store_id,sku_id', ignoreDuplicates: true });
+                    if (assignmentError) throw assignmentError;
+                    totalAssignments += assignments.length;
+                    createdJobs.push(jobRow);
                 }
                 
-                const { error: assignmentError } = await supabase
-                    .from('job_store_skus')
-                    .upsert(assignments, { 
-                        onConflict: 'job_id,store_id,sku_id', 
-                        ignoreDuplicates: true 
-                    });
-                
-                if (assignmentError) throw assignmentError;
-                console.log('✅ Assignments created:', assignments.length);
-                
-                // Add stores to brand_stores if user checked the checkbox (optional, non-blocking)
+                // Add stores to brand_stores if requested (non-blocking)
                 await addStoresToBrandAfterJob(brandId, storeIds);
-                
-                createdJobs.push(jobRow);
                 
                 if (errors.length > 0 && createdJobs.length === 0) {
                     throw new Error(`All jobs failed to create: ${errors.join(', ')}`);
                 }
                 
                 return {
-                    created: createdJobs.length, // Should be 1 (one job)
-                    assignments: assignments.length, // Multiple assignments
-                    jobId: jobRow.id,
+                    created: createdJobs.length,
+                    assignments: createdJobs.length * skuIds.length,
+                    jobId: createdJobs[0]?.id,
                     errors: errors.length
                 };
                 
@@ -1302,7 +1555,11 @@
                         brands(name),
                         assigned_user:assigned_user_id(full_name),
                         job_stores(stores(name, city, state)),
-                        job_skus(skus(name))
+                        job_skus(skus(name)),
+                        job_store_skus(
+                            stores(name, city, state),
+                            skus(name)
+                        )
                     `)
                     .order('created_at', { ascending: false });
 
@@ -1340,8 +1597,14 @@
             const html = jobs.map(job => {
                 const brandName = job.brands?.name || 'Unknown Brand';
                 const assignedUser = job.assigned_user?.full_name || 'Unassigned';
-                const stores = job.job_stores?.map(js => js.stores?.name || 'Unknown Store').join(', ') || 'No stores';
-                const skus = job.job_skus?.map(js => js.skus?.name || 'Unknown SKU').join(', ') || 'No SKUs';
+                const storesFromJS = (job.job_stores || []).map(js => js.stores?.name).filter(Boolean);
+                const skusFromJK = (job.job_skus || []).map(js => js.skus?.name).filter(Boolean);
+                const storesFromJSKS = (job.job_store_skus || []).map(r => r.stores?.name).filter(Boolean);
+                const skusFromJSKS = (job.job_store_skus || []).map(r => r.skus?.name).filter(Boolean);
+                const storeSet = new Set([...(storesFromJS || []), ...(storesFromJSKS || [])]);
+                const skuSet = new Set([...(skusFromJK || []), ...(skusFromJSKS || [])]);
+                const stores = (storeSet.size > 0 ? Array.from(storeSet) : []).join(', ') || 'No stores';
+                const skus = (skuSet.size > 0 ? Array.from(skuSet) : []).join(', ') || 'No SKUs';
                 
                 const statusColor = {
                     'pending': 'bg-yellow-100 text-yellow-800',
@@ -1350,6 +1613,7 @@
                     'cancelled': 'bg-red-100 text-red-800'
                 }[job.status] || 'bg-gray-100 text-gray-800';
 
+                const shortId = (job.id || '').split('-')[0] || (job.id || '').slice(0,8);
                 return `
                     <div class="px-6 py-4 hover:bg-gray-50">
                         <div class="flex items-center justify-between">
@@ -1361,6 +1625,7 @@
                                     </span>
                                 </div>
                                 <div class="mt-1 text-sm text-gray-500">
+                                    <div class="flex items-center gap-2"><strong>ID:</strong> <span id="job-id-${job.id}" title="${job.id}">${shortId}</span> <button class="text-blue-600 hover:text-blue-800 text-xs" onclick="navigator.clipboard.writeText('${job.id}')">Copy</button></div>
                                     <div><strong>Brand:</strong> ${brandName}</div>
                                     <div><strong>Assigned to:</strong> ${assignedUser}</div>
                                     <div><strong>Stores:</strong> ${stores}</div>
@@ -1382,13 +1647,17 @@
             container.innerHTML = html;
         }
 
-        // View job details (admin edit mode)
-        window.viewJobDetails = function(jobId) {
-            console.log('🔍 viewJobDetails called with jobId:', jobId);
-            console.log('🔍 Current URL:', window.location.href);
-            const newUrl = `manage-jobs.html?edit_job_id=${jobId}`;
-            console.log('🔍 Redirecting to:', newUrl);
-            window.location.href = newUrl;
+        // View job details (admin edit mode) without full reload
+        window.viewJobDetails = async function(jobId) {
+            try {
+                await loadJobForEdit(jobId);
+                if (history && history.pushState) {
+                    history.pushState(null, '', `manage-jobs.html?edit_job_id=${jobId}`);
+                }
+            } catch (e) {
+                // Fallback to navigation if inline load fails
+                window.location.href = `manage-jobs.html?edit_job_id=${jobId}`;
+            }
         }
 
         // Update job

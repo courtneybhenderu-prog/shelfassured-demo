@@ -586,6 +586,42 @@ class StoreSelector {
         return this.selectedStores;
     }
 
+    // Programmatically set selected stores (array of store objects with id/name/STORE...)
+    setSelectedStores(stores) {
+        if (!Array.isArray(stores)) return;
+        // Normalize to unique by id
+        const uniq = new Map();
+        stores.forEach(s => { if (s && s.id) uniq.set(s.id, s); });
+        this.selectedStores = Array.from(uniq.values());
+        this.renderSelectedStores();
+        this.updateCounts();
+        this.updateJobSummary();
+    }
+
+    // Programmatically set selected stores by IDs (fetch details if not in memory)
+    async setSelectedStoresByIds(storeIds) {
+        if (!Array.isArray(storeIds) || storeIds.length === 0) {
+            this.setSelectedStores([]);
+            return;
+        }
+        const need = new Set(storeIds);
+        const have = new Map(this.allStores.map(s => [s.id, s]));
+        const toFetch = storeIds.filter(id => !have.has(id));
+
+        let fetched = [];
+        if (toFetch.length > 0) {
+            const { data, error } = await supabase
+                .from('stores')
+                .select('id, name, STORE, address, city, state, zip_code')
+                .in('id', toFetch);
+            if (!error && data) fetched = data;
+        }
+        const all = storeIds
+            .map(id => have.get(id) || fetched.find(s => s.id === id))
+            .filter(Boolean);
+        this.setSelectedStores(all);
+    }
+
     // Add new store (for future implementation)
     async addNewStore(storeData) {
         try {

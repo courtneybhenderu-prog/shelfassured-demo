@@ -27,10 +27,17 @@
     .err{color:#b91c1c;font-size:13px}
     .ok{color:#065f46;font-size:13px}
     code.small{font-size:11px;color:#6b7280}
+    .back-link{display:inline-flex;align-items:center;color:#2563eb;text-decoration:none;font-size:14px;font-weight:500;transition:color 0.2s}
+    .back-link:hover{color:#1d4ed8}
   </style>
 </head>
 <body>
   <div class="wrap">
+    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px;">
+      <a href="dashboard.html" class="back-link">
+        ← Back to Admin Dashboard
+      </a>
+    </div>
     <h1>Brand Onboarding</h1>
     <p class="hint">We stop the silent, invisible margin erosion caused by bad retail execution. Help us understand your retail landscape so we can deliver real-time shelf visibility and competitive intelligence.</p>
 
@@ -63,6 +70,21 @@
         <div>
           <label>Phone</label>
           <input id="brand_phone" placeholder="(555) 123-4567" />
+        </div>
+        <div class="full">
+          <label>Brand Logo</label>
+          <div class="flex items-center space-x-4">
+            <input type="file" id="brand_logo_file" accept="image/*" class="hidden" />
+            <button type="button" onclick="document.getElementById('brand_logo_file').click()" 
+                    class="px-4 py-2 bg-gray-200 rounded-lg hover:bg-gray-300 text-sm">
+              Upload Logo
+            </button>
+            <input type="text" id="brand_logo_url" placeholder="Or paste logo URL" class="flex-1" />
+            <div id="brand_logo_preview" class="w-16 h-16 border border-gray-300 rounded-lg flex items-center justify-center bg-gray-50 hidden">
+              <img id="brand_logo_preview_img" src="" alt="Logo preview" class="max-w-full max-h-full object-contain" />
+            </div>
+          </div>
+          <p class="hint" style="font-size:11px;margin-top:4px;">Upload image or paste URL (JPG, PNG, SVG)</p>
         </div>
         <div class="full">
           <label>Address</label>
@@ -562,6 +584,10 @@
         const email = document.getElementById('brand_email').value.trim() || null;
         const phone = document.getElementById('brand_phone').value.trim() || null;
         const addr = document.getElementById('brand_addr').value.trim() || null;
+        
+        // Get logo URL or file (will upload after we have brandId)
+        let logoUrl = document.getElementById('brand_logo_url').value.trim() || null;
+        const logoFile = document.getElementById('brand_logo_file').files[0];
 
         const prodList = readProducts();
         const storeList = readStores();
@@ -576,14 +602,65 @@
         if (existingBrandId) {
           // Update existing brand
           brandId = existingBrandId;
-          const { error: updateErr } = await supabase.rpc('upsert_brand_public', {
-            p_id: brandId,
-            p_name: name,
-            p_website: site,
-            p_primary_email: email,
-            p_phone: phone,
-            p_address: addr,
-          });
+          
+          // Upload logo file if provided (now we have brandId)
+          if (logoFile) {
+            stat.textContent='Uploading logo…';
+            try {
+              const fileName = `${brandId}_${Date.now()}.${logoFile.name.split('.').pop()}`;
+              const { data: uploadData, error: uploadError } = await supabase.storage
+                .from('brand_logos')
+                .upload(fileName, logoFile, { upsert: false });
+              
+              if (uploadError) {
+                console.error('Logo upload error:', uploadError);
+                if (uploadError.message.includes('Bucket not found')) {
+                  // Non-blocking: warn but continue without logo
+                  console.warn('Brand logos storage bucket not configured. Skipping logo upload. Use logo URL field instead.');
+                  stat.textContent = 'Warning: Logo bucket not configured. Using URL if provided, or continue without logo.';
+                  // Don't return - continue with brand save without logo
+                  logoUrl = null; // Clear logoUrl so we don't try to save a bad URL
+                } else if (uploadError.message.includes('row-level security policy') || uploadError.message.includes('RLS')) {
+                  // RLS policy issue
+                  console.warn('Storage bucket RLS policy blocking upload. Adding policies in Supabase Dashboard → Storage → brand_logos → Policies');
+                  stat.textContent = 'Upload blocked by security policy. See FIX-STORAGE-RLS-BRAND-LOGOS.md for instructions. You can continue with URL only.';
+                  logoUrl = null; // Don't save a bad URL
+                  // Don't throw - allow user to continue without logo
+                } else {
+                  throw uploadError;
+                }
+              }
+              
+              const { data: urlData } = supabase.storage
+                .from('brand_logos')
+                .getPublicUrl(fileName);
+              
+              // Ensure we have the public URL
+              if (urlData && urlData.publicUrl) {
+                logoUrl = urlData.publicUrl;
+                console.log('✅ Logo uploaded successfully:', logoUrl);
+              } else {
+                console.error('❌ Failed to get public URL:', urlData);
+                throw new Error('Failed to get public URL for uploaded logo');
+              }
+            } catch (uploadErr) {
+              err.textContent = `Logo upload failed: ${uploadErr.message}. You can continue with URL only.`;
+              return;
+            }
+          }
+          
+          // Update existing brand (including logo)
+          const { error: updateErr } = await supabase
+            .from('brands')
+            .update({
+              name: name,
+              website: site,
+              primary_email: email,
+              phone: phone,
+              address: addr,
+              logo_url: logoUrl
+            })
+            .eq('id', brandId);
           if(updateErr){ err.textContent=updateErr.message; return; }
         } else {
           // Create new brand or upsert by name
@@ -597,6 +674,60 @@
           });
           if(rpcErr){ err.textContent=rpcErr.message; return; }
           brandId = brandResult;
+          
+          // Upload logo file if provided (now we have brandId)
+          if (logoFile) {
+            stat.textContent='Uploading logo…';
+            try {
+              const fileName = `${brandId}_${Date.now()}.${logoFile.name.split('.').pop()}`;
+              const { data: uploadData, error: uploadError } = await supabase.storage
+                .from('brand_logos')
+                .upload(fileName, logoFile, { upsert: false });
+              
+              if (uploadError) {
+                console.error('Logo upload error:', uploadError);
+                if (uploadError.message.includes('Bucket not found')) {
+                  // Non-blocking: warn but continue without logo
+                  console.warn('Brand logos storage bucket not configured. Skipping logo upload. Use logo URL field instead.');
+                  stat.textContent = 'Warning: Logo bucket not configured. Using URL if provided, or continue without logo.';
+                  // Don't throw - continue with brand save without logo
+                  logoUrl = null; // Clear logoUrl so we don't try to save a bad URL
+                } else if (uploadError.message.includes('row-level security policy') || uploadError.message.includes('RLS')) {
+                  // RLS policy issue
+                  console.warn('Storage bucket RLS policy blocking upload. Add policies in Supabase Dashboard → Storage → brand_logos → Policies');
+                  stat.textContent = 'Upload blocked by security policy. See FIX-STORAGE-RLS-BRAND-LOGOS.md for instructions. You can continue with URL only.';
+                  logoUrl = null; // Don't save a bad URL
+                  // Don't throw - allow user to continue without logo
+                } else {
+                  throw uploadError;
+                }
+              } else {
+                const { data: urlData } = supabase.storage
+                  .from('brand_logos')
+                  .getPublicUrl(fileName);
+                
+                // Ensure we have the public URL
+                if (urlData && urlData.publicUrl) {
+                  logoUrl = urlData.publicUrl;
+                  console.log('✅ Logo uploaded successfully:', logoUrl);
+                } else {
+                  console.error('❌ Failed to get public URL:', urlData);
+                  // Don't throw - continue without logo
+                  logoUrl = null;
+                }
+              }
+            } catch (uploadErr) {
+              console.warn('Logo upload failed:', uploadErr.message, '- continuing without logo');
+            }
+          }
+          
+          // Update logo_url after brand creation (if we have a logo URL)
+          if (logoUrl) {
+            await supabase
+              .from('brands')
+              .update({ logo_url: logoUrl })
+              .eq('id', brandId);
+          }
         }
 
         // 2) products - upsert by SKU (globally unique) with duplicate prevention
@@ -913,8 +1044,9 @@
                 brandSearch.value = brand.name;
                 brandSuggestions.classList.add('hidden');
                 
-                // Load existing products for this brand
+                // Load existing products and brand data (logo, website, address) for this brand
                 loadBrandProducts(brand.id);
+                loadBrandData(brand.id);
               });
               brandSuggestions.appendChild(div);
             });
@@ -931,30 +1063,189 @@
       
       // Load products for existing brand when selected
       async function loadBrandProducts(brandId) {
-        const { data: brandProducts } = await supabase
+        console.log('📦 Loading products for brand ID:', brandId);
+        
+        if (!products) {
+          console.error('❌ Products container element not found');
+          return;
+        }
+        
+        // Try the JOIN query first (more efficient)
+        let { data: brandProducts, error } = await supabase
           .from('brand_products')
           .select('products(id, name, sku, upc), product_label')
           .eq('brand_id', brandId);
+        
+        // If JOIN fails, try fetching separately (fallback)
+        if (error) {
+          console.warn('⚠️ JOIN query failed, trying separate queries:', error.message);
+          
+          // Fetch brand_products without JOIN
+          const { data: bpData, error: bpError } = await supabase
+            .from('brand_products')
+            .select('product_id, product_label')
+            .eq('brand_id', brandId);
+          
+          if (bpError) {
+            console.error('❌ Error loading brand products:', bpError);
+            stat.textContent = `Error loading products: ${bpError.message}`;
+            setTimeout(() => { stat.textContent = ''; }, 5000);
+            return;
+          }
+          
+          if (bpData && bpData.length > 0) {
+            // Fetch products separately
+            const productIds = bpData.map(bp => bp.product_id).filter(id => id);
+            const { data: productsData, error: pError } = await supabase
+              .from('products')
+              .select('id, name, sku, upc')
+              .in('id', productIds);
+            
+            if (pError) {
+              console.error('❌ Error loading products:', pError);
+              stat.textContent = `Error loading products: ${pError.message}`;
+              setTimeout(() => { stat.textContent = ''; }, 5000);
+              return;
+            }
+            
+            // Combine the data
+            brandProducts = bpData.map(bp => {
+              const product = productsData?.find(p => p.id === bp.product_id);
+              return {
+                products: product,
+                product_label: bp.product_label
+              };
+            }).filter(bp => bp.products); // Only include if product found
+            
+            error = null; // Clear error since we succeeded with fallback
+          } else {
+            brandProducts = [];
+            error = null;
+          }
+        }
+        
+        if (error) {
+          console.error('❌ Error loading brand products:', error);
+          stat.textContent = `Error loading products: ${error.message}`;
+          setTimeout(() => { stat.textContent = ''; }, 5000);
+          return;
+        }
+        
+        console.log('📊 Brand products query result:', { data: brandProducts, count: brandProducts?.length || 0 });
         
         if (brandProducts && brandProducts.length > 0) {
           // Clear existing product rows
           products.innerHTML = '';
           
+          console.log(`✅ Found ${brandProducts.length} products, adding to form...`);
+          
           // Add existing products to form
-          brandProducts.forEach(bp => {
+          let addedCount = 0;
+          brandProducts.forEach((bp, index) => {
             const product = bp.products;
-            if (!product) return;
+            if (!product) {
+              console.warn(`⚠️ Brand product ${index} has no associated product record`);
+              return;
+            }
             
             addProductRow();
             const lastRow = products.lastElementChild;
-            lastRow.querySelector('[data-k="name"]').value = bp.product_label || product.name || '';
-            lastRow.querySelector('[data-k="barcode"]').value = product.sku || product.upc || '';
+            if (lastRow) {
+              const nameInput = lastRow.querySelector('[data-k="name"]');
+              const barcodeInput = lastRow.querySelector('[data-k="barcode"]');
+              
+              if (nameInput) {
+                nameInput.value = bp.product_label || product.name || '';
+              }
+              if (barcodeInput) {
+                barcodeInput.value = product.sku || product.upc || '';
+              }
+              
+              addedCount++;
+              console.log(`  ✓ Added product: ${bp.product_label || product.name || 'Unknown'}`);
+            } else {
+              console.error(`❌ Failed to add product row for product ${index}`);
+            }
           });
           
-          stat.textContent = `Loaded ${brandProducts.length} existing products for this brand`;
+          stat.textContent = `Loaded ${addedCount} product${addedCount !== 1 ? 's' : ''} for this brand`;
+          setTimeout(() => { stat.textContent = ''; }, 3000);
+        } else {
+          console.log('ℹ️ No products found for this brand');
+          stat.textContent = 'No products found for this brand';
           setTimeout(() => { stat.textContent = ''; }, 3000);
         }
       }
+      
+      // Load brand data (logo, website, address) when existing brand is selected
+      async function loadBrandData(brandId) {
+        const { data, error } = await supabase
+          .from('brands')
+          .select('logo_url, website, address')
+          .eq('id', brandId)
+          .single();
+        
+        if (!error && data) {
+          // Load logo
+          if (data.logo_url) {
+            document.getElementById('brand_logo_url').value = data.logo_url;
+            showLogoPreview(data.logo_url);
+          }
+          
+          // Load website if not already filled
+          const websiteInput = document.getElementById('brand_site');
+          if (data.website && (!websiteInput.value || websiteInput.value === 'https://www.company.com')) {
+            websiteInput.value = data.website;
+          }
+          
+          // Load address if not already filled
+          const addressInput = document.getElementById('brand_addr');
+          if (data.address && (!addressInput.value || addressInput.value === 'Street, City, State, ZIP')) {
+            addressInput.value = data.address;
+          }
+        }
+      }
+      
+      // Show logo preview
+      function showLogoPreview(url) {
+        const preview = document.getElementById('brand_logo_preview');
+        const previewImg = document.getElementById('brand_logo_preview_img');
+        if (url && preview && previewImg) {
+          previewImg.src = url;
+          preview.classList.remove('hidden');
+          previewImg.onerror = () => {
+            preview.classList.add('hidden');
+          };
+        }
+      }
+      
+      // Handle logo file selection
+      document.addEventListener('DOMContentLoaded', () => {
+        const logoFileInput = document.getElementById('brand_logo_file');
+        const logoUrlInput = document.getElementById('brand_logo_url');
+        
+        if (logoFileInput) {
+          logoFileInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) {
+              const reader = new FileReader();
+              reader.onload = (event) => {
+                showLogoPreview(event.target.result);
+              };
+              reader.readAsDataURL(file);
+            }
+          });
+        }
+        
+        if (logoUrlInput) {
+          logoUrlInput.addEventListener('blur', (e) => {
+            const url = e.target.value.trim();
+            if (url) {
+              showLogoPreview(url);
+            }
+          });
+        }
+      });
       
       // Initialize: load brands for search
       loadBrands();

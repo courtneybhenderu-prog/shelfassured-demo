@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Brand Details - Admin - ShelfAssured</title>
+    
+    <!-- Set page role BEFORE loading shared/api.js -->
+    <script>
+        window.SA_PAGE_ROLE = 'admin';
+        window.SA_DISABLE_GLOBAL_GUARD = true;
+        window.SA_ADMIN_READY = true;
+    </script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.47.5/dist/umd/supabase.min.js"></script>
+    <link rel="stylesheet" href="../shared/styles.css">
+</head>
+<body>
+    <div class="min-h-screen bg-gray-100">
+        <!-- Header -->
+        <div class="bg-white shadow-sm border-b">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="flex justify-between items-center py-4">
+                    <div class="flex items-center space-x-4">
+                        <a href="brands.html" class="text-blue-600 hover:text-blue-800 flex items-center">
+                            ← Back to Brands
+                        </a>
+                        <div class="h-6 border-l border-gray-300"></div>
+                        <h1 class="text-2xl font-bold text-gray-900" id="brand-name">Brand Details</h1>
+                        <div class="ml-4 flex items-center space-x-2">
+                            <span class="px-2 py-1 bg-red-100 text-red-800 text-xs font-medium rounded-full">ADMIN</span>
+                        </div>
+                    </div>
+                    <div class="flex items-center space-x-4">
+                        <span id="admin-user" class="text-sm text-gray-600">Loading...</span>
+                        <button onclick="handleSignOut()" class="text-sm text-gray-500 hover:text-gray-700">Sign Out</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+            <!-- Error State (if brand ID missing/invalid) -->
+            <div id="error-state" class="hidden bg-white rounded-lg shadow p-6">
+                <div class="text-center">
+                    <p class="text-red-600 font-medium">Brand not found or access denied.</p>
+                    <a href="brands.html" class="text-blue-600 hover:text-blue-800 mt-4 inline-block">← Back to Brands</a>
+                </div>
+            </div>
+
+            <!-- Loading State -->
+            <div id="loading-state" class="bg-white rounded-lg shadow p-6">
+                <div class="text-center text-gray-500">Loading brand details...</div>
+            </div>
+
+            <!-- Brand Details Content -->
+            <div id="brand-content" class="hidden">
+                <div class="bg-white rounded-lg shadow p-6 mb-6">
+                    <div class="flex items-start justify-between">
+                        <div class="flex items-center space-x-4">
+                            <img id="brand-logo" src="" alt="Brand logo" 
+                                 class="w-20 h-20 object-contain rounded border border-gray-200 bg-white p-2 hidden"
+                                 onerror="this.style.display='none'">
+                            <div id="no-logo-placeholder" class="w-20 h-20 flex items-center justify-center bg-gray-100 rounded border border-gray-200 text-gray-400 text-sm hidden">
+                                No Logo
+                            </div>
+                            <div>
+                                <h2 class="text-2xl font-bold text-gray-900" id="brand-name-display"></h2>
+                                <p class="text-gray-500 mt-1" id="brand-website"></p>
+                                <p class="text-sm text-gray-400 mt-1" id="brand-created"></p>
+                            </div>
+                        </div>
+                        <div class="flex items-center space-x-2">
+                            <a href="" id="view-dashboard-link" target="_blank" rel="noopener"
+                               class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium">
+                                View Full Dashboard
+                            </a>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Quick Actions -->
+                <div class="bg-white rounded-lg shadow p-6 mb-6">
+                    <h3 class="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <a href="" id="create-job-link" class="px-4 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 font-medium text-center">
+                            Create Job for This Brand
+                        </a>
+                        <a href="brands-new.html" class="px-4 py-3 bg-gray-600 text-white rounded-lg hover:bg-gray-700 font-medium text-center">
+                            Edit Brand
+                        </a>
+                        <a href="brands.html" class="px-4 py-3 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 font-medium text-center">
+                            Back to All Brands
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Brand Information -->
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <div class="bg-white rounded-lg shadow p-6">
+                        <h3 class="text-lg font-semibold text-gray-900 mb-4">Brand Information</h3>
+                        <dl class="space-y-3">
+                            <div>
+                                <dt class="text-sm font-medium text-gray-500">Brand Name</dt>
+                                <dd class="mt-1 text-sm text-gray-900" id="info-name"></dd>
+                            </div>
+                            <div>
+                                <dt class="text-sm font-medium text-gray-500">Website</dt>
+                                <dd class="mt-1 text-sm text-gray-900" id="info-website"></dd>
+                            </div>
+                            <div>
+                                <dt class="text-sm font-medium text-gray-500">Address</dt>
+                                <dd class="mt-1 text-sm text-gray-900" id="info-address"></dd>
+                            </div>
+                            <div>
+                                <dt class="text-sm font-medium text-gray-500">Created Date</dt>
+                                <dd class="mt-1 text-sm text-gray-900" id="info-created"></dd>
+                            </div>
+                        </dl>
+                    </div>
+
+                    <div class="bg-white rounded-lg shadow p-6">
+                        <h3 class="text-lg font-semibold text-gray-900 mb-4">Statistics</h3>
+                        <div id="brand-stats" class="space-y-3">
+                            <div class="text-center text-gray-500">Loading statistics...</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Include shared API -->
+    <script src="../shared/api.js?v=20250113-4"></script>
+    
+    <script>
+        let currentUser = null;
+        let userProfile = null;
+        let brandId = null;
+
+        // Initialize page
+        document.addEventListener('DOMContentLoaded', async function() {
+            console.log('🔧 Brand detail page initialized');
+            
+            // Get brand ID from URL
+            const urlParams = new URLSearchParams(window.location.search);
+            brandId = urlParams.get('id');
+            
+            if (!brandId) {
+                showError('Brand ID not provided');
+                return;
+            }
+            
+            // Wait for Supabase to be available
+            let attempts = 0;
+            while (!window.supabase && attempts < 10) {
+                console.log('⏳ Waiting for Supabase to load...', attempts);
+                await new Promise(resolve => setTimeout(resolve, 100));
+                attempts++;
+            }
+            
+            if (!window.supabase) {
+                console.error('❌ Supabase failed to load');
+                window.location.href = '../auth/signin.html';
+                return;
+            }
+            
+            await checkAdminAccess();
+        });
+
+        // Check if user is admin
+        async function checkAdminAccess() {
+            try {
+                const { data: { user } } = await supabase.auth.getUser();
+                
+                if (!user) {
+                    alert('Please sign in to access this page');
+                    window.location.href = '../auth/signin.html';
+                    return;
+                }
+
+                // Get user profile to check role
+                const { data: profile, error } = await supabase
+                    .from('users')
+                    .select('role, full_name')
+                    .eq('id', user.id)
+                    .single();
+
+                if (error || !profile) {
+                    console.error('Error fetching user profile:', error);
+                    alert('Error loading user profile');
+                    window.location.href = '../auth/signin.html';
+                    return;
+                }
+
+                if (profile.role !== 'admin') {
+                    alert('Access denied. Admin privileges required.');
+                    window.location.href = '../admin/dashboard.html';
+                    return;
+                }
+
+                currentUser = user;
+                userProfile = profile;
+                document.getElementById('admin-user').textContent = `Welcome, ${profile.full_name || user.email}`;
+                console.log('✅ Admin access confirmed');
+                
+                // Load brand details after confirming admin access
+                await loadBrandDetails();
+                
+            } catch (error) {
+                console.error('Error checking admin access:', error);
+                alert('Error checking permissions');
+                window.location.href = '../auth/signin.html';
+            }
+        }
+
+        // Load brand details
+        async function loadBrandDetails() {
+            try {
+                console.log('🔄 Loading brand details for ID:', brandId);
+                
+                // Fetch brand
+                const { data: brand, error: brandError } = await supabase
+                    .from('brands')
+                    .select('*')
+                    .eq('id', brandId)
+                    .single();
+                
+                if (brandError || !brand) {
+                    console.error('❌ Error loading brand:', brandError);
+                    showError('Brand not found');
+                    return;
+                }
+                
+                // Fetch brand statistics
+                const [productsResult, storesResult, jobsResult] = await Promise.all([
+                    supabase.from('brand_products').select('id', { count: 'exact' }).eq('brand_id', brandId),
+                    supabase.from('brand_stores').select('id', { count: 'exact' }).eq('brand_id', brandId),
+                    supabase.from('jobs').select('id', { count: 'exact' }).eq('brand_id', brandId)
+                ]);
+                
+                const productCount = productsResult.count || 0;
+                const storeCount = storesResult.count || 0;
+                const jobCount = jobsResult.count || 0;
+                
+                // Populate UI
+                document.getElementById('brand-name').textContent = brand.name || 'Unnamed Brand';
+                document.getElementById('brand-name-display').textContent = brand.name || 'Unnamed Brand';
+                document.getElementById('info-name').textContent = brand.name || 'N/A';
+                
+                if (brand.website) {
+                    document.getElementById('brand-website').innerHTML = `<a href="${escapeHtml(brand.website)}" target="_blank" rel="noopener" class="text-blue-600 hover:underline">${escapeHtml(brand.website)}</a>`;
+                    document.getElementById('info-website').innerHTML = `<a href="${escapeHtml(brand.website)}" target="_blank" rel="noopener" class="text-blue-600 hover:underline">${escapeHtml(brand.website)}</a>`;
+                } else {
+                    document.getElementById('brand-website').textContent = 'No website';
+                    document.getElementById('info-website').textContent = 'N/A';
+                }
+                
+                if (brand.address) {
+                    document.getElementById('info-address').textContent = brand.address;
+                } else {
+                    document.getElementById('info-address').textContent = 'N/A';
+                }
+                
+                if (brand.created_at) {
+                    const createdDate = new Date(brand.created_at).toLocaleDateString();
+                    document.getElementById('brand-created').textContent = `Created: ${createdDate}`;
+                    document.getElementById('info-created').textContent = createdDate;
+                } else {
+                    document.getElementById('brand-created').textContent = 'Created: N/A';
+                    document.getElementById('info-created').textContent = 'N/A';
+                }
+                
+                // Logo
+                if (brand.logo_url) {
+                    const logoImg = document.getElementById('brand-logo');
+                    logoImg.src = brand.logo_url;
+                    logoImg.classList.remove('hidden');
+                } else {
+                    document.getElementById('no-logo-placeholder').classList.remove('hidden');
+                }
+                
+                // Update links
+                document.getElementById('view-dashboard-link').href = `../brand/dashboard.html?id=${brandId}`;
+                document.getElementById('create-job-link').href = `manage-jobs.html?brand_id=${brandId}`;
+                
+                // Update statistics
+                document.getElementById('brand-stats').innerHTML = `
+                    <div class="bg-blue-50 rounded-lg p-4">
+                        <div class="text-2xl font-bold text-blue-600">${productCount}</div>
+                        <div class="text-sm text-gray-600">Products</div>
+                    </div>
+                    <div class="bg-green-50 rounded-lg p-4">
+                        <div class="text-2xl font-bold text-green-600">${storeCount}</div>
+                        <div class="text-sm text-gray-600">Stores</div>
+                    </div>
+                    <div class="bg-purple-50 rounded-lg p-4">
+                        <div class="text-2xl font-bold text-purple-600">${jobCount}</div>
+                        <div class="text-sm text-gray-600">Jobs</div>
+                    </div>
+                `;
+                
+                // Show content
+                document.getElementById('loading-state').classList.add('hidden');
+                document.getElementById('brand-content').classList.remove('hidden');
+                
+                console.log('✅ Brand details loaded successfully');
+                
+            } catch (error) {
+                console.error('❌ Exception loading brand details:', error);
+                showError('Error loading brand details');
+            }
+        }
+
+        // Show error state
+        function showError(message) {
+            document.getElementById('loading-state').classList.add('hidden');
+            document.getElementById('brand-content').classList.add('hidden');
+            const errorDiv = document.getElementById('error-state');
+            errorDiv.classList.remove('hidden');
+            errorDiv.querySelector('p').textContent = message;
+        }
+
+        // Helper function to escape HTML
+        function escapeHtml(text) {
+            if (!text) return '';
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // Handle sign out
+        async function handleSignOut() {
+            try {
+                await supabase.auth.signOut();
+                window.location.href = '../auth/signin.html';
+            } catch (error) {
+                console.error('Error signing out:', error);
+                window.location.href = '../auth/signin.html';
+            }
+        }
+
+        window.handleSignOut = handleSignOut;
+    </script>
+
+    <!-- Admin Navigation -->
+    <div class="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200">
+        <div class="flex justify-around py-3">
+            <button onclick="window.location.href = 'dashboard.html'" class="font-bold text-[#C62828]">Admin</button>
+            <button onclick="window.location.href = '../dashboard/shelfer.html'" class="text-gray-500 hover:text-gray-700">Shelfer</button>
+            <button onclick="window.location.href = '../dashboard/brand-client.html'" class="text-gray-500 hover:text-gray-700">Brand</button>
+            <button onclick="window.location.href = '../dashboard/profile.html'" class="text-gray-500 hover:text-gray-700">Profile</button>
+        </div>
+    </div>
+</body>
+</html>
+

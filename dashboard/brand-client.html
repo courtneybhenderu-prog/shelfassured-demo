@@ -10,7 +10,9 @@
     
     <!-- Set page role BEFORE loading shared/api.js -->
     <script>
+        // Allow both brand_client and admin to access this page
         window.SA_PAGE_ROLE = 'brand_client';
+        window.SA_ALLOW_ADMIN_OVERRIDE = true; // Allow admins to access brand_client pages
     </script>
 </head>
 <body>
@@ -100,7 +102,7 @@
     </div>
 
     <!-- Include shared API -->
-    <script src="../shared/api.js?v=20250113-4"></script>
+    <script src="../shared/api.js?v=20250113-15"></script>
     
     <!-- Define goToPage function -->
     <script>

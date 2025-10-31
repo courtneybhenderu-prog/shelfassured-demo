@@ -67,6 +67,9 @@
                     <button onclick="goToPage('brands-new.html')" class="btn-red">
                         + Add Brand
                     </button>
+                    <button onclick="goToPage('brands.html')" id="brands-quick-action" class="btn-red">
+                        Brands
+                    </button>
                     <button onclick="goToPage('manage-jobs.html')" class="btn-red">
                         Manage Jobs
                     </button>
@@ -93,6 +96,20 @@
                         <h3 class="text-lg font-medium text-gray-900">Recent Jobs</h3>
                     </div>
                     <div id="recent-jobs" class="p-6">
+                        <div class="text-center text-gray-500">Loading...</div>
+                    </div>
+                </div>
+
+                <!-- Brands Panel -->
+                <div class="bg-white rounded-lg shadow" id="brands-section">
+                    <div class="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
+                        <h3 class="text-lg font-medium text-gray-900">Brands</h3>
+                        <div class="flex items-center space-x-2">
+                            <input type="text" id="brand-search" placeholder="Search brands..." 
+                                   class="px-3 py-1 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        </div>
+                    </div>
+                    <div id="brands-list" class="p-6">
                         <div class="text-center text-gray-500">Loading...</div>
                     </div>
                 </div>
@@ -137,7 +154,7 @@
     <script src="../shared/api.js?v=20250113-4"></script>
     
     <!-- Include admin dashboard logic with cache busting -->
-    <script src="../pages/admin-dashboard.js?v=20250113-4"></script>
+    <script src="../pages/admin-dashboard.js?v=20250113-16"></script>
     
     <!-- Define goToPage function -->
     <script>
@@ -146,8 +163,32 @@
             window.location.href = page;
         }
         
+        // Scroll to brands section smoothly
+        function scrollToBrands() {
+            console.log('🔍 scrollToBrands() called');
+            const brandsSection = document.getElementById('brands-section');
+            if (brandsSection) {
+                console.log('✅ Found brands section, scrolling...');
+                brandsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                // Small delay to ensure section is rendered, then highlight briefly
+                setTimeout(() => {
+                    brandsSection.style.transition = 'box-shadow 0.3s';
+                    brandsSection.style.boxShadow = '0 0 0 3px rgba(59, 130, 246, 0.5)';
+                    setTimeout(() => {
+                        brandsSection.style.boxShadow = '';
+                    }, 1000);
+                }, 300);
+            } else {
+                console.error('❌ Brands section (#brands-section) not found');
+                // Try to find it by searching
+                const allSections = document.querySelectorAll('[id*="brand"]');
+                console.log('Found sections with "brand" in ID:', Array.from(allSections).map(s => s.id));
+            }
+        }
+        
         // Make it globally available
         window.goToPage = goToPage;
+        window.scrollToBrands = scrollToBrands;
     </script>
     
 
