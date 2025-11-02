@@ -253,13 +253,88 @@
                                            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
                                     <div id="product-suggestions" class="absolute z-10 w-full bg-white border border-gray-300 rounded-lg shadow-lg hidden mt-1 max-h-60 overflow-y-auto"></div>
                                 </div>
-                                <input type="text" id="product-sku" placeholder="SKU/UPC (optional, e.g., 0123456789012)" 
+                                <input type="text" id="product-sku" placeholder="UPC (optional, e.g., 0123456789012)" 
                                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                                <select id="product-category" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                                    <option value="">Select category (optional)</option>
+                                    <option value="Air Care">Air Care</option>
+                                    <option value="Asian Foods">Asian Foods</option>
+                                    <option value="Baby Food">Baby Food</option>
+                                    <option value="Bagels">Bagels</option>
+                                    <option value="Beef">Beef</option>
+                                    <option value="Beer">Beer</option>
+                                    <option value="Body Care">Body Care</option>
+                                    <option value="Bread">Bread</option>
+                                    <option value="Butter">Butter</option>
+                                    <option value="Candy">Candy</option>
+                                    <option value="Canned Fruit">Canned Fruit</option>
+                                    <option value="Canned Tomatoes">Canned Tomatoes</option>
+                                    <option value="Canned Vegetables">Canned Vegetables</option>
+                                    <option value="Cat Food">Cat Food</option>
+                                    <option value="Cheese">Cheese</option>
+                                    <option value="Chips">Chips</option>
+                                    <option value="Cleaning Supplies">Cleaning Supplies</option>
+                                    <option value="Coffee">Coffee</option>
+                                    <option value="Cold Cereal">Cold Cereal</option>
+                                    <option value="Condiments">Condiments</option>
+                                    <option value="Cookies">Cookies</option>
+                                    <option value="Diapers">Diapers</option>
+                                    <option value="Dog Food">Dog Food</option>
+                                    <option value="Eggs">Eggs</option>
+                                    <option value="Energy & Functional Beverage">Energy & Functional Beverage</option>
+                                    <option value="Feminine Hygiene">Feminine Hygiene</option>
+                                    <option value="Fresh Fruit">Fresh Fruit</option>
+                                    <option value="Fresh Vegetables">Fresh Vegetables</option>
+                                    <option value="Frozen Bread">Frozen Bread</option>
+                                    <option value="Frozen Desserts & Novelties">Frozen Desserts & Novelties</option>
+                                    <option value="Frozen Fruits">Frozen Fruits</option>
+                                    <option value="Frozen Meals">Frozen Meals</option>
+                                    <option value="Frozen Pizza">Frozen Pizza</option>
+                                    <option value="Frozen Potatoes">Frozen Potatoes</option>
+                                    <option value="Frozen Vegetables">Frozen Vegetables</option>
+                                    <option value="Granola">Granola</option>
+                                    <option value="Herbs">Herbs</option>
+                                    <option value="Ice Cream">Ice Cream</option>
+                                    <option value="Laundry">Laundry</option>
+                                    <option value="Meat Alternatives">Meat Alternatives</option>
+                                    <option value="Mediterranean Foods">Mediterranean Foods</option>
+                                    <option value="Mexican Foods">Mexican Foods</option>
+                                    <option value="Milk">Milk</option>
+                                    <option value="Nuts">Nuts</option>
+                                    <option value="Oatmeal">Oatmeal</option>
+                                    <option value="Oil & Vinegar">Oil & Vinegar</option>
+                                    <option value="Other International Foods">Other International Foods</option>
+                                    <option value="Packaged Salads">Packaged Salads</option>
+                                    <option value="Pancake Mix">Pancake Mix</option>
+                                    <option value="Paper Goods">Paper Goods</option>
+                                    <option value="Pasta">Pasta</option>
+                                    <option value="Pasta Sauce">Pasta Sauce</option>
+                                    <option value="Pastries">Pastries</option>
+                                    <option value="Pet Treats">Pet Treats</option>
+                                    <option value="Pork">Pork</option>
+                                    <option value="Poultry">Poultry</option>
+                                    <option value="Protein Bars">Protein Bars</option>
+                                    <option value="Ready to Drink Coffee & Tea">Ready to Drink Coffee & Tea</option>
+                                    <option value="Rice, Beans & Grains">Rice, Beans & Grains</option>
+                                    <option value="Salad Dressing">Salad Dressing</option>
+                                    <option value="Seafood">Seafood</option>
+                                    <option value="Sparkling Water">Sparkling Water</option>
+                                    <option value="Spices & Seasonings">Spices & Seasonings</option>
+                                    <option value="Spirits">Spirits</option>
+                                    <option value="Still Water">Still Water</option>
+                                    <option value="Supplements">Supplements</option>
+                                    <option value="Tea">Tea</option>
+                                    <option value="Trail Mix">Trail Mix</option>
+                                    <option value="Vitamins">Vitamins</option>
+                                    <option value="Wine">Wine</option>
+                                    <option value="Wipes">Wipes</option>
+                                    <option value="Yogurt">Yogurt</option>
+                                </select>
                                 <button type="button" onclick="addSkuInput()" class="px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">Add Product</button>
                                 <div id="available-products" class="mt-3 p-2 bg-gray-50 rounded hidden"></div>
                             </div>
                         </div>
-                        <p class="mt-1 text-sm text-gray-500">Add products to audit - SKU/UPC can be added later in store if not known</p>
+                        <p class="mt-1 text-sm text-gray-500">Add products to audit - UPC can be added later in store if not known</p>
                     </div>
 
                     <!-- Assigned User -->
@@ -415,7 +490,11 @@
                         *,
                         brands(name),
                         job_stores(stores(id, name, city, state)),
-                        job_skus(skus(id, name, upc)),
+                        job_skus(skus(id, name, upc, category)),
+                        job_store_skus(
+                            stores(id, name, city, state),
+                            skus(id, name, upc, category)
+                        ),
                         assigned_user:assigned_user_id(full_name)
                     `)
                     .eq('id', jobId)
@@ -489,7 +568,11 @@
                 const skusFromJK = (job.job_skus || []).map(r => r.skus).filter(Boolean);
                 const uniqueSkuMap = new Map();
                 [...skusFromJSKS, ...skusFromJK].forEach(k => { if (k?.id) uniqueSkuMap.set(k.id, k); });
-                selectedSkus = Array.from(uniqueSkuMap.values()).map(k => ({ name: k.name, sku: k.upc || null }));
+                selectedSkus = Array.from(uniqueSkuMap.values()).map(k => ({ 
+                    name: k.name, 
+                    sku: k.upc || null,
+                    category: k.category || null
+                }));
                 updateSkuDisplay();
                 
                 // Change form title and button
@@ -793,7 +876,7 @@
                 try {
                     const { data, error } = await supabase
                         .from('products')
-                        .select('id, name, sku, upc')
+                        .select('id, name, sku, upc, category')
                         .order('name');
                     
                     if (error) throw error;
@@ -887,13 +970,22 @@
                     div.className = 'p-3 hover:bg-gray-50 cursor-pointer border-b border-gray-200 last:border-b-0';
                     div.innerHTML = `
                         <div class="font-medium">${escapeHtml(product.name || 'Unnamed Product')}</div>
-                        ${product.sku ? `<div class="text-xs text-gray-500">SKU: ${escapeHtml(product.sku)}</div>` : ''}
+                        <div class="text-xs text-gray-500">
+                            ${(product.sku || product.upc) ? `UPC: ${escapeHtml(product.sku || product.upc)}` : ''}
+                            ${product.category ? ` • ${escapeHtml(product.category)}` : ''}
+                        </div>
                     `;
                     div.addEventListener('mousedown', (e) => {
                         e.preventDefault();
                         document.getElementById('product-name').value = product.name;
-                        if (product.sku) {
-                            document.getElementById('product-sku').value = product.sku;
+                        if (product.sku || product.upc) {
+                            document.getElementById('product-sku').value = product.sku || product.upc;
+                        }
+                        if (product.category) {
+                            const categorySelect = document.getElementById('product-category');
+                            if (categorySelect) {
+                                categorySelect.value = product.category;
+                            }
                         }
                         hideProductSuggestions();
                     });
@@ -971,7 +1063,8 @@
                             id,
                             name,
                             sku,
-                            upc
+                            upc,
+                            category
                         )
                     `)
                     .eq('brand_id', brandId);
@@ -995,7 +1088,8 @@
                     .map(bp => ({
                         id: bp.products?.id || bp.product_id,
                         name: bp.product_label || bp.products?.name || 'Unknown',
-                        sku: bp.products?.sku || bp.products?.upc || ''
+                        sku: bp.products?.sku || bp.products?.upc || '',
+                        category: bp.products?.category || ''
                     }))
                     .filter(p => p.name && p.name !== 'Unknown');
                 
@@ -1005,8 +1099,8 @@
                     <div class="flex flex-wrap gap-2">
                         ${items.map(p => `
                             <span class=\"px-2 py-1 bg-gray-100 text-gray-800 text-xs rounded-full flex items-center gap-1\">
-                                <span>${p.name}${p.sku ? ` (${p.sku})` : ''}</span>
-                                <button type=\"button\" class=\"text-blue-600 hover:text-blue-800\" onclick=\"addAvailableProduct('${encodeURIComponent(p.name)}','${encodeURIComponent(p.sku || '')}')\">+ Add</button>
+                                <span>${p.name}${p.sku ? ` (${p.sku})` : ''}${p.category ? ` [${p.category}]` : ''}</span>
+                                <button type=\"button\" class=\"text-blue-600 hover:text-blue-800\" onclick=\"addAvailableProduct('${encodeURIComponent(p.name)}','${encodeURIComponent(p.sku || '')}','${encodeURIComponent(p.category || '')}')\">+ Add</button>
                             </span>
                         `).join('')}
                     </div>
@@ -1018,12 +1112,13 @@
         }
 
         // Add from available list into Selected Products
-        function addAvailableProduct(encodedName, encodedSku) {
+        function addAvailableProduct(encodedName, encodedSku, encodedCategory) {
             const name = decodeURIComponent(encodedName);
-            const sku = decodeURIComponent(encodedSku);
+            const sku = decodeURIComponent(encodedSku || '');
+            const category = encodedCategory ? decodeURIComponent(encodedCategory) : null;
             const exists = selectedSkus.find(s => s.name === name);
             if (exists) return;
-            selectedSkus.push({ name, sku: sku || null });
+            selectedSkus.push({ name, sku: sku || null, category: category || null });
             updateSkuDisplay();
             updateJobSummary();
         }
@@ -1124,6 +1219,7 @@
         function addSkuInput() {
             const productName = document.getElementById('product-name').value.trim();
             const productSku = document.getElementById('product-sku').value.trim();
+            const productCategory = document.getElementById('product-category').value.trim();
             
             if (!productName) {
                 alert('Please enter a product name');
@@ -1137,10 +1233,11 @@
                 return;
             }
             
-            // Add product with both name and SKU (SKU can be empty)
+            // Add product with name, SKU (UPC), and category
             const productData = {
                 name: productName,
-                sku: productSku || null
+                sku: productSku || null,
+                category: productCategory || null
             };
             
             selectedSkus.push(productData);
@@ -1148,6 +1245,7 @@
             // Clear inputs
             document.getElementById('product-name').value = '';
             document.getElementById('product-sku').value = '';
+            document.getElementById('product-category').value = '';
             
             updateJobSummary();
             updateSkuDisplay();
@@ -1195,7 +1293,7 @@
                     <div class="flex flex-wrap gap-2">
                         ${selectedSkus.map((sku, index) => `
                             <span class="px-2 py-1 bg-green-100 text-green-800 text-xs rounded-full">
-                                ${sku.name}${sku.sku ? ` (${sku.sku})` : ''}
+                                ${sku.name}${sku.sku ? ` (UPC: ${sku.sku})` : ''}${sku.category ? ` [${sku.category}]` : ''}
                                 <button type="button" onclick="removeSku(${index})" class="ml-1 text-green-600 hover:text-green-800">×</button>
                             </span>
                         `).join('')}
@@ -1368,15 +1466,22 @@
                 
                 // Create ONE job per store with the same product set
                 let totalAssignments = 0;
+                
+                // Convert dueDate to proper format (datetime-local to ISO string)
+                let dueDateValue = null;
+                if (formData.dueDate) {
+                    dueDateValue = new Date(formData.dueDate).toISOString();
+                }
+                
                 for (const storeId of storeIds) {
                     const jobData = {
                         title: formData.title,
-                        description: formData.description,
+                        description: formData.description || null,
                         brand_id: brandId,
                         assigned_user_id: formData.assignedUserId,
-                        priority: formData.priority,
-                        due_date: formData.dueDate || null,
-                        instructions: formData.specialInstructions,
+                        priority: formData.priority || 'normal',
+                        due_date: dueDateValue,
+                        instructions: formData.specialInstructions || null,
                         status: 'pending',
                         payout_per_store: 5.00,
                         created_at: new Date().toISOString()
@@ -1477,12 +1582,13 @@
                 if (existingSku) {
                     skuIds.push(existingSku.id);
                 } else {
-                    // Create new SKU with both name and UPC (UPC can be null)
+                    // Create new SKU with name, UPC, and category (UPC and category can be null)
                     const { data: sku, error } = await supabase
                         .from('skus')
                         .insert({ 
                             name: skuItem.name,
                             upc: skuItem.sku || null, // UPC can be null if not provided
+                            category: skuItem.category || null, // Category can be null if not provided
                             brand_id: brandId
                         })
                         .select()
@@ -1668,28 +1774,72 @@
                 // Get form data
                 const formData = getFormData();
                 
+                // Ensure brand exists and get brand_id
+                const brandId = await ensureBrandExists(formData.brand);
+                console.log('✅ Brand ID for update:', brandId);
+                
+                // Convert dueDate to proper format (datetime-local to ISO string)
+                let dueDateValue = null;
+                if (formData.dueDate) {
+                    // datetime-local returns format: "YYYY-MM-DDTHH:mm"
+                    // Convert to ISO string for timestamp with time zone
+                    dueDateValue = new Date(formData.dueDate).toISOString();
+                }
+                
                 // Update job
                 const { error: jobError } = await supabase
                     .from('jobs')
                     .update({
                         title: formData.title,
-                        description: formData.description,
-                        brand_id: formData.brandId,
-                        assigned_to: formData.assignedTo,
-                        priority: formData.priority,
-                        due_date: formData.dueDate,
-                        additional_notes: formData.additionalNotes,
+                        description: formData.description || null,
+                        brand_id: brandId,
+                        assigned_user_id: formData.assignedUserId,
+                        priority: formData.priority || 'normal',
+                        due_date: dueDateValue,
+                        instructions: formData.specialInstructions || null,
                         updated_at: new Date().toISOString()
                     })
                     .eq('id', jobId);
 
                 if (jobError) throw jobError;
 
-                // Update stores
-                await updateJobStores(jobId, formData.stores);
+                // Update stores and SKUs using job_store_skus table (same as create)
+                // Get store IDs from formData.stores array (store objects with .id)
+                const storeIds = formData.stores.map(store => store.id);
+                console.log('✅ Store IDs for update:', storeIds);
                 
-                // Update SKUs
-                await updateJobSkus(jobId, formData.skus);
+                // Ensure SKUs exist and get SKU IDs
+                const skuIds = await ensureSkusExist(formData.skus, brandId);
+                console.log('✅ SKU IDs for update:', skuIds);
+                
+                // Delete all existing job_store_skus relationships for this job
+                const { error: deleteErr } = await supabase
+                    .from('job_store_skus')
+                    .delete()
+                    .eq('job_id', jobId);
+                
+                if (deleteErr) throw deleteErr;
+                
+                // Create new job_store_skus relationships (one per store-SKU combination)
+                const assignments = [];
+                for (const storeId of storeIds) {
+                    for (const skuId of skuIds) {
+                        assignments.push({
+                            job_id: jobId,
+                            store_id: storeId,
+                            sku_id: skuId
+                        });
+                    }
+                }
+                
+                if (assignments.length > 0) {
+                    const { error: assignmentError } = await supabase
+                        .from('job_store_skus')
+                        .insert(assignments);
+                    
+                    if (assignmentError) throw assignmentError;
+                    console.log(`✅ Created ${assignments.length} store-SKU assignments`);
+                }
 
                 console.log('✅ Job updated successfully');
                 showSuccess('Job updated successfully!');

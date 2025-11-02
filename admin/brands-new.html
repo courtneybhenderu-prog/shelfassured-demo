@@ -107,6 +107,94 @@
         </div>
       </div>
       <div id="products" class="list"></div>
+      
+      <!-- Category Reference Section (Collapsible) -->
+      <div style="margin-top: 15px;">
+        <button type="button" id="toggle-category-reference" 
+                class="hint" 
+                style="background: none; border: none; padding: 0; text-decoration: underline; cursor: pointer; color: #6b7280;">
+          📋 View all valid categories for CSV upload
+        </button>
+        <div id="category-reference" style="display: none; margin-top: 10px; padding: 15px; background-color: #f9fafb; border-radius: 8px; border: 1px solid #e5e7eb;">
+          <p class="hint" style="margin-bottom: 10px; font-weight: 600;">
+            Choose from the categories listed below when filling out your CSV:
+          </p>
+          <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 8px; font-size: 0.9em; color: #6b7280;">
+            <span>Air Care</span>
+            <span>Asian Foods</span>
+            <span>Baby Food</span>
+            <span>Bagels</span>
+            <span>Beef</span>
+            <span>Beer</span>
+            <span>Body Care</span>
+            <span>Bread</span>
+            <span>Butter</span>
+            <span>Candy</span>
+            <span>Canned Fruit</span>
+            <span>Canned Tomatoes</span>
+            <span>Canned Vegetables</span>
+            <span>Cat Food</span>
+            <span>Cheese</span>
+            <span>Chips</span>
+            <span>Cleaning Supplies</span>
+            <span>Coffee</span>
+            <span>Cold Cereal</span>
+            <span>Condiments</span>
+            <span>Cookies</span>
+            <span>Diapers</span>
+            <span>Dog Food</span>
+            <span>Eggs</span>
+            <span>Energy & Functional Beverage</span>
+            <span>Feminine Hygiene</span>
+            <span>Fresh Fruit</span>
+            <span>Fresh Vegetables</span>
+            <span>Frozen Bread</span>
+            <span>Frozen Desserts & Novelties</span>
+            <span>Frozen Fruits</span>
+            <span>Frozen Meals</span>
+            <span>Frozen Pizza</span>
+            <span>Frozen Potatoes</span>
+            <span>Frozen Vegetables</span>
+            <span>Granola</span>
+            <span>Herbs</span>
+            <span>Ice Cream</span>
+            <span>Laundry</span>
+            <span>Meat Alternatives</span>
+            <span>Mediterranean Foods</span>
+            <span>Mexican Foods</span>
+            <span>Milk</span>
+            <span>Nuts</span>
+            <span>Oatmeal</span>
+            <span>Oil & Vinegar</span>
+            <span>Other International Foods</span>
+            <span>Packaged Salads</span>
+            <span>Pancake Mix</span>
+            <span>Paper Goods</span>
+            <span>Pasta</span>
+            <span>Pasta Sauce</span>
+            <span>Pastries</span>
+            <span>Pet Treats</span>
+            <span>Pork</span>
+            <span>Poultry</span>
+            <span>Protein Bars</span>
+            <span>Ready to Drink Coffee & Tea</span>
+            <span>Rice, Beans & Grains</span>
+            <span>Salad Dressing</span>
+            <span>Seafood</span>
+            <span>Sparkling Water</span>
+            <span>Spices & Seasonings</span>
+            <span>Spirits</span>
+            <span>Still Water</span>
+            <span>Supplements</span>
+            <span>Tea</span>
+            <span>Trail Mix</span>
+            <span>Vitamins</span>
+            <span>Wine</span>
+            <span>Wipes</span>
+            <span>Yogurt</span>
+          </div>
+        </div>
+      </div>
     </div>
 
     <div class="card">
@@ -149,7 +237,7 @@
           <input data-k="name" placeholder="Specific Product Name" />
         </div>
         <div>
-          <label>UPC/SKU *</label>
+          <label>UPC *</label>
           <input data-k="barcode" placeholder="123456789012" />
         </div>
         <div>
@@ -166,7 +254,81 @@
         </div>
         <div>
           <label>Category</label>
-          <input data-k="category" placeholder="Sausage" />
+          <select data-k="category">
+            <option value="">Select category</option>
+            <option value="Air Care">Air Care</option>
+            <option value="Asian Foods">Asian Foods</option>
+            <option value="Baby Food">Baby Food</option>
+            <option value="Bagels">Bagels</option>
+            <option value="Beef">Beef</option>
+            <option value="Beer">Beer</option>
+            <option value="Body Care">Body Care</option>
+            <option value="Bread">Bread</option>
+            <option value="Butter">Butter</option>
+            <option value="Candy">Candy</option>
+            <option value="Canned Fruit">Canned Fruit</option>
+            <option value="Canned Tomatoes">Canned Tomatoes</option>
+            <option value="Canned Vegetables">Canned Vegetables</option>
+            <option value="Cat Food">Cat Food</option>
+            <option value="Cheese">Cheese</option>
+            <option value="Chips">Chips</option>
+            <option value="Cleaning Supplies">Cleaning Supplies</option>
+            <option value="Coffee">Coffee</option>
+            <option value="Cold Cereal">Cold Cereal</option>
+            <option value="Condiments">Condiments</option>
+            <option value="Cookies">Cookies</option>
+            <option value="Diapers">Diapers</option>
+            <option value="Dog Food">Dog Food</option>
+            <option value="Eggs">Eggs</option>
+            <option value="Energy & Functional Beverage">Energy & Functional Beverage</option>
+            <option value="Feminine Hygiene">Feminine Hygiene</option>
+            <option value="Fresh Fruit">Fresh Fruit</option>
+            <option value="Fresh Vegetables">Fresh Vegetables</option>
+            <option value="Frozen Bread">Frozen Bread</option>
+            <option value="Frozen Desserts & Novelties">Frozen Desserts & Novelties</option>
+            <option value="Frozen Fruits">Frozen Fruits</option>
+            <option value="Frozen Meals">Frozen Meals</option>
+            <option value="Frozen Pizza">Frozen Pizza</option>
+            <option value="Frozen Potatoes">Frozen Potatoes</option>
+            <option value="Frozen Vegetables">Frozen Vegetables</option>
+            <option value="Granola">Granola</option>
+            <option value="Herbs">Herbs</option>
+            <option value="Ice Cream">Ice Cream</option>
+            <option value="Laundry">Laundry</option>
+            <option value="Meat Alternatives">Meat Alternatives</option>
+            <option value="Mediterranean Foods">Mediterranean Foods</option>
+            <option value="Mexican Foods">Mexican Foods</option>
+            <option value="Milk">Milk</option>
+            <option value="Nuts">Nuts</option>
+            <option value="Oatmeal">Oatmeal</option>
+            <option value="Oil & Vinegar">Oil & Vinegar</option>
+            <option value="Other International Foods">Other International Foods</option>
+            <option value="Packaged Salads">Packaged Salads</option>
+            <option value="Pancake Mix">Pancake Mix</option>
+            <option value="Paper Goods">Paper Goods</option>
+            <option value="Pasta">Pasta</option>
+            <option value="Pasta Sauce">Pasta Sauce</option>
+            <option value="Pastries">Pastries</option>
+            <option value="Pet Treats">Pet Treats</option>
+            <option value="Pork">Pork</option>
+            <option value="Poultry">Poultry</option>
+            <option value="Protein Bars">Protein Bars</option>
+            <option value="Ready to Drink Coffee & Tea">Ready to Drink Coffee & Tea</option>
+            <option value="Rice, Beans & Grains">Rice, Beans & Grains</option>
+            <option value="Salad Dressing">Salad Dressing</option>
+            <option value="Seafood">Seafood</option>
+            <option value="Sparkling Water">Sparkling Water</option>
+            <option value="Spices & Seasonings">Spices & Seasonings</option>
+            <option value="Spirits">Spirits</option>
+            <option value="Still Water">Still Water</option>
+            <option value="Supplements">Supplements</option>
+            <option value="Tea">Tea</option>
+            <option value="Trail Mix">Trail Mix</option>
+            <option value="Vitamins">Vitamins</option>
+            <option value="Wine">Wine</option>
+            <option value="Wipes">Wipes</option>
+            <option value="Yogurt">Yogurt</option>
+          </select>
         </div>
       </div>
       <div class="row" style="margin-top:8px;justify-content:flex-end">
@@ -255,6 +417,15 @@
       el('downloadProductsTemplate').onclick = (e)=>{ e.preventDefault(); downloadTemplate('products'); };
       el('downloadStoresTemplate').onclick = (e)=>{ e.preventDefault(); downloadTemplate('stores'); };
 
+      // Category reference toggle
+      el('toggle-category-reference').onclick = (e)=>{
+        e.preventDefault();
+        const ref = el('category-reference');
+        const isVisible = ref.style.display !== 'none';
+        ref.style.display = isVisible ? 'none' : 'block';
+        e.target.textContent = isVisible ? '📋 View all valid categories for CSV upload' : '📋 Hide category list';
+      };
+
       // Draft functionality
       el('saveDraft').onclick = (e)=>{ e.preventDefault(); saveDraft(); };
       el('loadDraft').onclick = (e)=>{ e.preventDefault(); loadDraft(); };
@@ -323,7 +494,7 @@
 
       function downloadTemplate(type) {
         const templates = {
-          products: 'name,barcode,size,category\nProduct Name 1,123456789012,16 oz,Beverages\nProduct Name 2,123456789013,32 oz,Beverages',
+          products: 'name,upc,size,suggested_retail_price,category\nProduct Name 1,123456789012,16 oz,9.99,Coffee\nProduct Name 2,123456789013,32 oz,12.99,Milk',
           stores: 'retailer,name,address,city,state_zip\nH-E-B,San Felipe H-E-B,5895 San Felipe Street,Houston,TX 77057-3061\nKroger,Kroger - Bunker Hill,17455 Spring Cypress Road,Houston,TX 77090'
         };
         
@@ -347,20 +518,38 @@
           const headers = lines[0].split(',').map(h => h.trim().toLowerCase());
           
           if (type === 'products') {
-            // Expected headers: name,barcode,size,category
+            // Expected headers: name,upc,size,suggested_retail_price,category
+            // Support legacy 'barcode' header for backward compatibility
             for (let i = 1; i < lines.length; i++) {
               const values = lines[i].split(',').map(v => v.trim());
               const product = {};
               headers.forEach((header, index) => {
-                product[header] = values[index] || '';
+                let key = header.toLowerCase();
+                // Map 'barcode' to 'upc' for backward compatibility
+                if (key === 'barcode') key = 'upc';
+                product[key] = values[index] || '';
               });
               
-              if (product.name && product.barcode) {
+              // Check for either 'upc' or 'barcode' (for backward compatibility)
+              if (product.name && (product.upc || product.barcode)) {
+                // If 'barcode' exists but 'upc' doesn't, copy it
+                if (!product.upc && product.barcode) {
+                  product.upc = product.barcode;
+                }
+                
                 addProductRow();
                 const lastRow = products.lastElementChild;
                 Object.keys(product).forEach(key => {
-                  const input = lastRow.querySelector(`[data-k="${key}"]`);
-                  if (input) input.value = product[key];
+                  // Map 'upc' key to 'barcode' input field (data-k="barcode")
+                  const fieldKey = (key === 'upc') ? 'barcode' : key;
+                  const input = lastRow.querySelector(`[data-k="${fieldKey}"]`);
+                  if (input) {
+                    if (input.tagName === 'SELECT') {
+                      input.value = product[key];
+                    } else {
+                      input.value = product[key];
+                    }
+                  }
                 });
               }
             }
@@ -392,12 +581,23 @@
 
       function readProducts(){
         return Array.from(products.querySelectorAll('.pill')).map(card=>{
-          const get = k => (card.querySelector(`[data-k="${k}"]`).value||'').trim();
+          const get = k => {
+            const el = card.querySelector(`[data-k="${k}"]`);
+            if (!el) return '';
+            // Handle both input and select elements
+            return el.value ? el.value.trim() : '';
+          };
+          const getNum = k => {
+            const val = card.querySelector(`[data-k="${k}"]`)?.value;
+            return val ? parseFloat(val) : null;
+          };
           return {
             name: get('name'),
             barcode: get('barcode'),
             size: get('size')||null,
             category: get('category')||null,
+            suggested_retail_price: getNum('suggested_retail_price'),
+            image_url: get('image_url')||null,
           };
         }).filter(p=>p.name && p.barcode);
       }
@@ -665,14 +865,14 @@
         } else {
           // Create new brand or upsert by name
           const { data: brandResult, error: rpcErr } = await supabase.rpc('upsert_brand_public', {
-            p_id: null,
-            p_name: name,
-            p_website: site,
-            p_primary_email: email,
-            p_phone: phone,
-            p_address: addr,
-          });
-          if(rpcErr){ err.textContent=rpcErr.message; return; }
+          p_id: null,
+          p_name: name,
+          p_website: site,
+          p_primary_email: email,
+          p_phone: phone,
+          p_address: addr,
+        });
+        if(rpcErr){ err.textContent=rpcErr.message; return; }
           brandId = brandResult;
           
           // Upload logo file if provided (now we have brandId)
@@ -749,14 +949,31 @@
           // Step 1: Check if product exists by SKU (globally unique)
           const { data: existingProduct } = await supabase
             .from('products')
-            .select('id, name, upc, sku')
+            .select('id, name, upc, sku, suggested_retail_price, image_url')
             .eq('sku', sku)
             .maybeSingle();
           
           let productId;
           
           if (existingProduct) {
-            // Product exists - check if already linked to this brand
+            // Product exists - update suggested_retail_price and image_url if provided and not already set
+            const updateData = {};
+            if (p.suggested_retail_price && !existingProduct.suggested_retail_price) {
+              updateData.suggested_retail_price = p.suggested_retail_price;
+            }
+            if (p.image_url && !existingProduct.image_url) {
+              updateData.image_url = p.image_url;
+            }
+            
+            if (Object.keys(updateData).length > 0) {
+              await supabase
+                .from('products')
+                .update(updateData)
+                .eq('id', existingProduct.id);
+              console.log(`Updated product ${sku} with missing fields:`, updateData);
+            }
+            
+            // Check if already linked to this brand
             const { data: existingLink } = await supabase
               .from('brand_products')
               .select('id, product_label')
@@ -780,14 +997,16 @@
               productLabels[productId] = productName;
             }
           } else {
-            // Product doesn't exist - create minimal product
+            // Product doesn't exist - create product with all available fields
             const { data: newProduct, error: insErr } = await supabase
               .from('products')
               .insert({
                 sku: sku,
                 name: productName,
                 upc: productUPC,
-                category: p.category || 'General'
+                category: p.category || 'General',
+                suggested_retail_price: p.suggested_retail_price || null,
+                image_url: p.image_url || null
               })
               .select('id')
               .single();
@@ -898,7 +1117,7 @@
             const state = (s.state_zip || '').trim().split(/\s+/)[0]?.toUpperCase() || null;
             const zip5 = toZip5(s.state_zip);
             
-            // Try to find existing store first
+          // Try to find existing store first
             let storeId = await findExistingStore(s);
             
             if (!storeId) {
@@ -907,14 +1126,14 @@
                 const payload = {
                   banner_id,
                   name: s.name || `${s.retailer} - ${s.city}`,
-                  address: s.address,
-                  city: s.city,
+              address: s.address,
+              city: s.city,
                   state: state,
                   zip_code: zip5,
                   street_norm,
                   city_norm,
                   metro: s.metro,
-                  status: 'unverified'
+              status: 'unverified'
                 };
                 
                 const { data: newStore, error: sErr } = await supabase
@@ -922,8 +1141,8 @@
                   .insert(payload)
                   .select('id')
                   .single();
-                
-                if(sErr){ 
+            
+            if(sErr){ 
                   // Don't block - collect as unmatched
                   unmatchedStores.push({
                     retailer: s.retailer,
