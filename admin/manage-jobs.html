@@ -56,8 +56,16 @@
                 </div>
                 
                 <div id="jobs-table-container" class="bg-white shadow rounded-lg">
-                    <div class="px-6 py-4 border-b border-gray-200">
+                    <div class="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
                         <h3 class="text-lg font-medium text-gray-900">Job List</h3>
+                        <div id="bulk-delete-controls" class="hidden flex items-center gap-3">
+                            <button id="select-all-pending" class="px-3 py-1 text-sm text-blue-600 hover:text-blue-800 border border-blue-300 rounded hover:bg-blue-50">
+                                Select All Pending
+                            </button>
+                            <button id="delete-selected-jobs" class="px-4 py-2 text-sm font-medium text-white bg-red-600 hover:bg-red-700 rounded disabled:opacity-50 disabled:cursor-not-allowed" disabled>
+                                Delete Selected (<span id="selected-count">0</span>)
+                            </button>
+                        </div>
                     </div>
                     <div id="jobs-table-body" class="divide-y divide-gray-200">
                         <!-- Jobs will be loaded here -->
@@ -981,10 +989,35 @@
                         if (product.sku || product.upc) {
                             document.getElementById('product-sku').value = product.sku || product.upc;
                         }
+                        // Set category dropdown to match product's category
                         if (product.category) {
                             const categorySelect = document.getElementById('product-category');
                             if (categorySelect) {
-                                categorySelect.value = product.category;
+                                const categoryValue = product.category.trim();
+                                // Try exact match first
+                                categorySelect.value = categoryValue;
+                                
+                                // If no match found, try case-insensitive match
+                                if (!categorySelect.value || categorySelect.value === '') {
+                                    const options = Array.from(categorySelect.options);
+                                    const matchingOption = options.find(opt => 
+                                        opt.value.toLowerCase() === categoryValue.toLowerCase()
+                                    );
+                                    if (matchingOption) {
+                                        categorySelect.value = matchingOption.value;
+                                        console.log(`✅ Category matched (case-insensitive): ${categoryValue} → ${matchingOption.value}`);
+                                    } else {
+                                        console.warn(`⚠️ Category "${categoryValue}" not found in dropdown options`);
+                                    }
+                                } else {
+                                    console.log(`✅ Category set: ${categoryValue}`);
+                                }
+                            }
+                        } else {
+                            // Clear category if product has no category
+                            const categorySelect = document.getElementById('product-category');
+                            if (categorySelect) {
+                                categorySelect.value = '';
                             }
                         }
                         hideProductSuggestions();
@@ -1647,6 +1680,8 @@
             document.getElementById('jobs-list-section').classList.remove('hidden');
             document.getElementById('create-job-btn').textContent = 'Create New Job';
             document.getElementById('create-job-btn').onclick = showCreateJobForm;
+            // Reload jobs list to show updates
+            loadJobsList();
         }
 
         // Load jobs list
@@ -1654,6 +1689,7 @@
             try {
                 console.log('🔄 Loading jobs list...');
                 
+                // Query jobs with fresh data (no caching)
                 const { data: jobs, error } = await supabase
                     .from('jobs')
                     .select(`
@@ -1671,19 +1707,36 @@
 
                 if (error) throw error;
 
-                console.log('📊 Jobs loaded:', jobs);
+                // Ensure jobs is an array
+                const jobsArray = Array.isArray(jobs) ? jobs : [];
+                console.log(`📊 Jobs loaded: ${jobsArray.length} total jobs`);
 
-                // Update counts
-                const totalJobs = jobs.length;
-                const pendingJobs = jobs.filter(job => job.status === 'pending').length;
-                const completedJobs = jobs.filter(job => job.status === 'completed').length;
+                // Update counts - ensure fresh values
+                const totalJobs = jobsArray.length;
+                const pendingJobs = jobsArray.filter(job => job.status === 'pending').length;
+                const completedJobs = jobsArray.filter(job => job.status === 'completed').length;
 
-                document.getElementById('total-jobs-count').textContent = totalJobs;
-                document.getElementById('pending-jobs-count').textContent = pendingJobs;
-                document.getElementById('completed-jobs-count').textContent = completedJobs;
+                console.log(`📊 Updating counts: Total=${totalJobs}, Pending=${pendingJobs}, Completed=${completedJobs}`);
+
+                const totalEl = document.getElementById('total-jobs-count');
+                const pendingEl = document.getElementById('pending-jobs-count');
+                const completedEl = document.getElementById('completed-jobs-count');
+                
+                if (totalEl) {
+                    totalEl.textContent = totalJobs;
+                    console.log(`✅ Updated total jobs count element: ${totalEl.textContent}`);
+                }
+                if (pendingEl) {
+                    pendingEl.textContent = pendingJobs;
+                    console.log(`✅ Updated pending jobs count element: ${pendingEl.textContent}`);
+                }
+                if (completedEl) {
+                    completedEl.textContent = completedJobs;
+                    console.log(`✅ Updated completed jobs count element: ${completedEl.textContent}`);
+                }
 
                 // Render jobs table
-                renderJobsTable(jobs);
+                renderJobsTable(jobsArray);
 
             } catch (error) {
                 console.error('❌ Error loading jobs:', error);
@@ -1694,10 +1747,24 @@
         // Render jobs table
         function renderJobsTable(jobs) {
             const container = document.getElementById('jobs-table-body');
+            const bulkControls = document.getElementById('bulk-delete-controls');
             
             if (jobs.length === 0) {
                 container.innerHTML = '<div class="p-6 text-center text-gray-500">No jobs found</div>';
+                if (bulkControls) bulkControls.classList.add('hidden');
                 return;
+            }
+
+            // Filter pending jobs
+            const pendingJobs = jobs.filter(job => job.status === 'pending');
+            
+            // Show/hide bulk delete controls based on pending jobs
+            if (bulkControls) {
+                if (pendingJobs.length > 0) {
+                    bulkControls.classList.remove('hidden');
+                } else {
+                    bulkControls.classList.add('hidden');
+                }
             }
 
             const html = jobs.map(job => {
@@ -1720,23 +1787,34 @@
                 }[job.status] || 'bg-gray-100 text-gray-800';
 
                 const shortId = (job.id || '').split('-')[0] || (job.id || '').slice(0,8);
+                const isPending = job.status === 'pending';
+                const checkboxHtml = isPending ? `
+                    <input type="checkbox" 
+                           class="job-checkbox w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500" 
+                           data-job-id="${job.id}"
+                           onchange="updateDeleteButtonState()">
+                ` : '<div class="w-4"></div>'; // Spacer for non-pending jobs
+                
                 return `
                     <div class="px-6 py-4 hover:bg-gray-50">
                         <div class="flex items-center justify-between">
-                            <div class="flex-1">
-                                <div class="flex items-center">
-                                    <h4 class="text-lg font-medium text-gray-900">${job.title}</h4>
-                                    <span class="ml-2 px-2 py-1 text-xs font-semibold rounded-full ${statusColor}">
-                                        ${job.status}
-                                    </span>
-                                </div>
-                                <div class="mt-1 text-sm text-gray-500">
-                                    <div class="flex items-center gap-2"><strong>ID:</strong> <span id="job-id-${job.id}" title="${job.id}">${shortId}</span> <button class="text-blue-600 hover:text-blue-800 text-xs" onclick="navigator.clipboard.writeText('${job.id}')">Copy</button></div>
-                                    <div><strong>Brand:</strong> ${brandName}</div>
-                                    <div><strong>Assigned to:</strong> ${assignedUser}</div>
-                                    <div><strong>Stores:</strong> ${stores}</div>
-                                    <div><strong>Products:</strong> ${skus}</div>
-                                    <div><strong>Created:</strong> ${new Date(job.created_at).toLocaleDateString()}</div>
+                            <div class="flex items-center gap-3 flex-1">
+                                ${checkboxHtml}
+                                <div class="flex-1">
+                                    <div class="flex items-center">
+                                        <h4 class="text-lg font-medium text-gray-900">${job.title}</h4>
+                                        <span class="ml-2 px-2 py-1 text-xs font-semibold rounded-full ${statusColor}">
+                                            ${job.status}
+                                        </span>
+                                    </div>
+                                    <div class="mt-1 text-sm text-gray-500">
+                                        <div class="flex items-center gap-2"><strong>ID:</strong> <span id="job-id-${job.id}" title="${job.id}">${shortId}</span> <button class="text-blue-600 hover:text-blue-800 text-xs" onclick="navigator.clipboard.writeText('${job.id}')">Copy</button></div>
+                                        <div><strong>Brand:</strong> ${brandName}</div>
+                                        <div><strong>Assigned to:</strong> ${assignedUser}</div>
+                                        <div><strong>Stores:</strong> ${stores}</div>
+                                        <div><strong>Products:</strong> ${skus}</div>
+                                        <div><strong>Created:</strong> ${new Date(job.created_at).toLocaleDateString()}</div>
+                                    </div>
                                 </div>
                             </div>
                             <div class="text-right">
@@ -1751,6 +1829,120 @@
             }).join('');
 
             container.innerHTML = html;
+            
+            // Setup event listeners for bulk delete
+            setupBulkDeleteListeners();
+        }
+        
+        // Setup bulk delete functionality
+        function setupBulkDeleteListeners() {
+            // Select all pending jobs
+            const selectAllBtn = document.getElementById('select-all-pending');
+            if (selectAllBtn) {
+                selectAllBtn.addEventListener('click', function() {
+                    const checkboxes = document.querySelectorAll('.job-checkbox');
+                    const allChecked = Array.from(checkboxes).every(cb => cb.checked);
+                    
+                    checkboxes.forEach(cb => {
+                        cb.checked = !allChecked;
+                    });
+                    
+                    window.updateDeleteButtonState();
+                });
+            }
+            
+            // Individual checkbox changes
+            document.querySelectorAll('.job-checkbox').forEach(checkbox => {
+                checkbox.addEventListener('change', window.updateDeleteButtonState);
+            });
+            
+            // Delete selected jobs
+            const deleteBtn = document.getElementById('delete-selected-jobs');
+            if (deleteBtn) {
+                deleteBtn.addEventListener('click', handleBulkDelete);
+            }
+            
+            // Initialize button state
+            window.updateDeleteButtonState();
+        }
+        
+        // Update delete button state based on selected checkboxes (globally accessible for inline handlers)
+        window.updateDeleteButtonState = function() {
+            const checkboxes = document.querySelectorAll('.job-checkbox:checked');
+            const deleteBtn = document.getElementById('delete-selected-jobs');
+            const countSpan = document.getElementById('selected-count');
+            
+            const count = checkboxes.length;
+            
+            if (countSpan) {
+                countSpan.textContent = count;
+            }
+            
+            if (deleteBtn) {
+                deleteBtn.disabled = count === 0;
+            }
+        }
+        
+        // Handle bulk delete with confirmation
+        async function handleBulkDelete() {
+            const checkboxes = document.querySelectorAll('.job-checkbox:checked');
+            const jobIds = Array.from(checkboxes).map(cb => cb.dataset.jobId);
+            
+            if (jobIds.length === 0) {
+                alert('No jobs selected for deletion.');
+                return;
+            }
+            
+            // Confirmation dialog
+            const confirmMessage = `Are you sure you want to delete ${jobIds.length} pending job(s)?\n\nThis action cannot be undone.`;
+            if (!confirm(confirmMessage)) {
+                return;
+            }
+            
+            // Double confirmation for large deletions
+            if (jobIds.length >= 10) {
+                const doubleConfirm = confirm(`⚠️ WARNING: You are about to delete ${jobIds.length} jobs.\n\nThis is a large deletion. Are you absolutely sure?`);
+                if (!doubleConfirm) {
+                    return;
+                }
+            }
+            
+            try {
+                console.log(`🗑️ Deleting ${jobIds.length} jobs...`);
+                
+                // Delete jobs from Supabase
+                const { error } = await supabase
+                    .from('jobs')
+                    .delete()
+                    .in('id', jobIds);
+                
+                if (error) {
+                    console.error('❌ Error deleting jobs:', error);
+                    alert(`Error deleting jobs: ${error.message}`);
+                    return;
+                }
+                
+                console.log(`✅ Successfully deleted ${jobIds.length} jobs`);
+                
+                // Clear all checkboxes
+                document.querySelectorAll('.job-checkbox').forEach(cb => {
+                    cb.checked = false;
+                });
+                
+                // Update delete button state (disable it)
+                updateDeleteButtonState();
+                
+                // Reload jobs list with fresh data
+                await loadJobsList();
+                
+                // Force a small delay to ensure DOM is updated, then show success
+                await new Promise(resolve => setTimeout(resolve, 200));
+                alert(`Successfully deleted ${jobIds.length} job(s).`);
+                
+            } catch (error) {
+                console.error('❌ Error in bulk delete:', error);
+                alert(`Error deleting jobs: ${error.message}`);
+            }
         }
 
         // View job details (admin edit mode) without full reload
@@ -1842,16 +2034,14 @@
                 }
 
                 console.log('✅ Job updated successfully');
-                showSuccess('Job updated successfully!');
+                alert('Job updated successfully!');
                 
-                // Return to job list
-                setTimeout(() => {
-                    window.location.href = 'manage-jobs.html';
-                }, 2000);
+                // Return to job list and reload
+                window.location.href = 'manage-jobs.html';
 
             } catch (error) {
                 console.error('❌ Error updating job:', error);
-                showError('Failed to update job. Please try again.');
+                alert(`Failed to update job: ${error.message}`);
             }
         }
 
@@ -1872,28 +2062,52 @@
                 if (error) throw error;
 
                 console.log('✅ Job deleted successfully');
-                showSuccess('Job deleted successfully!');
+                alert('Job deleted successfully!');
                 
-                // Return to job list
-                setTimeout(() => {
-                    window.location.href = 'manage-jobs.html';
-                }, 2000);
+                // Return to job list and reload
+                window.location.href = 'manage-jobs.html';
 
             } catch (error) {
                 console.error('❌ Error deleting job:', error);
-                showError('Failed to delete job. Please try again.');
+                alert(`Failed to delete job: ${error.message}`);
             }
         }
 
         // Add delete button
         function addDeleteButton(jobId) {
-            const form = document.getElementById('job-creation-form');
+            // Remove existing delete button if it exists
+            const existingBtn = document.getElementById('delete-job-btn');
+            if (existingBtn) {
+                existingBtn.remove();
+            }
+            
+            // Find the form actions container (where Cancel and Confirm buttons are)
+            const formActions = document.querySelector('#job-creation-form .flex.justify-between.pt-6');
+            
+            if (!formActions) {
+                console.warn('Could not find form actions container');
+                return;
+            }
+            
+            // Create delete button
             const deleteBtn = document.createElement('button');
+            deleteBtn.id = 'delete-job-btn';
             deleteBtn.type = 'button';
-            deleteBtn.className = 'btn-red mt-4';
+            deleteBtn.className = 'px-6 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700';
             deleteBtn.textContent = 'Delete Job';
-            deleteBtn.onclick = () => deleteJob(jobId);
-            form.appendChild(deleteBtn);
+            deleteBtn.onclick = (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                deleteJob(jobId);
+            };
+            
+            // Insert before the Cancel button (so it's: Delete | Cancel | Confirm)
+            const cancelBtn = formActions.querySelector('button[onclick*="goToPage"]');
+            if (cancelBtn) {
+                formActions.insertBefore(deleteBtn, cancelBtn);
+            } else {
+                formActions.appendChild(deleteBtn);
+            }
         }
 
         // Update job stores

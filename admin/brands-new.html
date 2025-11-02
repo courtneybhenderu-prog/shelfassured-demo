@@ -249,10 +249,6 @@
           <input data-k="suggested_retail_price" placeholder="9.99" type="number" step="0.01" />
         </div>
         <div>
-          <label>Image URL</label>
-          <input data-k="image_url" placeholder="https://…" />
-        </div>
-        <div>
           <label>Category</label>
           <select data-k="category">
             <option value="">Select category</option>
@@ -495,7 +491,7 @@
       function downloadTemplate(type) {
         const templates = {
           products: 'name,upc,size,suggested_retail_price,category\nProduct Name 1,123456789012,16 oz,9.99,Coffee\nProduct Name 2,123456789013,32 oz,12.99,Milk',
-          stores: 'retailer,name,address,city,state_zip\nH-E-B,San Felipe H-E-B,5895 San Felipe Street,Houston,TX 77057-3061\nKroger,Kroger - Bunker Hill,17455 Spring Cypress Road,Houston,TX 77090'
+          stores: 'retailer,name,address,city,state_zip,metro\nH-E-B,San Felipe H-E-B,5895 San Felipe Street,Houston,TX 77057-3061,Houston-The Woodlands-Sugar Land, TX MSA\nKroger,Kroger - Bunker Hill,17455 Spring Cypress Road,Houston,TX 77090,'
         };
         
         const blob = new Blob([templates[type]], { type: 'text/csv' });
@@ -554,7 +550,7 @@
               }
             }
           } else if (type === 'stores') {
-            // Expected headers: retailer,name,address,city,state_zip,metro
+            // Expected headers: retailer,name,address,city,state_zip,metro (metro is optional)
             for (let i = 1; i < lines.length; i++) {
               const values = lines[i].split(',').map(v => v.trim());
               const store = {};
@@ -597,7 +593,6 @@
             size: get('size')||null,
             category: get('category')||null,
             suggested_retail_price: getNum('suggested_retail_price'),
-            image_url: get('image_url')||null,
           };
         }).filter(p=>p.name && p.barcode);
       }
@@ -947,22 +942,20 @@
           }
           
           // Step 1: Check if product exists by SKU (globally unique)
+          // Select fields
           const { data: existingProduct } = await supabase
             .from('products')
-            .select('id, name, upc, sku, suggested_retail_price, image_url')
+            .select('id, name, upc, sku, suggested_retail_price')
             .eq('sku', sku)
             .maybeSingle();
           
           let productId;
           
           if (existingProduct) {
-            // Product exists - update suggested_retail_price and image_url if provided and not already set
+            // Product exists - update suggested_retail_price if provided and not already set
             const updateData = {};
             if (p.suggested_retail_price && !existingProduct.suggested_retail_price) {
               updateData.suggested_retail_price = p.suggested_retail_price;
-            }
-            if (p.image_url && !existingProduct.image_url) {
-              updateData.image_url = p.image_url;
             }
             
             if (Object.keys(updateData).length > 0) {
@@ -1004,9 +997,8 @@
                 sku: sku,
                 name: productName,
                 upc: productUPC,
-                category: p.category || 'General',
-                suggested_retail_price: p.suggested_retail_price || null,
-                image_url: p.image_url || null
+                category: p.category || null, // Don't default to 'General' - it's not in the dropdown
+                suggested_retail_price: p.suggested_retail_price || null
               })
               .select('id')
               .single();

@@ -171,12 +171,47 @@
         // Load dashboard data
         async function loadDashboardData() {
             try {
-                // Load jobs data
-                const jobs = await saGet('jobs', []);
+                // Check if brand_id is provided in URL (admin viewing specific brand)
+                const urlParams = new URLSearchParams(window.location.search);
+                const brandId = urlParams.get('brand_id');
                 
-                // Filter jobs for this client
-                const { data: { user } } = await supabase.auth.getUser();
-                const clientJobs = jobs.filter(job => job.client_id === user.id);
+                let clientJobs = [];
+                let brandInfo = null;
+                
+                if (brandId) {
+                    // Admin viewing specific brand - filter by brand_id
+                    console.log('🔍 Admin viewing brand:', brandId);
+                    
+                    // Load brand info
+                    const { data: brand, error: brandError } = await supabase
+                        .from('brands')
+                        .select('id, name, website, logo_url, created_at')
+                        .eq('id', brandId)
+                        .single();
+                    
+                    if (brandError) {
+                        console.error('Error loading brand:', brandError);
+                    } else {
+                        brandInfo = brand;
+                        // Update page title with brand name
+                        document.querySelector('h1').textContent = `${brand.name} Dashboard`;
+                        const greeting = document.querySelector('h2');
+                        if (greeting) {
+                            greeting.textContent = `Hello, ${brand.name}!`;
+                        }
+                    }
+                    
+                    // Filter jobs by brand_id
+                    const jobs = await saGet('jobs', []);
+                    clientJobs = jobs.filter(job => job.brand_id === brandId);
+                    
+                    console.log(`✅ Loaded ${clientJobs.length} jobs for brand ${brandId}`);
+                } else {
+                    // Normal brand client view - filter by client_id
+                    const { data: { user } } = await supabase.auth.getUser();
+                    const jobs = await saGet('jobs', []);
+                    clientJobs = jobs.filter(job => job.client_id === user.id);
+                }
                 
                 // Update stats
                 document.getElementById('active-jobs').textContent = clientJobs.filter(job => job.status === 'pending' || job.status === 'assigned').length;

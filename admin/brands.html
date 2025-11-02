@@ -273,7 +273,7 @@
                         <div class="flex items-center space-x-4 flex-1">
                             ${logoHtml}
                             <div class="flex-1">
-                                <a href="../brand/dashboard.html?id=${brand.id}" class="font-medium text-blue-600 hover:text-blue-800 hover:underline text-lg">
+                                <a href="../dashboard/brand-client.html?brand_id=${brand.id}" class="font-medium text-blue-600 hover:text-blue-800 hover:underline text-lg">
                                     ${escapeHtml(brand.name || 'Unnamed Brand')} ${brand.name === 'Rambler' ? '⭐' : ''}
                                 </a>
                                 ${brand.website ? `<div class="text-sm text-gray-500 mt-1">${escapeHtml(brand.website)}</div>` : ''}
@@ -281,11 +281,11 @@
                             </div>
                         </div>
                         <div class="flex items-center space-x-2">
-                            <a href="../brand/dashboard.html?id=${brand.id}" target="_blank" rel="noopener" 
+                            <a href="../dashboard/brand-client.html?brand_id=${brand.id}" target="_blank" rel="noopener" 
                                class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium text-sm">
                                 View Dashboard
                             </a>
-                            <a href="../brand/dashboard.html?id=${brand.id}" target="_blank" rel="noopener" 
+                            <a href="../dashboard/brand-client.html?brand_id=${brand.id}" target="_blank" rel="noopener" 
                                class="text-gray-400 hover:text-gray-600 text-lg" title="Open in new tab">
                                 ↗
                             </a>

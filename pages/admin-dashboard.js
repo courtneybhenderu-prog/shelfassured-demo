@@ -323,7 +323,7 @@ function updateBrandsPanel(brands, isInitial = false) {
                 <div class="flex items-center space-x-3 flex-1">
                     ${logoHtml}
                     <div class="flex-1">
-                        <a href="../brand/dashboard.html?id=${brand.id}" class="font-medium text-blue-600 hover:text-blue-800 hover:underline">
+                        <a href="../dashboard/brand-client.html?brand_id=${brand.id}" class="font-medium text-blue-600 hover:text-blue-800 hover:underline">
                             ${escapeHtml(brand.name || 'Unnamed Brand')}
                         </a>
                         ${brand.website ? `<div class="text-sm text-gray-500 mt-1">${escapeHtml(brand.website)}</div>` : ''}
@@ -331,7 +331,7 @@ function updateBrandsPanel(brands, isInitial = false) {
                     </div>
                 </div>
                 <div class="flex items-center space-x-2">
-                    <a href="../brand/dashboard.html?id=${brand.id}" target="_blank" rel="noopener" 
+                    <a href="../dashboard/brand-client.html?brand_id=${brand.id}" target="_blank" rel="noopener" 
                        class="text-gray-400 hover:text-gray-600 text-sm" title="Open in new tab">
                         ↗
                     </a>
