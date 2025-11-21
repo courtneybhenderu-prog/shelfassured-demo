@@ -587,9 +587,14 @@
                     }
                     
                     if (statusFilter === 'pending_review') {
-                        const isPending = job.status === 'pending_review' && 
-                               (sub.is_validated === null || sub.is_validated === false) &&
+                        // Show submissions that haven't been reviewed yet
+                        // This includes jobs with status 'pending_review' OR any job that has an unvalidated submission
+                        const hasUnvalidatedSubmission = (sub.is_validated === null || sub.is_validated === false) &&
                                (sub.review_outcome === null || sub.review_outcome === undefined || sub.review_outcome !== 'superseded');
+                        
+                        const isPending = hasUnvalidatedSubmission && 
+                               job.status !== 'completed' && 
+                               job.status !== 'cancelled';
                         
                         // Debug logging for first few submissions
                         if (filtered.length <= 3) {
@@ -598,6 +603,7 @@
                                 job_status: job.status,
                                 is_validated: sub.is_validated,
                                 review_outcome: sub.review_outcome,
+                                hasUnvalidatedSubmission: hasUnvalidatedSubmission,
                                 passes_filter: isPending
                             });
                         }
