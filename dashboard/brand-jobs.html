@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Brand Jobs - ShelfAssured</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.47.5/dist/umd/supabase.min.js"></script>
+    <link rel="stylesheet" href="../shared/styles.css">
+    
+    <!-- Set page role BEFORE loading shared/api.js -->
+    <script>
+        // Allow both brand_client and admin to access this page
+        window.SA_PAGE_ROLE = 'brand_client';
+        window.SA_ALLOW_ADMIN_OVERRIDE = true; // Allow admins to access brand_client pages
+    </script>
+</head>
+<body>
+    <div class="min-h-screen bg-gray-100">
+        <!-- Header -->
+        <div class="bg-white shadow-sm border-b">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="flex justify-between items-center py-4">
+                    <div class="flex items-center">
+                        <h1 class="text-2xl font-bold text-gray-900" id="page-title">Brand Jobs</h1>
+                        <span id="brand-name-badge" class="ml-3 px-2 py-1 text-xs font-semibold text-white bg-blue-600 rounded-full hidden"></span>
+                    </div>
+                    <div class="flex items-center space-x-4">
+                        <a href="brand-client.html" id="back-link" class="text-gray-600 hover:text-gray-900">← Back to Dashboard</a>
+                        <span id="client-user" class="text-sm text-gray-600">Loading...</span>
+                        <button onclick="handleSignOut()" class="text-sm text-gray-500 hover:text-gray-700">Sign Out</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+            <!-- Stats Cards -->
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+                <div class="bg-white p-4 rounded-lg shadow">
+                    <div class="text-sm text-gray-500">Total Jobs</div>
+                    <div id="total-jobs-count" class="text-2xl font-bold text-gray-900">0</div>
+                </div>
+                <div class="bg-white p-4 rounded-lg shadow">
+                    <div class="text-sm text-gray-500">Active</div>
+                    <div id="active-jobs-count" class="text-2xl font-bold text-blue-600">0</div>
+                </div>
+                <div class="bg-white p-4 rounded-lg shadow">
+                    <div class="text-sm text-gray-500">Pending Review</div>
+                    <div id="pending-review-count" class="text-2xl font-bold text-orange-600">0</div>
+                </div>
+                <div class="bg-white p-4 rounded-lg shadow">
+                    <div class="text-sm text-gray-500">Completed</div>
+                    <div id="completed-jobs-count" class="text-2xl font-bold text-green-600">0</div>
+                </div>
+            </div>
+
+            <!-- Jobs List -->
+            <div class="bg-white shadow rounded-lg">
+                <div class="px-6 py-4 border-b border-gray-200">
+                    <div class="flex items-center justify-between">
+                        <h3 class="text-lg font-medium text-gray-900">Job List</h3>
+                        <div class="flex items-center gap-3">
+                            <select id="status-filter" class="px-3 py-1 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                                <option value="all">All Status</option>
+                                <option value="pending">Pending</option>
+                                <option value="assigned">Assigned</option>
+                                <option value="pending_review">Pending Review</option>
+                                <option value="completed">Completed</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                <div id="jobs-table-body" class="divide-y divide-gray-200">
+                    <div class="p-6 text-center text-gray-500">Loading jobs...</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Include shared API -->
+    <script src="../shared/api.js?v=20250113-16"></script>
+    
+    <script>
+        let currentBrandId = null;
+        let currentBrandName = null;
+        let allJobs = [];
+
+        // Initialize page
+        document.addEventListener('DOMContentLoaded', async function() {
+            console.log('🔧 Brand Jobs page initialized');
+            
+            // Wait for Supabase to be available
+            let attempts = 0;
+            while (!window.supabase && attempts < 10) {
+                await new Promise(resolve => setTimeout(resolve, 100));
+                attempts++;
+            }
+            
+            if (!window.supabase) {
+                console.error('❌ Supabase failed to load');
+                window.location.href = '../auth/signin.html';
+                return;
+            }
+            
+            // Get brand_id from URL
+            const urlParams = new URLSearchParams(window.location.search);
+            currentBrandId = urlParams.get('brand_id');
+            
+            if (!currentBrandId) {
+                console.error('❌ No brand_id in URL');
+                alert('Invalid page access. Redirecting to dashboard.');
+                window.location.href = 'brand-client.html';
+                return;
+            }
+            
+            // Load brand info and jobs
+            await loadBrandInfo();
+            await loadJobsList();
+            
+            // Setup filter
+            document.getElementById('status-filter').addEventListener('change', filterJobs);
+        });
+
+        // Load brand information
+        async function loadBrandInfo() {
+            try {
+                const { data: brand, error } = await supabase
+                    .from('brands')
+                    .select('id, name')
+                    .eq('id', currentBrandId)
+                    .single();
+                
+                if (error) throw error;
+                
+                currentBrandName = brand.name;
+                document.getElementById('page-title').textContent = `${brand.name} - Jobs`;
+                document.getElementById('brand-name-badge').textContent = brand.name;
+                document.getElementById('brand-name-badge').classList.remove('hidden');
+                
+                // Update back link to include brand_id
+                const backLink = document.getElementById('back-link');
+                backLink.href = `brand-client.html?brand_id=${currentBrandId}`;
+                
+            } catch (error) {
+                console.error('❌ Error loading brand info:', error);
+            }
+        }
+
+        // Load jobs list (filtered by brand_id)
+        async function loadJobsList() {
+            try {
+                console.log('🔄 Loading jobs for brand:', currentBrandId);
+                
+                // Query jobs for this brand only
+                const { data: jobs, error } = await supabase
+                    .from('jobs')
+                    .select(`
+                        *,
+                        brands(name),
+                        assigned_user:assigned_user_id(full_name),
+                        job_store_skus(
+                            stores(name, city, state),
+                            skus(name)
+                        )
+                    `)
+                    .eq('brand_id', currentBrandId)
+                    .order('created_at', { ascending: false });
+
+                if (error) throw error;
+
+                allJobs = Array.isArray(jobs) ? jobs : [];
+                console.log(`📊 Jobs loaded: ${allJobs.length} jobs for brand`);
+
+                // Update counts
+                updateJobCounts(allJobs);
+
+                // Render jobs table
+                renderJobsTable(allJobs);
+
+            } catch (error) {
+                console.error('❌ Error loading jobs:', error);
+                document.getElementById('jobs-table-body').innerHTML = 
+                    '<div class="p-6 text-center text-red-500">Error loading jobs. Please refresh.</div>';
+            }
+        }
+
+        // Update job counts
+        function updateJobCounts(jobs) {
+            const total = jobs.length;
+            const active = jobs.filter(j => ['pending', 'assigned', 'pending_review'].includes(j.status)).length;
+            const pendingReview = jobs.filter(j => j.status === 'pending_review').length;
+            const completed = jobs.filter(j => j.status === 'completed').length;
+
+            document.getElementById('total-jobs-count').textContent = total;
+            document.getElementById('active-jobs-count').textContent = active;
+            document.getElementById('pending-review-count').textContent = pendingReview;
+            document.getElementById('completed-jobs-count').textContent = completed;
+        }
+
+        // Filter jobs by status
+        function filterJobs() {
+            const statusFilter = document.getElementById('status-filter').value;
+            let filtered = allJobs;
+
+            if (statusFilter !== 'all') {
+                filtered = allJobs.filter(job => job.status === statusFilter);
+            }
+
+            renderJobsTable(filtered);
+        }
+
+        // Render jobs table
+        function renderJobsTable(jobs) {
+            const container = document.getElementById('jobs-table-body');
+            
+            if (jobs.length === 0) {
+                container.innerHTML = '<div class="p-6 text-center text-gray-500">No jobs found</div>';
+                return;
+            }
+
+            const html = jobs.map(job => {
+                // Extract stores and SKUs from job_store_skus
+                const storesFromJSKS = (job.job_store_skus || [])
+                    .map(r => r.stores?.name)
+                    .filter(Boolean);
+                const skusFromJSKS = (job.job_store_skus || [])
+                    .map(r => r.skus?.name)
+                    .filter(Boolean);
+                
+                const storeSet = new Set(storesFromJSKS);
+                const skuSet = new Set(skusFromJSKS);
+                const stores = storeSet.size > 0 ? Array.from(storeSet).join(', ') : 'No stores';
+                const skus = skuSet.size > 0 ? Array.from(skuSet).join(', ') : 'No SKUs';
+                
+                const statusColor = {
+                    'pending': 'bg-yellow-100 text-yellow-800',
+                    'assigned': 'bg-blue-100 text-blue-800',
+                    'pending_review': 'bg-orange-100 text-orange-800',
+                    'completed': 'bg-green-100 text-green-800',
+                    'cancelled': 'bg-red-100 text-red-800'
+                }[job.status] || 'bg-gray-100 text-gray-800';
+
+                const statusLabel = {
+                    'pending': 'Pending',
+                    'assigned': 'Assigned',
+                    'pending_review': 'Pending Review',
+                    'completed': 'Completed',
+                    'cancelled': 'Cancelled'
+                }[job.status] || job.status;
+
+                const shortId = (job.id || '').split('-')[0] || (job.id || '').slice(0, 8);
+                const assignedUser = job.assigned_user?.full_name || 'Unassigned';
+                
+                return `
+                    <div class="px-6 py-4 hover:bg-gray-50">
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center space-x-4 flex-1">
+                                <div class="flex-1">
+                                    <div class="flex items-center gap-3 mb-1">
+                                        <h4 class="font-semibold text-gray-900">${escapeHtml(job.title || 'Untitled Job')}</h4>
+                                        <span class="px-2 py-1 text-xs font-semibold rounded-full ${statusColor}">
+                                            ${statusLabel}
+                                        </span>
+                                    </div>
+                                    <div class="text-sm text-gray-600 space-y-1">
+                                        <div><strong>Job ID:</strong> ${shortId}</div>
+                                        <div><strong>Stores:</strong> ${escapeHtml(stores)}</div>
+                                        <div><strong>Products:</strong> ${escapeHtml(skus)}</div>
+                                        <div><strong>Assigned:</strong> ${escapeHtml(assignedUser)}</div>
+                                        <div><strong>Created:</strong> ${new Date(job.created_at).toLocaleDateString()}</div>
+                                        ${job.due_date ? `<div><strong>Due:</strong> ${new Date(job.due_date).toLocaleDateString()}</div>` : ''}
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="ml-4 flex items-center gap-2">
+                                <a href="../admin/manage-jobs.html?edit_job_id=${job.id}" 
+                                   target="_blank"
+                                   class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-medium">
+                                    View Details
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            container.innerHTML = html;
+        }
+
+        // Escape HTML helper
+        function escapeHtml(text) {
+            if (!text) return '';
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // Sign out handler
+        async function handleSignOut() {
+            try {
+                await supabase.auth.signOut();
+                window.location.href = '../auth/signin.html';
+            } catch (error) {
+                console.error('Error signing out:', error);
+            }
+        }
+    </script>
+</body>
+</html>
+

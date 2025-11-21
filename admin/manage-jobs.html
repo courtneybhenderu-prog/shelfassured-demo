@@ -264,79 +264,7 @@
                                 <input type="text" id="product-sku" placeholder="UPC (optional, e.g., 0123456789012)" 
                                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
                                 <select id="product-category" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
-                                    <option value="">Select category (optional)</option>
-                                    <option value="Air Care">Air Care</option>
-                                    <option value="Asian Foods">Asian Foods</option>
-                                    <option value="Baby Food">Baby Food</option>
-                                    <option value="Bagels">Bagels</option>
-                                    <option value="Beef">Beef</option>
-                                    <option value="Beer">Beer</option>
-                                    <option value="Body Care">Body Care</option>
-                                    <option value="Bread">Bread</option>
-                                    <option value="Butter">Butter</option>
-                                    <option value="Candy">Candy</option>
-                                    <option value="Canned Fruit">Canned Fruit</option>
-                                    <option value="Canned Tomatoes">Canned Tomatoes</option>
-                                    <option value="Canned Vegetables">Canned Vegetables</option>
-                                    <option value="Cat Food">Cat Food</option>
-                                    <option value="Cheese">Cheese</option>
-                                    <option value="Chips">Chips</option>
-                                    <option value="Cleaning Supplies">Cleaning Supplies</option>
-                                    <option value="Coffee">Coffee</option>
-                                    <option value="Cold Cereal">Cold Cereal</option>
-                                    <option value="Condiments">Condiments</option>
-                                    <option value="Cookies">Cookies</option>
-                                    <option value="Diapers">Diapers</option>
-                                    <option value="Dog Food">Dog Food</option>
-                                    <option value="Eggs">Eggs</option>
-                                    <option value="Energy & Functional Beverage">Energy & Functional Beverage</option>
-                                    <option value="Feminine Hygiene">Feminine Hygiene</option>
-                                    <option value="Fresh Fruit">Fresh Fruit</option>
-                                    <option value="Fresh Vegetables">Fresh Vegetables</option>
-                                    <option value="Frozen Bread">Frozen Bread</option>
-                                    <option value="Frozen Desserts & Novelties">Frozen Desserts & Novelties</option>
-                                    <option value="Frozen Fruits">Frozen Fruits</option>
-                                    <option value="Frozen Meals">Frozen Meals</option>
-                                    <option value="Frozen Pizza">Frozen Pizza</option>
-                                    <option value="Frozen Potatoes">Frozen Potatoes</option>
-                                    <option value="Frozen Vegetables">Frozen Vegetables</option>
-                                    <option value="Granola">Granola</option>
-                                    <option value="Herbs">Herbs</option>
-                                    <option value="Ice Cream">Ice Cream</option>
-                                    <option value="Laundry">Laundry</option>
-                                    <option value="Meat Alternatives">Meat Alternatives</option>
-                                    <option value="Mediterranean Foods">Mediterranean Foods</option>
-                                    <option value="Mexican Foods">Mexican Foods</option>
-                                    <option value="Milk">Milk</option>
-                                    <option value="Nuts">Nuts</option>
-                                    <option value="Oatmeal">Oatmeal</option>
-                                    <option value="Oil & Vinegar">Oil & Vinegar</option>
-                                    <option value="Other International Foods">Other International Foods</option>
-                                    <option value="Packaged Salads">Packaged Salads</option>
-                                    <option value="Pancake Mix">Pancake Mix</option>
-                                    <option value="Paper Goods">Paper Goods</option>
-                                    <option value="Pasta">Pasta</option>
-                                    <option value="Pasta Sauce">Pasta Sauce</option>
-                                    <option value="Pastries">Pastries</option>
-                                    <option value="Pet Treats">Pet Treats</option>
-                                    <option value="Pork">Pork</option>
-                                    <option value="Poultry">Poultry</option>
-                                    <option value="Protein Bars">Protein Bars</option>
-                                    <option value="Ready to Drink Coffee & Tea">Ready to Drink Coffee & Tea</option>
-                                    <option value="Rice, Beans & Grains">Rice, Beans & Grains</option>
-                                    <option value="Salad Dressing">Salad Dressing</option>
-                                    <option value="Seafood">Seafood</option>
-                                    <option value="Sparkling Water">Sparkling Water</option>
-                                    <option value="Spices & Seasonings">Spices & Seasonings</option>
-                                    <option value="Spirits">Spirits</option>
-                                    <option value="Still Water">Still Water</option>
-                                    <option value="Supplements">Supplements</option>
-                                    <option value="Tea">Tea</option>
-                                    <option value="Trail Mix">Trail Mix</option>
-                                    <option value="Vitamins">Vitamins</option>
-                                    <option value="Wine">Wine</option>
-                                    <option value="Wipes">Wipes</option>
-                                    <option value="Yogurt">Yogurt</option>
+                                    <!-- Categories will be populated by JavaScript -->
                                 </select>
                                 <button type="button" onclick="addSkuInput()" class="px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">Add Product</button>
                                 <div id="available-products" class="mt-3 p-2 bg-gray-50 rounded hidden"></div>
@@ -412,6 +340,7 @@
     </div>
 
     <script src="../shared/api.js?v=20250113-4"></script>
+    <script src="../shared/categories.js"></script>
     <script src="enhanced-store-selector.js?v=20250113-13"></script>
     <script>
         // Global variables
@@ -422,6 +351,14 @@
         let selectedStores = [];
         let selectedSkus = [];
 
+        // Populate category dropdown
+        function populateCategoryDropdown() {
+            const categorySelect = document.getElementById('product-category');
+            if (categorySelect && typeof generateCategoryDropdownHTML === 'function') {
+                categorySelect.innerHTML = generateCategoryDropdownHTML(true);
+            }
+        }
+        
         // Initialize page
         document.addEventListener('DOMContentLoaded', async function() {
             try {
@@ -471,6 +408,9 @@
                 // Setup error handling
                 console.log('🔄 Setting up error handling...');
                 setupErrorHandling();
+                
+                // Populate category dropdown
+                populateCategoryDropdown();
                 
                 // Load jobs list by default (unless in edit mode)
                 if (!editJobId) {

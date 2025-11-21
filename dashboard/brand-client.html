@@ -68,7 +68,7 @@
                     <button onclick="goToPage('request-audit.html')" class="btn-red">
                         Request New Audit
                     </button>
-                    <button onclick="goToPage('jobs.html')" class="btn-red">
+                    <button onclick="goToPage('brand-jobs.html')" class="btn-red">
                         View Jobs
                     </button>
                 </div>
@@ -108,6 +108,17 @@
     <script>
         function goToPage(page) {
             console.log('🔍 Debug: goToPage called with:', page);
+            
+            // If navigating to brand-jobs, include brand_id if available
+            if (page === 'brand-jobs.html' || page.includes('brand-jobs')) {
+                const urlParams = new URLSearchParams(window.location.search);
+                const brandId = urlParams.get('brand_id');
+                if (brandId) {
+                    window.location.href = `${page}?brand_id=${brandId}`;
+                    return;
+                }
+            }
+            
             window.location.href = page;
         }
         
@@ -214,14 +225,26 @@
                 }
                 
                 // Update stats
-                document.getElementById('active-jobs').textContent = clientJobs.filter(job => job.status === 'pending' || job.status === 'assigned').length;
-                document.getElementById('completed-audits').textContent = clientJobs.filter(job => job.status === 'completed').length;
+                // Active jobs: pending, assigned, or pending_review (waiting for admin review)
+                const activeStatuses = ['pending', 'assigned', 'pending_review'];
+                const activeJobs = clientJobs.filter(job => activeStatuses.includes(job.status)).length;
+                document.getElementById('active-jobs').textContent = activeJobs;
+                
+                // Completed jobs: only 'completed' status
+                const completedJobs = clientJobs.filter(job => job.status === 'completed').length;
+                document.getElementById('completed-audits').textContent = completedJobs;
                 
                 // Calculate success rate
                 const totalJobs = clientJobs.length;
-                const completedJobs = clientJobs.filter(job => job.status === 'completed').length;
                 const successRate = totalJobs > 0 ? Math.round((completedJobs / totalJobs) * 100) : 0;
                 document.getElementById('success-rate').textContent = `${successRate}%`;
+                
+                console.log('📊 Dashboard stats:', {
+                    total: totalJobs,
+                    active: activeJobs,
+                    completed: completedJobs,
+                    pending_review: clientJobs.filter(job => job.status === 'pending_review').length
+                });
                 
                 // Update success rate description based on data availability
                 const successRateDesc = document.getElementById('success-rate-desc');
@@ -242,8 +265,11 @@
                 // Update motivational text based on progress
                 updateMotivationalText(totalJobs, completedJobs);
                 
-                // Display recent jobs
-                displayRecentJobs(clientJobs.slice(0, 5));
+                // Display recent jobs - sort by most recent first
+                const sortedJobs = [...clientJobs].sort((a, b) => {
+                    return new Date(b.created_at || b.updated_at) - new Date(a.created_at || a.updated_at);
+                });
+                displayRecentJobs(sortedJobs.slice(0, 5));
                 
             } catch (error) {
                 console.error('Error loading dashboard data:', error);
@@ -278,20 +304,45 @@
                 return;
             }
 
-            const jobsHtml = jobs.map(job => `
+            const jobsHtml = jobs.map(job => {
+                // Determine status styling and label
+                let statusClass = 'text-gray-600';
+                let statusLabel = job.status;
+                let statusIcon = '⏳';
+                
+                if (job.status === 'completed') {
+                    statusClass = 'text-green-600';
+                    statusLabel = 'Completed';
+                    statusIcon = '✅';
+                } else if (job.status === 'pending_review') {
+                    statusClass = 'text-orange-600';
+                    statusLabel = 'Pending Review';
+                    statusIcon = '👀';
+                } else if (job.status === 'pending') {
+                    statusClass = 'text-blue-600';
+                    statusLabel = 'Pending';
+                    statusIcon = '⏳';
+                } else if (job.status === 'assigned') {
+                    statusClass = 'text-purple-600';
+                    statusLabel = 'Assigned';
+                    statusIcon = '📋';
+                }
+                
+                return `
                 <div class="py-3 border-b border-gray-200 last:border-b-0">
                     <div class="flex items-start justify-between">
                         <div class="flex-1">
                             <div class="font-medium text-gray-900">${job.title}</div>
-                            <div class="text-sm text-gray-600">Status: <span class="font-medium ${job.status === 'completed' ? 'text-green-600' : job.status === 'pending' ? 'text-blue-600' : 'text-gray-600'}">${job.status}</span></div>
+                            <div class="text-sm text-gray-600">Status: <span class="font-medium ${statusClass}">${statusLabel}</span></div>
                             <div class="text-sm text-gray-500">Created: ${new Date(job.created_at).toLocaleDateString()}</div>
                         </div>
                         <div class="text-right">
-                            <div class="text-sm font-medium text-gray-900">${job.status === 'completed' ? '✅ Complete' : '⏳ In Progress'}</div>
+                            <div class="text-sm font-medium ${statusClass}">${statusIcon} ${statusLabel}</div>
                         </div>
                     </div>
                 </div>
-            `).join('');
+            `;
+            }).join('');
 
             container.innerHTML = jobsHtml;
         }

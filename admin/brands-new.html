@@ -119,79 +119,8 @@
           <p class="hint" style="margin-bottom: 10px; font-weight: 600;">
             Choose from the categories listed below when filling out your CSV:
           </p>
-          <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 8px; font-size: 0.9em; color: #6b7280;">
-            <span>Air Care</span>
-            <span>Asian Foods</span>
-            <span>Baby Food</span>
-            <span>Bagels</span>
-            <span>Beef</span>
-            <span>Beer</span>
-            <span>Body Care</span>
-            <span>Bread</span>
-            <span>Butter</span>
-            <span>Candy</span>
-            <span>Canned Fruit</span>
-            <span>Canned Tomatoes</span>
-            <span>Canned Vegetables</span>
-            <span>Cat Food</span>
-            <span>Cheese</span>
-            <span>Chips</span>
-            <span>Cleaning Supplies</span>
-            <span>Coffee</span>
-            <span>Cold Cereal</span>
-            <span>Condiments</span>
-            <span>Cookies</span>
-            <span>Diapers</span>
-            <span>Dog Food</span>
-            <span>Eggs</span>
-            <span>Energy & Functional Beverage</span>
-            <span>Feminine Hygiene</span>
-            <span>Fresh Fruit</span>
-            <span>Fresh Vegetables</span>
-            <span>Frozen Bread</span>
-            <span>Frozen Desserts & Novelties</span>
-            <span>Frozen Fruits</span>
-            <span>Frozen Meals</span>
-            <span>Frozen Pizza</span>
-            <span>Frozen Potatoes</span>
-            <span>Frozen Vegetables</span>
-            <span>Granola</span>
-            <span>Herbs</span>
-            <span>Ice Cream</span>
-            <span>Laundry</span>
-            <span>Meat Alternatives</span>
-            <span>Mediterranean Foods</span>
-            <span>Mexican Foods</span>
-            <span>Milk</span>
-            <span>Nuts</span>
-            <span>Oatmeal</span>
-            <span>Oil & Vinegar</span>
-            <span>Other International Foods</span>
-            <span>Packaged Salads</span>
-            <span>Pancake Mix</span>
-            <span>Paper Goods</span>
-            <span>Pasta</span>
-            <span>Pasta Sauce</span>
-            <span>Pastries</span>
-            <span>Pet Treats</span>
-            <span>Pork</span>
-            <span>Poultry</span>
-            <span>Protein Bars</span>
-            <span>Ready to Drink Coffee & Tea</span>
-            <span>Rice, Beans & Grains</span>
-            <span>Salad Dressing</span>
-            <span>Seafood</span>
-            <span>Sparkling Water</span>
-            <span>Spices & Seasonings</span>
-            <span>Spirits</span>
-            <span>Still Water</span>
-            <span>Supplements</span>
-            <span>Tea</span>
-            <span>Trail Mix</span>
-            <span>Vitamins</span>
-            <span>Wine</span>
-            <span>Wipes</span>
-            <span>Yogurt</span>
+          <div id="category-reference-list" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 8px; font-size: 0.9em; color: #6b7280;">
+            <!-- Categories will be populated by JavaScript -->
           </div>
         </div>
       </div>
@@ -250,80 +179,8 @@
         </div>
         <div>
           <label>Category</label>
-          <select data-k="category">
-            <option value="">Select category</option>
-            <option value="Air Care">Air Care</option>
-            <option value="Asian Foods">Asian Foods</option>
-            <option value="Baby Food">Baby Food</option>
-            <option value="Bagels">Bagels</option>
-            <option value="Beef">Beef</option>
-            <option value="Beer">Beer</option>
-            <option value="Body Care">Body Care</option>
-            <option value="Bread">Bread</option>
-            <option value="Butter">Butter</option>
-            <option value="Candy">Candy</option>
-            <option value="Canned Fruit">Canned Fruit</option>
-            <option value="Canned Tomatoes">Canned Tomatoes</option>
-            <option value="Canned Vegetables">Canned Vegetables</option>
-            <option value="Cat Food">Cat Food</option>
-            <option value="Cheese">Cheese</option>
-            <option value="Chips">Chips</option>
-            <option value="Cleaning Supplies">Cleaning Supplies</option>
-            <option value="Coffee">Coffee</option>
-            <option value="Cold Cereal">Cold Cereal</option>
-            <option value="Condiments">Condiments</option>
-            <option value="Cookies">Cookies</option>
-            <option value="Diapers">Diapers</option>
-            <option value="Dog Food">Dog Food</option>
-            <option value="Eggs">Eggs</option>
-            <option value="Energy & Functional Beverage">Energy & Functional Beverage</option>
-            <option value="Feminine Hygiene">Feminine Hygiene</option>
-            <option value="Fresh Fruit">Fresh Fruit</option>
-            <option value="Fresh Vegetables">Fresh Vegetables</option>
-            <option value="Frozen Bread">Frozen Bread</option>
-            <option value="Frozen Desserts & Novelties">Frozen Desserts & Novelties</option>
-            <option value="Frozen Fruits">Frozen Fruits</option>
-            <option value="Frozen Meals">Frozen Meals</option>
-            <option value="Frozen Pizza">Frozen Pizza</option>
-            <option value="Frozen Potatoes">Frozen Potatoes</option>
-            <option value="Frozen Vegetables">Frozen Vegetables</option>
-            <option value="Granola">Granola</option>
-            <option value="Herbs">Herbs</option>
-            <option value="Ice Cream">Ice Cream</option>
-            <option value="Laundry">Laundry</option>
-            <option value="Meat Alternatives">Meat Alternatives</option>
-            <option value="Mediterranean Foods">Mediterranean Foods</option>
-            <option value="Mexican Foods">Mexican Foods</option>
-            <option value="Milk">Milk</option>
-            <option value="Nuts">Nuts</option>
-            <option value="Oatmeal">Oatmeal</option>
-            <option value="Oil & Vinegar">Oil & Vinegar</option>
-            <option value="Other International Foods">Other International Foods</option>
-            <option value="Packaged Salads">Packaged Salads</option>
-            <option value="Pancake Mix">Pancake Mix</option>
-            <option value="Paper Goods">Paper Goods</option>
-            <option value="Pasta">Pasta</option>
-            <option value="Pasta Sauce">Pasta Sauce</option>
-            <option value="Pastries">Pastries</option>
-            <option value="Pet Treats">Pet Treats</option>
-            <option value="Pork">Pork</option>
-            <option value="Poultry">Poultry</option>
-            <option value="Protein Bars">Protein Bars</option>
-            <option value="Ready to Drink Coffee & Tea">Ready to Drink Coffee & Tea</option>
-            <option value="Rice, Beans & Grains">Rice, Beans & Grains</option>
-            <option value="Salad Dressing">Salad Dressing</option>
-            <option value="Seafood">Seafood</option>
-            <option value="Sparkling Water">Sparkling Water</option>
-            <option value="Spices & Seasonings">Spices & Seasonings</option>
-            <option value="Spirits">Spirits</option>
-            <option value="Still Water">Still Water</option>
-            <option value="Supplements">Supplements</option>
-            <option value="Tea">Tea</option>
-            <option value="Trail Mix">Trail Mix</option>
-            <option value="Vitamins">Vitamins</option>
-            <option value="Wine">Wine</option>
-            <option value="Wipes">Wipes</option>
-            <option value="Yogurt">Yogurt</option>
+          <select data-k="category" id="product-category-select">
+            <!-- Categories will be populated by JavaScript -->
           </select>
         </div>
       </div>
@@ -369,6 +226,7 @@
 
   <script src="./config.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="../shared/categories.js"></script>
   <script>
     (function(){
       const { SUPABASE_URL, SUPABASE_ANON_KEY } = window.SA_CONFIG || {};
@@ -389,6 +247,13 @@
           e.preventDefault(); e.target.closest('.pill').remove();
         };
         products.appendChild(tpl);
+        
+        // Populate category dropdown in the newly added row
+        const lastRow = products.lastElementChild;
+        const categorySelect = lastRow.querySelector('[data-k="category"]');
+        if (categorySelect && typeof generateCategoryDropdownHTML === 'function') {
+          categorySelect.innerHTML = generateCategoryDropdownHTML(true);
+        }
       }
       function addStoreRow(){
         const tpl = el('tplStore').content.cloneNode(true);
@@ -1431,7 +1296,18 @@
       }
       
       // Handle logo file selection
+      // Populate category dropdowns and reference list
+      function populateCategories() {
+        // Populate category reference list
+        const categoryRefList = document.getElementById('category-reference-list');
+        if (categoryRefList && typeof generateCategoryReferenceHTML === 'function') {
+          categoryRefList.innerHTML = generateCategoryReferenceHTML();
+        }
+      }
+      
       document.addEventListener('DOMContentLoaded', () => {
+        // Populate categories on page load
+        populateCategories();
         const logoFileInput = document.getElementById('brand_logo_file');
         const logoUrlInput = document.getElementById('brand_logo_url');
         

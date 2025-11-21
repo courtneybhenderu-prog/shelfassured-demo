@@ -13,6 +13,69 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.47.5/dist/umd/supabase.min.js"></script>
     <link rel="stylesheet" href="../shared/styles.css">
+    <style>
+        .photo-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1rem;
+        }
+        .photo-card {
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+            overflow: hidden;
+            background: white;
+        }
+        .photo-card img {
+            width: 100%;
+            height: 200px;
+            object-fit: cover;
+            cursor: pointer;
+        }
+        .photo-card .photo-label {
+            padding: 0.5rem;
+            background: #f3f4f6;
+            font-size: 0.875rem;
+            font-weight: 500;
+        }
+        .submission-card {
+            transition: all 0.2s;
+        }
+        .submission-card:hover {
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.8);
+        }
+        .modal-content {
+            margin: 5% auto;
+            max-width: 90%;
+            max-height: 90vh;
+        }
+        .modal-content img {
+            width: 100%;
+            height: auto;
+            max-height: 90vh;
+            object-fit: contain;
+        }
+        .close {
+            color: #fff;
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+            padding: 10px;
+        }
+        .close:hover {
+            opacity: 0.7;
+        }
+    </style>
 </head>
 <body>
     <div class="min-h-screen bg-gray-100">
@@ -25,6 +88,9 @@
                         <span class="ml-3 px-2 py-1 text-xs font-semibold text-white bg-red-600 rounded-full">ADMIN ONLY</span>
                     </div>
                     <div class="flex items-center space-x-4">
+                        <div class="text-sm text-gray-600">
+                            <span id="pending-count" class="font-semibold text-blue-600">0</span> pending
+                        </div>
                         <a href="dashboard.html" class="text-gray-600 hover:text-gray-900">← Back to Dashboard</a>
                         <button onclick="signOut()" class="text-gray-600 hover:text-gray-900">Sign Out</button>
                     </div>
@@ -34,30 +100,335 @@
 
         <!-- Main Content -->
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-            <!-- Coming Soon Card -->
-            <div class="bg-white rounded-lg shadow-sm border p-8 text-center">
-                <div class="mx-auto w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mb-4">
-                    <svg class="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+            <!-- Filters -->
+            <div class="bg-white rounded-lg shadow-sm border p-4 mb-6">
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Status</label>
+                        <select id="status-filter" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                            <option value="all">All Submissions</option>
+                            <option value="pending_review" selected>Pending Review</option>
+                            <option value="approved">Approved</option>
+                            <option value="rejected">Rejected</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Date Range</label>
+                        <select id="date-range-filter" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                            <option value="all">All Time</option>
+                            <option value="7">Last 7 Days</option>
+                            <option value="30" selected>Last 30 Days</option>
+                            <option value="custom">Custom Range</option>
+                        </select>
+                    </div>
+                    <div id="custom-date-range" class="hidden col-span-2">
+                        <div class="grid grid-cols-2 gap-2">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">From</label>
+                                <input type="date" id="date-from" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">To</label>
+                                <input type="date" id="date-to" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                            </div>
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Store/Banner</label>
+                        <select id="store-filter" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                            <option value="all">All Stores</option>
+                            <!-- Populated by JavaScript -->
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Brand</label>
+                        <select id="brand-filter" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                            <option value="all">All Brands</option>
+                            <!-- Populated by JavaScript -->
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Product/SKU</label>
+                        <input type="text" id="sku-filter" placeholder="Search SKU..." class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Submitted By</label>
+                        <select id="submitter-filter" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                            <option value="all">All Submitters</option>
+                            <!-- Populated by JavaScript -->
+                        </select>
+                    </div>
+                </div>
+                <div class="flex flex-wrap gap-4 items-center justify-between">
+                    <div class="flex gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Sort By</label>
+                            <select id="sort-by" class="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                                <option value="newest" selected>Newest First</option>
+                                <option value="oldest">Oldest First</option>
+                                <option value="job_title">Job Title</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">View</label>
+                            <select id="view-mode" class="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                                <option value="cards" selected>Card View</option>
+                                <option value="table">Table View</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="flex gap-2">
+                        <button onclick="clearFilters()" class="px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 font-medium">
+                            Clear Filters
+                        </button>
+                        <button onclick="loadSubmissions()" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium">
+                            🔄 Refresh
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Loading State -->
+            <div id="loading" class="text-center py-12">
+                <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                <p class="mt-2 text-gray-600">Loading submissions...</p>
+            </div>
+
+            <!-- Submissions List -->
+            <div id="submissions-list" class="space-y-4">
+                <!-- Will be populated by JavaScript -->
+            </div>
+
+            <!-- Pagination Controls -->
+            <div id="pagination-controls" class="hidden mt-6 flex items-center justify-between bg-white px-4 py-3 border-t border-gray-200 rounded-lg">
+                <div class="flex items-center gap-2">
+                    <button id="prev-page" onclick="changePage(-1)" class="px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed" disabled>
+                        Previous
+                    </button>
+                    <span class="text-sm text-gray-700">
+                        Page <span id="current-page">1</span> of <span id="total-pages">1</span>
+                    </span>
+                    <button id="next-page" onclick="changePage(1)" class="px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed" disabled>
+                        Next
+                    </button>
+                </div>
+                <div class="text-sm text-gray-700">
+                    Showing <span id="showing-start">0</span>-<span id="showing-end">0</span> of <span id="showing-total">0</span> submissions
+                </div>
+            </div>
+
+            <!-- Empty State -->
+            <div id="empty-state" class="hidden bg-white rounded-lg shadow-sm border p-12 text-center">
+                <div class="mx-auto w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
+                    <svg class="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
                     </svg>
                 </div>
-                <h2 class="text-2xl font-bold text-gray-900 mb-2">Coming Soon!</h2>
-                <p class="text-gray-600 mb-4">The Submission Review system is currently under development.</p>
-                <p class="text-sm text-gray-500">This will include:</p>
-                <ul class="text-sm text-gray-500 mt-2 space-y-1">
-                    <li>• Review shelfer photo submissions</li>
-                    <li>• Approve or reject job completions</li>
-                    <li>• Quality control and validation</li>
-                    <li>• Process payouts and rewards</li>
-                </ul>
+                <h3 class="text-lg font-semibold text-gray-900 mb-2">No Submissions Found</h3>
+                <p class="text-gray-600">There are no submissions matching your current filters.</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Photo Modal -->
+    <div id="photo-modal" class="modal">
+        <span class="close" onclick="closeModal()">&times;</span>
+        <div class="modal-content">
+            <img id="modal-image" src="" alt="Photo">
+        </div>
+    </div>
+
+    <!-- Review Modal / Detail Drawer -->
+    <div id="review-modal" class="hidden fixed z-50 inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full">
+        <div class="relative top-10 mx-auto p-6 border w-11/12 md:w-4/5 lg:w-3/4 shadow-lg rounded-md bg-white max-h-[90vh] overflow-y-auto">
+            <div class="mb-4">
+                <button onclick="closeReviewModal()" class="float-right text-gray-400 hover:text-gray-600 text-2xl font-bold">&times;</button>
+                <h3 class="text-xl font-bold text-gray-900 mb-4" id="review-modal-title">Review Submission</h3>
+                
+                <!-- Submission Metadata -->
+                <div id="submission-metadata" class="mb-6 p-4 bg-gray-50 rounded-lg">
+                    <h4 class="text-sm font-semibold text-gray-700 mb-3">Submission Details</h4>
+                    <div class="grid grid-cols-2 md:grid-cols-3 gap-3 text-sm" id="metadata-content">
+                        <!-- Populated by JavaScript -->
+                    </div>
+                </div>
+
+                <!-- Photos Section -->
+                <div id="modal-photos-section" class="mb-6">
+                    <h4 class="text-sm font-semibold text-gray-700 mb-3">Photos</h4>
+                    <div id="modal-photos-grid" class="photo-grid">
+                        <!-- Populated by JavaScript -->
+                    </div>
+                </div>
+
+                <!-- Notes Section -->
+                <div id="modal-notes-section" class="mb-6">
+                    <h4 class="text-sm font-semibold text-gray-700 mb-3">Shelfer Notes & Data</h4>
+                    <div id="modal-notes-content" class="p-4 bg-gray-50 rounded-lg text-sm">
+                        <!-- Populated by JavaScript -->
+                    </div>
+                </div>
+
+                <!-- Review Notes Input -->
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                        Review Notes 
+                        <span id="notes-required" class="text-red-600 hidden">(Required for rejection)</span>
+                    </label>
+                    <textarea id="review-notes" rows="4" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" placeholder="Add notes about quality, issues, or approval reasons..."></textarea>
+                </div>
+                
+                <!-- Actions -->
+                <div class="flex gap-3 justify-end pt-4 border-t">
+                    <button onclick="closeReviewModal()" class="px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300">
+                        Back
+                    </button>
+                    <button onclick="rejectSubmission()" class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700">
+                        ❌ Reject
+                    </button>
+                    <button onclick="approveSubmission()" class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700">
+                        ✅ Approve
+                    </button>
+                </div>
             </div>
         </div>
     </div>
 
     <script src="../shared/api.js"></script>
     <script>
-        // Basic admin check - show page to all authenticated users for now
+        let allSubmissions = [];
+        let currentSubmissionId = null;
+        let allStores = [];
+        let allBrands = [];
+        let allSubmitters = [];
+        let currentPage = 1;
+        const itemsPerPage = 20;
+
+        // Initialize page
         document.addEventListener('DOMContentLoaded', async function() {
+            await checkAdminAccess();
+            await loadFilterOptions();
+            setupFilters();
+            await loadSubmissions();
+        });
+
+        // Load filter dropdown options
+        async function loadFilterOptions() {
+            try {
+                // Load stores (for store/banner filter)
+                const { data: stores } = await supabase
+                    .from('stores')
+                    .select('id, STORE, name')
+                    .order('STORE, name')
+                    .limit(1000);
+                
+                allStores = stores || [];
+                const storeSelect = document.getElementById('store-filter');
+                const uniqueBanners = [...new Set(allStores.map(s => s.STORE).filter(Boolean))];
+                uniqueBanners.forEach(banner => {
+                    const option = document.createElement('option');
+                    option.value = banner;
+                    option.textContent = banner;
+                    storeSelect.appendChild(option);
+                });
+
+                // Load brands
+                const { data: brands } = await supabase
+                    .from('brands')
+                    .select('id, name')
+                    .order('name')
+                    .limit(500);
+                
+                allBrands = brands || [];
+                const brandSelect = document.getElementById('brand-filter');
+                allBrands.forEach(brand => {
+                    const option = document.createElement('option');
+                    option.value = brand.id;
+                    option.textContent = brand.name;
+                    brandSelect.appendChild(option);
+                });
+
+                // Load submitters (users who have submitted)
+                const { data: submitters } = await supabase
+                    .from('users')
+                    .select('id, full_name, email')
+                    .order('full_name');
+                
+                allSubmitters = submitters || [];
+                const submitterSelect = document.getElementById('submitter-filter');
+                allSubmitters.forEach(user => {
+                    const option = document.createElement('option');
+                    option.value = user.id;
+                    option.textContent = user.full_name || user.email;
+                    submitterSelect.appendChild(option);
+                });
+
+                console.log('✅ Filter options loaded:', {
+                    stores: allStores.length,
+                    brands: allBrands.length,
+                    submitters: allSubmitters.length
+                });
+            } catch (error) {
+                console.error('❌ Error loading filter options:', error);
+            }
+        }
+
+        // Setup filter handlers
+        function setupFilters() {
+            document.getElementById('status-filter').addEventListener('change', filterSubmissions);
+            document.getElementById('date-range-filter').addEventListener('change', handleDateRangeChange);
+            document.getElementById('store-filter').addEventListener('change', filterSubmissions);
+            document.getElementById('brand-filter').addEventListener('change', filterSubmissions);
+            document.getElementById('sku-filter').addEventListener('input', debounce(filterSubmissions, 300));
+            document.getElementById('submitter-filter').addEventListener('change', filterSubmissions);
+            document.getElementById('sort-by').addEventListener('change', filterSubmissions);
+            document.getElementById('view-mode').addEventListener('change', handleViewModeChange);
+        }
+
+        // Handle date range filter change
+        function handleDateRangeChange() {
+            const dateRange = document.getElementById('date-range-filter').value;
+            const customRange = document.getElementById('custom-date-range');
+            if (dateRange === 'custom') {
+                customRange.classList.remove('hidden');
+            } else {
+                customRange.classList.add('hidden');
+            }
+            filterSubmissions();
+        }
+
+        // Handle view mode change
+        function handleViewModeChange() {
+            filterSubmissions(); // Re-render with new view mode
+        }
+
+        // Clear all filters
+        function clearFilters() {
+            document.getElementById('status-filter').value = 'all';
+            document.getElementById('date-range-filter').value = '30';
+            document.getElementById('store-filter').value = 'all';
+            document.getElementById('brand-filter').value = 'all';
+            document.getElementById('sku-filter').value = '';
+            document.getElementById('submitter-filter').value = 'all';
+            document.getElementById('custom-date-range').classList.add('hidden');
+            filterSubmissions();
+        }
+
+        // Debounce helper
+        function debounce(func, wait) {
+            let timeout;
+            return function executedFunction(...args) {
+                const later = () => {
+                    clearTimeout(timeout);
+                    func(...args);
+                };
+                clearTimeout(timeout);
+                timeout = setTimeout(later, wait);
+            };
+        }
+
+        // Check admin access
+        async function checkAdminAccess() {
             try {
                 const { data: { user } } = await supabase.auth.getUser();
                 if (!user) {
@@ -65,15 +436,846 @@
                     return;
                 }
                 
-                // For placeholder pages, show to all authenticated users
-                console.log('✅ Showing Review Submissions placeholder to authenticated user:', user.email);
+                const { data: profile } = await supabase
+                    .from('users')
+                    .select('role')
+                    .eq('id', user.id)
+                    .single();
+
+                if (!profile || profile.role !== 'admin') {
+                    alert('Access denied. Admin privileges required.');
+                    window.location.href = '../dashboard/brand-client.html';
+                    return;
+                }
+
+                console.log('✅ Admin access confirmed');
             } catch (error) {
-                console.error('❌ Error checking authentication:', error);
+                console.error('❌ Error checking access:', error);
                 window.location.href = '../auth/signin.html';
             }
-        });
+        }
 
-        // Sign out function
+        // Load all submissions with job details
+        async function loadSubmissions() {
+            try {
+                document.getElementById('loading').classList.remove('hidden');
+                document.getElementById('submissions-list').innerHTML = '';
+                document.getElementById('empty-state').classList.add('hidden');
+
+                // Load submissions with all needed joins (MVP query)
+                const { data: submissions, error: subError } = await supabase
+                    .from('job_submissions')
+                    .select(`
+                        *,
+                        jobs (
+                            id,
+                            title,
+                            description,
+                            brand_id,
+                            payout_per_store,
+                            brands (
+                                id,
+                                name,
+                                logo_url
+                            )
+                        ),
+                        users!job_submissions_contractor_id_fkey (
+                            id,
+                            full_name,
+                            email
+                        ),
+                        stores (
+                            id,
+                            STORE,
+                            name,
+                            address,
+                            city,
+                            state,
+                            zip_code
+                        ),
+                        skus (
+                            id,
+                            name,
+                            upc
+                        )
+                    `)
+                    .order('created_at', { ascending: false });
+
+                if (subError) throw subError;
+
+                // Also load jobs with pending_review status
+                const { data: pendingJobs, error: jobsError } = await supabase
+                    .from('jobs')
+                    .select(`
+                        id,
+                        title,
+                        status,
+                        brands (
+                            id,
+                            name
+                        )
+                    `)
+                    .eq('status', 'pending_review');
+
+                console.log('📋 Loaded submissions:', submissions?.length || 0);
+                console.log('📋 Loaded pending jobs:', pendingJobs?.length || 0);
+
+                allSubmissions = submissions || [];
+                
+                // Update pending count
+                const pendingCount = allSubmissions.filter(s => {
+                    const job = s.jobs;
+                    return job && job.status === 'pending_review';
+                }).length;
+                document.getElementById('pending-count').textContent = pendingCount;
+
+                filterSubmissions();
+
+            } catch (error) {
+                console.error('❌ Error loading submissions:', error);
+                alert('Error loading submissions. Check console for details.');
+            } finally {
+                document.getElementById('loading').classList.add('hidden');
+            }
+        }
+
+        // Filter and display submissions
+        function filterSubmissions() {
+            const statusFilter = document.getElementById('status-filter').value;
+            const dateRange = document.getElementById('date-range-filter').value;
+            const storeFilter = document.getElementById('store-filter').value;
+            const brandFilter = document.getElementById('brand-filter').value;
+            const skuFilter = document.getElementById('sku-filter').value.toLowerCase();
+            const submitterFilter = document.getElementById('submitter-filter').value;
+            const sortBy = document.getElementById('sort-by').value;
+
+            let filtered = [...allSubmissions];
+
+            // Filter by status (match job status and review outcome)
+            if (statusFilter !== 'all') {
+                filtered = filtered.filter(sub => {
+                    const job = sub.jobs;
+                    if (!job) return false;
+                    
+                    if (statusFilter === 'pending_review') {
+                        return job.status === 'pending_review' && 
+                               (sub.is_validated === null || sub.is_validated === false) &&
+                               (sub.review_outcome === null || sub.review_outcome === undefined || sub.review_outcome !== 'superseded');
+                    } else if (statusFilter === 'approved') {
+                        return sub.review_outcome === 'approved' || 
+                               (job.status === 'completed' && sub.is_validated === true);
+                    } else if (statusFilter === 'rejected') {
+                        return sub.review_outcome === 'rejected' || 
+                               (sub.is_validated === false && sub.validation_notes);
+                    }
+                    return true;
+                });
+            }
+
+            // Filter by date range
+            if (dateRange !== 'all') {
+                const now = new Date();
+                let cutoffDate;
+                
+                if (dateRange === 'custom') {
+                    const fromDate = document.getElementById('date-from').value;
+                    const toDate = document.getElementById('date-to').value;
+                    if (fromDate && toDate) {
+                        filtered = filtered.filter(sub => {
+                            const subDate = new Date(sub.created_at);
+                            return subDate >= new Date(fromDate) && subDate <= new Date(toDate + 'T23:59:59');
+                        });
+                    }
+                } else {
+                    const days = parseInt(dateRange);
+                    cutoffDate = new Date(now.getTime() - (days * 24 * 60 * 60 * 1000));
+                    filtered = filtered.filter(sub => new Date(sub.created_at) >= cutoffDate);
+                }
+            }
+
+            // Filter by store/banner
+            if (storeFilter !== 'all') {
+                filtered = filtered.filter(sub => {
+                    const store = sub.stores || {};
+                    return (store.STORE || store.name || '') === storeFilter;
+                });
+            }
+
+            // Filter by brand
+            if (brandFilter !== 'all') {
+                filtered = filtered.filter(sub => {
+                    const job = sub.jobs || {};
+                    return job.brand_id === brandFilter;
+                });
+            }
+
+            // Filter by SKU/product name
+            if (skuFilter) {
+                filtered = filtered.filter(sub => {
+                    const sku = sub.skus || {};
+                    const skuName = (sku.name || '').toLowerCase();
+                    const skuUpc = (sku.upc || '').toLowerCase();
+                    return skuName.includes(skuFilter) || skuUpc.includes(skuFilter);
+                });
+            }
+
+            // Filter by submitter
+            if (submitterFilter !== 'all') {
+                filtered = filtered.filter(sub => sub.contractor_id === submitterFilter);
+            }
+
+            // Sort
+            if (sortBy === 'newest') {
+                filtered.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+            } else if (sortBy === 'oldest') {
+                filtered.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+            } else if (sortBy === 'job_title') {
+                filtered.sort((a, b) => {
+                    const titleA = (a.jobs?.title || '').toLowerCase();
+                    const titleB = (b.jobs?.title || '').toLowerCase();
+                    return titleA.localeCompare(titleB);
+                });
+            }
+
+            // Reset to page 1 when filtering
+            currentPage = 1;
+            displaySubmissions(filtered);
+        }
+
+        // Display submissions with pagination
+        function displaySubmissions(submissions) {
+            const container = document.getElementById('submissions-list');
+            const viewMode = document.getElementById('view-mode').value;
+            
+            if (submissions.length === 0) {
+                container.innerHTML = '';
+                document.getElementById('empty-state').classList.remove('hidden');
+                document.getElementById('pagination-controls').classList.add('hidden');
+                return;
+            }
+
+            document.getElementById('empty-state').classList.add('hidden');
+            
+            // Calculate pagination
+            const totalPages = Math.ceil(submissions.length / itemsPerPage);
+            const startIndex = (currentPage - 1) * itemsPerPage;
+            const endIndex = startIndex + itemsPerPage;
+            const paginatedSubmissions = submissions.slice(startIndex, endIndex);
+            
+            // Display based on view mode
+            if (viewMode === 'table') {
+                container.innerHTML = renderTableView(paginatedSubmissions);
+            } else {
+                container.innerHTML = renderCardView(paginatedSubmissions);
+            }
+            
+            // Update pagination controls
+            updatePaginationControls(submissions.length, totalPages);
+        }
+
+        // Render table view
+        function renderTableView(submissions) {
+            if (submissions.length === 0) return '';
+            
+            const rows = submissions.map(sub => {
+                const job = sub.jobs || {};
+                const brand = job.brands || {};
+                const contractor = sub.users || {};
+                const store = sub.stores || {};
+                const sku = sub.skus || {};
+                const files = Array.isArray(sub.files) ? sub.files : [];
+                
+                const storeDisplay = store.STORE || store.name || 'N/A';
+                const productName = sku.name || 'N/A';
+                const statusBadge = getStatusBadge(job.status, sub.is_validated, sub.review_outcome);
+                const photoCount = files.length;
+                const shortId = (sub.id || '').split('-')[0] || (sub.id || '').slice(0, 8);
+                
+                const canReview = job.status === 'pending_review' && 
+                                 !sub.is_validated && 
+                                 sub.review_outcome !== 'superseded';
+                
+                return `
+                    <tr class="hover:bg-gray-50 cursor-pointer" onclick="openSubmissionDetail('${sub.id}')">
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                            ${new Date(sub.created_at).toLocaleString()}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                            ${escapeHtml(storeDisplay)}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                            ${escapeHtml(brand.name || 'N/A')} / ${escapeHtml(productName)}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                            <div class="font-medium">${escapeHtml(job.title || 'Untitled')}</div>
+                            <div class="text-xs text-gray-500">ID: ${shortId}</div>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                            ${escapeHtml(contractor.full_name || contractor.email || 'Unknown')}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                            ${photoCount}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            ${statusBadge}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                            ${canReview ? `
+                                <button onclick="event.stopPropagation(); openReviewModal('${sub.id}')" 
+                                        class="text-blue-600 hover:text-blue-900">
+                                    Review
+                                </button>
+                            ` : '<span class="text-gray-400">-</span>'}
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+            
+            return `
+                <div class="overflow-x-auto">
+                    <table class="min-w-full divide-y divide-gray-200">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Submitted At</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Store</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Brand/SKU</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Job Title/ID</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Submitted By</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Photos</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody class="bg-white divide-y divide-gray-200">
+                            ${rows}
+                        </tbody>
+                    </table>
+                </div>
+            `;
+        }
+
+        // Render card view (existing implementation)
+        function renderCardView(submissions) {
+            return submissions.map(sub => {
+                const job = sub.jobs || {};
+                const brand = job.brands || {};
+                const contractor = sub.users || {};
+                const submissionData = sub.data || {};
+                const files = Array.isArray(sub.files) ? sub.files : [];
+                const store = sub.stores || {};
+                const sku = sub.skus || {};
+
+                const statusBadge = getStatusBadge(job.status, sub.is_validated, sub.review_outcome);
+                const photoCount = files.length;
+                const hasStorageIssues = files.some(f => f.error || !f.url);
+                
+                // Store display: Use STORE column first, fallback to name
+                const storeDisplay = store.STORE || store.name || 'Store not specified';
+                const storeAddress = store.address ? 
+                    `${store.address}, ${store.city || ''}, ${store.state || ''} ${store.zip_code || ''}`.trim() : 
+                    'Address not available';
+                
+                // Product/SKU display
+                const productName = sku.name || 'Product not specified';
+                
+                // Payout display
+                const payoutAmount = job.payout_per_store || 0;
+                
+                // Check if superseded
+                const isSuperseded = sub.review_outcome === 'superseded';
+                const canReview = job.status === 'pending_review' && 
+                                 !sub.is_validated && 
+                                 !isSuperseded;
+
+                return `
+                    <div class="submission-card bg-white rounded-lg shadow-sm border p-6">
+                        <div class="flex justify-between items-start mb-4">
+                            <div class="flex-1">
+                                <div class="flex items-center gap-3 mb-2">
+                                    <h3 class="text-xl font-semibold text-gray-900">${escapeHtml(job.title || 'Untitled Job')}</h3>
+                                    ${statusBadge}
+                                    ${isSuperseded ? '<span class="px-2 py-1 text-xs font-semibold text-gray-500 bg-gray-100 rounded-full">Superseded</span>' : ''}
+                                </div>
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm text-gray-600 mb-2">
+                                    <div><strong>Brand:</strong> ${escapeHtml(brand.name || 'Unknown')}</div>
+                                    <div><strong>Shelfer:</strong> ${escapeHtml(contractor.full_name || contractor.email || 'Unknown')}</div>
+                                    <div><strong>Store:</strong> ${escapeHtml(storeDisplay)}</div>
+                                    <div><strong>Product:</strong> ${escapeHtml(productName)}</div>
+                                    <div class="text-blue-600 font-semibold"><strong>Payout:</strong> $${payoutAmount.toFixed(2)}</div>
+                                    <div><strong>Submitted:</strong> ${new Date(sub.created_at).toLocaleString()}</div>
+                                </div>
+                                ${storeAddress !== 'Address not available' ? `
+                                    <div class="text-xs text-gray-500 mb-2">📍 ${escapeHtml(storeAddress)}</div>
+                                ` : ''}
+                                <div class="text-sm text-gray-600 space-y-1">
+                                    ${submissionData.stock_level ? `<div><strong>Stock Level:</strong> ${escapeHtml(submissionData.stock_level)}</div>` : ''}
+                                    ${submissionData.price ? `<div><strong>Price:</strong> $${submissionData.price.toFixed(2)}</div>` : ''}
+                                    ${submissionData.notes ? `<div><strong>Shelfer Notes:</strong> ${escapeHtml(submissionData.notes)}</div>` : ''}
+                                    ${hasStorageIssues ? `<div class="text-orange-600"><strong>⚠️ Storage:</strong> Some photos stored as base64 (bucket not configured)</div>` : ''}
+                                </div>
+                            </div>
+                            <div class="ml-4 flex flex-col gap-2">
+                                ${canReview ? `
+                                    <button onclick="openReviewModal('${sub.id}')" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium">
+                                        Review
+                                    </button>
+                                ` : ''}
+                                <a href="manage-jobs.html?edit_job_id=${job.id}" target="_blank" class="px-3 py-1 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 text-sm text-center">
+                                    View Job →
+                                </a>
+                                ${sub.validation_notes ? `
+                                    <div class="mt-2 p-2 bg-gray-50 rounded text-xs text-gray-600 max-w-xs">
+                                        <strong>Review Notes:</strong><br>
+                                        ${escapeHtml(sub.validation_notes)}
+                                    </div>
+                                ` : ''}
+                            </div>
+                        </div>
+
+                        ${photoCount > 0 ? `
+                            <div class="mt-4">
+                                <h4 class="text-sm font-semibold text-gray-700 mb-2">Photos (${photoCount})</h4>
+                                <div class="photo-grid">
+                                    ${files.map(file => {
+                                        const photoSrc = file.url || (file.file_data ? file.file_data : null);
+                                        const photoAlt = file.type ? file.type.replace(/_/g, ' ') : 'Photo';
+                                        
+                                        if (!photoSrc) {
+                                            return `
+                                                <div class="photo-card">
+                                                    <div class="photo-label">${escapeHtml(photoAlt)}</div>
+                                                    <div class="p-4 text-center text-gray-500 text-sm">
+                                                        Photo not available
+                                                        ${file.error ? `<br><span class="text-xs text-red-600">${escapeHtml(file.error)}</span>` : ''}
+                                                    </div>
+                                                </div>
+                                            `;
+                                        }
+                                        
+                                        return `
+                                            <div class="photo-card">
+                                                <img src="${photoSrc}" alt="${escapeHtml(photoAlt)}" onclick="openPhotoModal('${photoSrc}')" style="cursor: pointer;">
+                                                <div class="photo-label">${escapeHtml(photoAlt)}</div>
+                                            </div>
+                                        `;
+                                    }).join('')}
+                                </div>
+                            </div>
+                        ` : '<p class="text-sm text-gray-500 mt-4">No photos uploaded</p>'}
+
+                        ${canReview ? `
+                            <div class="mt-4 pt-4 border-t flex gap-2">
+                                <button onclick="quickApprove('${sub.id}')" class="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium">
+                                    ✅ Quick Approve
+                                </button>
+                                <button onclick="quickReject('${sub.id}')" class="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 font-medium">
+                                    ❌ Quick Reject
+                                </button>
+                            </div>
+                        ` : ''}
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // Update pagination controls
+        function updatePaginationControls(totalItems, totalPages) {
+            const paginationControls = document.getElementById('pagination-controls');
+            const prevBtn = document.getElementById('prev-page');
+            const nextBtn = document.getElementById('next-page');
+            const currentPageSpan = document.getElementById('current-page');
+            const totalPagesSpan = document.getElementById('total-pages');
+            const showingStart = document.getElementById('showing-start');
+            const showingEnd = document.getElementById('showing-end');
+            const showingTotal = document.getElementById('showing-total');
+            
+            if (totalPages <= 1) {
+                paginationControls.classList.add('hidden');
+                return;
+            }
+            
+            paginationControls.classList.remove('hidden');
+            currentPageSpan.textContent = currentPage;
+            totalPagesSpan.textContent = totalPages;
+            
+            const start = (currentPage - 1) * itemsPerPage + 1;
+            const end = Math.min(currentPage * itemsPerPage, totalItems);
+            showingStart.textContent = start;
+            showingEnd.textContent = end;
+            showingTotal.textContent = totalItems;
+            
+            prevBtn.disabled = currentPage === 1;
+            nextBtn.disabled = currentPage === totalPages;
+        }
+
+        // Change page
+        function changePage(direction) {
+            const viewMode = document.getElementById('view-mode').value;
+            const statusFilter = document.getElementById('status-filter').value;
+            const dateRange = document.getElementById('date-range-filter').value;
+            const storeFilter = document.getElementById('store-filter').value;
+            const brandFilter = document.getElementById('brand-filter').value;
+            const skuFilter = document.getElementById('sku-filter').value.toLowerCase();
+            const submitterFilter = document.getElementById('submitter-filter').value;
+            const sortBy = document.getElementById('sort-by').value;
+            
+            // Re-apply filters to get filtered list
+            let filtered = [...allSubmissions];
+            
+            // Apply all filters (same logic as filterSubmissions)
+            if (statusFilter !== 'all') {
+                filtered = filtered.filter(sub => {
+                    const job = sub.jobs;
+                    if (!job) return false;
+                    if (statusFilter === 'pending_review') {
+                        return job.status === 'pending_review' && 
+                               (sub.is_validated === null || sub.is_validated === false) &&
+                               (sub.review_outcome === null || sub.review_outcome === undefined || sub.review_outcome !== 'superseded');
+                    } else if (statusFilter === 'approved') {
+                        return sub.review_outcome === 'approved' || 
+                               (job.status === 'completed' && sub.is_validated === true);
+                    } else if (statusFilter === 'rejected') {
+                        return sub.review_outcome === 'rejected' || 
+                               (sub.is_validated === false && sub.validation_notes);
+                    }
+                    return true;
+                });
+            }
+            
+            if (dateRange !== 'all') {
+                if (dateRange === 'custom') {
+                    const fromDate = document.getElementById('date-from').value;
+                    const toDate = document.getElementById('date-to').value;
+                    if (fromDate && toDate) {
+                        filtered = filtered.filter(sub => {
+                            const subDate = new Date(sub.created_at);
+                            return subDate >= new Date(fromDate) && subDate <= new Date(toDate + 'T23:59:59');
+                        });
+                    }
+                } else {
+                    const days = parseInt(dateRange);
+                    const cutoffDate = new Date(Date.now() - (days * 24 * 60 * 60 * 1000));
+                    filtered = filtered.filter(sub => new Date(sub.created_at) >= cutoffDate);
+                }
+            }
+            
+            if (storeFilter !== 'all') {
+                filtered = filtered.filter(sub => {
+                    const store = sub.stores || {};
+                    return (store.STORE || store.name || '') === storeFilter;
+                });
+            }
+            
+            if (brandFilter !== 'all') {
+                filtered = filtered.filter(sub => {
+                    const job = sub.jobs || {};
+                    return job.brand_id === brandFilter;
+                });
+            }
+            
+            if (skuFilter) {
+                filtered = filtered.filter(sub => {
+                    const sku = sub.skus || {};
+                    const skuName = (sku.name || '').toLowerCase();
+                    const skuUpc = (sku.upc || '').toLowerCase();
+                    return skuName.includes(skuFilter) || skuUpc.includes(skuFilter);
+                });
+            }
+            
+            if (submitterFilter !== 'all') {
+                filtered = filtered.filter(sub => sub.contractor_id === submitterFilter);
+            }
+            
+            // Sort
+            if (sortBy === 'newest') {
+                filtered.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+            } else if (sortBy === 'oldest') {
+                filtered.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+            } else if (sortBy === 'job_title') {
+                filtered.sort((a, b) => {
+                    const titleA = (a.jobs?.title || '').toLowerCase();
+                    const titleB = (b.jobs?.title || '').toLowerCase();
+                    return titleA.localeCompare(titleB);
+                });
+            }
+            
+            // Change page
+            const totalPages = Math.ceil(filtered.length / itemsPerPage);
+            currentPage = Math.max(1, Math.min(totalPages, currentPage + direction));
+            
+            // Re-display
+            displaySubmissions(filtered);
+        }
+
+        // Open submission detail (for table row click)
+        function openSubmissionDetail(submissionId) {
+            openReviewModal(submissionId);
+        }
+
+        // Get status badge HTML
+        function getStatusBadge(jobStatus, isValidated, reviewOutcome) {
+            if (reviewOutcome === 'approved') {
+                return '<span class="px-2 py-1 text-xs font-semibold text-white bg-green-600 rounded-full">✅ Approved</span>';
+            } else if (reviewOutcome === 'rejected') {
+                return '<span class="px-2 py-1 text-xs font-semibold text-white bg-red-600 rounded-full">❌ Rejected</span>';
+            } else if (reviewOutcome === 'superseded') {
+                return '<span class="px-2 py-1 text-xs font-semibold text-gray-500 bg-gray-200 rounded-full">Superseded</span>';
+            } else if (jobStatus === 'pending_review') {
+                return '<span class="px-2 py-1 text-xs font-semibold text-white bg-orange-600 rounded-full">Pending Review</span>';
+            } else if (jobStatus === 'completed' && isValidated) {
+                return '<span class="px-2 py-1 text-xs font-semibold text-white bg-green-600 rounded-full">✅ Approved</span>';
+            }
+            return '<span class="px-2 py-1 text-xs font-semibold text-gray-600 bg-gray-200 rounded-full">' + escapeHtml(jobStatus) + '</span>';
+        }
+
+        // Open photo modal
+        function openPhotoModal(imageSrc) {
+            const modal = document.getElementById('photo-modal');
+            const img = document.getElementById('modal-image');
+            img.src = imageSrc;
+            modal.style.display = 'block';
+        }
+
+        // Close photo modal
+        function closeModal() {
+            document.getElementById('photo-modal').style.display = 'none';
+        }
+
+        // Close modal when clicking outside
+        window.onclick = function(event) {
+            const modal = document.getElementById('photo-modal');
+            if (event.target === modal) {
+                closeModal();
+            }
+        }
+
+        // Open review modal with full details
+        function openReviewModal(submissionId) {
+            currentSubmissionId = submissionId;
+            const modal = document.getElementById('review-modal');
+            modal.classList.remove('hidden');
+            document.getElementById('review-notes').value = '';
+            document.getElementById('notes-required').classList.add('hidden');
+            
+            // Find the submission in allSubmissions
+            const submission = allSubmissions.find(s => s.id === submissionId);
+            if (!submission) {
+                console.error('Submission not found:', submissionId);
+                return;
+            }
+            
+            const job = submission.jobs || {};
+            const brand = job.brands || {};
+            const contractor = submission.users || {};
+            const store = submission.stores || {};
+            const sku = submission.skus || {};
+            const submissionData = submission.data || {};
+            const files = Array.isArray(submission.files) ? submission.files : [];
+            
+            // Populate metadata
+            const metadataContent = document.getElementById('metadata-content');
+            metadataContent.innerHTML = `
+                <div><strong>Job ID:</strong> <span class="text-gray-600">${(job.id || '').split('-')[0] || 'N/A'}</span></div>
+                <div><strong>Job Title:</strong> <span class="text-gray-600">${escapeHtml(job.title || 'Untitled')}</span></div>
+                <div><strong>Store ID:</strong> <span class="text-gray-600">${(store.id || '').split('-')[0] || 'N/A'}</span></div>
+                <div><strong>Banner:</strong> <span class="text-gray-600">${escapeHtml(store.STORE || store.name || 'N/A')}</span></div>
+                <div><strong>Store Name:</strong> <span class="text-gray-600">${escapeHtml(store.name || 'N/A')}</span></div>
+                <div><strong>Store Address:</strong> <span class="text-gray-600">${escapeHtml(store.address ? `${store.address}, ${store.city || ''}, ${store.state || ''} ${store.zip_code || ''}`.trim() : 'N/A')}</span></div>
+                <div><strong>Brand:</strong> <span class="text-gray-600">${escapeHtml(brand.name || 'N/A')}</span></div>
+                <div><strong>Product/SKU:</strong> <span class="text-gray-600">${escapeHtml(sku.name || 'N/A')}</span></div>
+                <div><strong>SKU UPC:</strong> <span class="text-gray-600">${escapeHtml(sku.upc || 'N/A')}</span></div>
+                <div><strong>Submitted By:</strong> <span class="text-gray-600">${escapeHtml(contractor.full_name || contractor.email || 'Unknown')}</span></div>
+                <div><strong>Submitter ID:</strong> <span class="text-gray-600">${(contractor.id || '').split('-')[0] || 'N/A'}</span></div>
+                <div><strong>Submitted At:</strong> <span class="text-gray-600">${new Date(submission.created_at).toLocaleString()}</span></div>
+                <div><strong>Payout Amount:</strong> <span class="text-blue-600 font-semibold">$${(job.payout_per_store || 0).toFixed(2)}</span></div>
+            `;
+            
+            // Populate photos
+            const photosGrid = document.getElementById('modal-photos-grid');
+            if (files.length > 0) {
+                photosGrid.innerHTML = files.map(file => {
+                    const photoSrc = file.url || (file.file_data ? file.file_data : null);
+                    const photoAlt = file.type ? file.type.replace(/_/g, ' ') : 'Photo';
+                    
+                    if (!photoSrc) {
+                        return `
+                            <div class="photo-card">
+                                <div class="photo-label">${escapeHtml(photoAlt)}</div>
+                                <div class="p-4 text-center text-gray-500 text-sm">
+                                    Photo not available
+                                    ${file.error ? `<br><span class="text-xs text-red-600">${escapeHtml(file.error)}</span>` : ''}
+                                </div>
+                            </div>
+                        `;
+                    }
+                    
+                    return `
+                        <div class="photo-card">
+                            <img src="${photoSrc}" alt="${escapeHtml(photoAlt)}" onclick="openPhotoModal('${photoSrc}')" style="cursor: pointer;">
+                            <div class="photo-label">${escapeHtml(photoAlt)}</div>
+                        </div>
+                    `;
+                }).join('');
+            } else {
+                photosGrid.innerHTML = '<p class="text-sm text-gray-500">No photos uploaded</p>';
+            }
+            
+            // Populate notes and data
+            const notesContent = document.getElementById('modal-notes-content');
+            const notesHtml = [];
+            
+            if (submissionData.notes) {
+                notesHtml.push(`<div class="mb-3"><strong>Shelfer Notes:</strong><p class="mt-1 text-gray-700">${escapeHtml(submissionData.notes)}</p></div>`);
+            }
+            
+            if (submissionData.stock_level) {
+                notesHtml.push(`<div class="mb-3"><strong>Stock Level:</strong> <span class="text-gray-700">${escapeHtml(submissionData.stock_level)}</span></div>`);
+            }
+            
+            if (submissionData.price) {
+                notesHtml.push(`<div class="mb-3"><strong>Price:</strong> <span class="text-gray-700">$${parseFloat(submissionData.price).toFixed(2)}</span></div>`);
+            }
+            
+            if (submissionData.captured_at) {
+                notesHtml.push(`<div class="mb-3"><strong>Captured At:</strong> <span class="text-gray-700">${new Date(submissionData.captured_at).toLocaleString()}</span></div>`);
+            }
+            
+            if (submissionData.device) {
+                notesHtml.push(`<div class="mb-3"><strong>Device:</strong> <span class="text-gray-700">${escapeHtml(submissionData.device)}</span></div>`);
+            }
+            
+            if (submission.validation_notes) {
+                notesHtml.push(`<div class="mt-3 pt-3 border-t"><strong>Previous Review Notes:</strong><p class="mt-1 text-gray-700">${escapeHtml(submission.validation_notes)}</p></div>`);
+            }
+            
+            notesContent.innerHTML = notesHtml.length > 0 ? notesHtml.join('') : '<p class="text-gray-500 italic">No notes or data provided</p>';
+        }
+
+        // Close review modal
+        function closeReviewModal() {
+            document.getElementById('review-modal').classList.add('hidden');
+            currentSubmissionId = null;
+        }
+
+        // Quick approve (without notes)
+        async function quickApprove(submissionId) {
+            if (!confirm('Approve this submission? This will mark the job as completed and process the payout.')) {
+                return;
+            }
+            await approveSubmissionRPC(submissionId, null);
+        }
+
+        // Quick reject (requires notes)
+        async function quickReject(submissionId) {
+            const notes = prompt('Rejection notes are required:\n\nEnter reason for rejection:');
+            if (!notes || notes.trim() === '') {
+                alert('Rejection cancelled. Notes are required.');
+                return;
+            }
+            if (!confirm('Reject this submission? The job will be reopened for resubmission.')) {
+                return;
+            }
+            await rejectSubmissionRPC(submissionId, notes.trim());
+        }
+
+        // Approve submission (via RPC)
+        async function approveSubmission() {
+            if (!currentSubmissionId) return;
+            const notes = document.getElementById('review-notes').value.trim() || null;
+            closeReviewModal();
+            await approveSubmissionRPC(currentSubmissionId, notes);
+        }
+
+        // Reject submission (via RPC)
+        async function rejectSubmission() {
+            if (!currentSubmissionId) return;
+            const notes = document.getElementById('review-notes').value.trim();
+            if (!notes || notes === '') {
+                alert('Rejection notes are required.');
+                document.getElementById('notes-required').classList.remove('hidden');
+                document.getElementById('review-notes').focus();
+                return;
+            }
+            closeReviewModal();
+            await rejectSubmissionRPC(currentSubmissionId, notes);
+        }
+
+        // Approve submission using RPC
+        async function approveSubmissionRPC(submissionId, notes) {
+            try {
+                const { data: { user } } = await supabase.auth.getUser();
+                if (!user) throw new Error('Not authenticated');
+
+                const { data, error } = await supabase.rpc('approve_submission', {
+                    p_submission_id: submissionId,
+                    p_admin_id: user.id,
+                    p_notes: notes
+                });
+
+                if (error) throw error;
+
+                // Show toast
+                showToast('Submission approved — payment created (pending).', 'success');
+                
+                // Reload list
+                await loadSubmissions();
+
+            } catch (error) {
+                console.error('❌ Error approving submission:', error);
+                alert('Error approving submission: ' + error.message);
+            }
+        }
+
+        // Reject submission using RPC
+        async function rejectSubmissionRPC(submissionId, notes) {
+            try {
+                const { data: { user } } = await supabase.auth.getUser();
+                if (!user) throw new Error('Not authenticated');
+
+                const { data, error } = await supabase.rpc('reject_submission', {
+                    p_submission_id: submissionId,
+                    p_admin_id: user.id,
+                    p_notes: notes
+                });
+
+                if (error) throw error;
+
+                // Show toast
+                showToast('Submission rejected — job reopened.', 'error');
+                
+                // Reload list
+                await loadSubmissions();
+
+            } catch (error) {
+                console.error('❌ Error rejecting submission:', error);
+                alert('Error rejecting submission: ' + error.message);
+            }
+        }
+
+        // Show toast notification
+        function showToast(message, type = 'success') {
+            const toast = document.createElement('div');
+            toast.className = `fixed top-4 right-4 px-6 py-3 rounded-lg shadow-lg z-50 ${
+                type === 'success' ? 'bg-green-600 text-white' : 'bg-red-600 text-white'
+            }`;
+            toast.textContent = message;
+            document.body.appendChild(toast);
+
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                toast.style.transition = 'opacity 0.3s';
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
+
+        // Escape HTML
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // Sign out
         async function signOut() {
             try {
                 await supabase.auth.signOut();
