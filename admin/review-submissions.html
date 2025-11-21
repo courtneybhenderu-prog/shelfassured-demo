@@ -472,6 +472,7 @@
                             title,
                             description,
                             brand_id,
+                            status,
                             payout_per_store,
                             brands (
                                 id,
@@ -519,13 +520,38 @@
 
                 console.log('📋 Loaded submissions:', submissions?.length || 0);
                 console.log('📋 Loaded pending jobs:', pendingJobs?.length || 0);
+                
+                // Debug: Log job statuses
+                if (submissions && submissions.length > 0) {
+                    const statusCounts = {};
+                    submissions.forEach(sub => {
+                        const jobStatus = sub.jobs?.status || 'no-job';
+                        statusCounts[jobStatus] = (statusCounts[jobStatus] || 0) + 1;
+                    });
+                    console.log('📊 Job status breakdown:', statusCounts);
+                    
+                    // Log submissions with pending_review jobs
+                    const pendingSubs = submissions.filter(s => s.jobs?.status === 'pending_review');
+                    console.log('👀 Submissions with pending_review jobs:', pendingSubs.length);
+                    if (pendingSubs.length > 0) {
+                        console.log('Sample pending submission:', {
+                            id: pendingSubs[0].id,
+                            job_id: pendingSubs[0].job_id,
+                            job_status: pendingSubs[0].jobs?.status,
+                            is_validated: pendingSubs[0].is_validated,
+                            review_outcome: pendingSubs[0].review_outcome
+                        });
+                    }
+                }
 
                 allSubmissions = submissions || [];
                 
                 // Update pending count
                 const pendingCount = allSubmissions.filter(s => {
                     const job = s.jobs;
-                    return job && job.status === 'pending_review';
+                    return job && job.status === 'pending_review' &&
+                           (s.is_validated === null || s.is_validated === false) &&
+                           (s.review_outcome === null || s.review_outcome === undefined || s.review_outcome !== 'superseded');
                 }).length;
                 document.getElementById('pending-count').textContent = pendingCount;
 
@@ -555,12 +581,28 @@
             if (statusFilter !== 'all') {
                 filtered = filtered.filter(sub => {
                     const job = sub.jobs;
-                    if (!job) return false;
+                    if (!job) {
+                        console.warn('⚠️ Submission has no job:', sub.id);
+                        return false;
+                    }
                     
                     if (statusFilter === 'pending_review') {
-                        return job.status === 'pending_review' && 
+                        const isPending = job.status === 'pending_review' && 
                                (sub.is_validated === null || sub.is_validated === false) &&
                                (sub.review_outcome === null || sub.review_outcome === undefined || sub.review_outcome !== 'superseded');
+                        
+                        // Debug logging for first few submissions
+                        if (filtered.length <= 3) {
+                            console.log('🔍 Filter check for submission:', {
+                                submission_id: sub.id,
+                                job_status: job.status,
+                                is_validated: sub.is_validated,
+                                review_outcome: sub.review_outcome,
+                                passes_filter: isPending
+                            });
+                        }
+                        
+                        return isPending;
                     } else if (statusFilter === 'approved') {
                         return sub.review_outcome === 'approved' || 
                                (job.status === 'completed' && sub.is_validated === true);
@@ -570,6 +612,8 @@
                     }
                     return true;
                 });
+                
+                console.log(`📊 After ${statusFilter} filter: ${filtered.length} submissions`);
             }
 
             // Filter by date range
