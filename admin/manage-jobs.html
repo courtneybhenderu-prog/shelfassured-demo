@@ -294,12 +294,14 @@
                         </select>
                     </div>
 
-                    <!-- Due Date -->
+                    <!-- Due Date (Auto-calculated: 48 hours from creation) -->
                     <div>
                         <label for="due-date" class="block text-sm font-medium text-gray-700 mb-2">Due Date</label>
-                        <input type="datetime-local" id="due-date" name="due-date"
-                               class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
-                        <p class="mt-1 text-sm text-gray-500">Standard timeline: 48 hours (placeholder for Marc's feedback)</p>
+                        <div class="w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-lg text-gray-700" id="due-date-display">
+                            Auto-set to 48 hours from job creation
+                        </div>
+                        <input type="hidden" id="due-date" name="due-date">
+                        <p class="mt-1 text-sm text-gray-500">Standard timeline: 48 hours from creation</p>
                     </div>
 
                     <!-- Additional Notes -->
@@ -473,11 +475,22 @@
                     if (prEl) prEl.value = job.priority;
                 }
                 
-                // Set due date
+                // Set due date (for edit mode - show existing date)
                 if (job.due_date) {
-                    const dueDate = new Date(job.due_date).toISOString().split('T')[0];
+                    const dueDate = new Date(job.due_date);
+                    const dueDateDisplay = document.getElementById('due-date-display');
                     const dueEl = document.getElementById('due-date');
-                    if (dueEl) dueEl.value = dueDate;
+                    if (dueDateDisplay) {
+                        dueDateDisplay.textContent = dueDate.toLocaleString();
+                        dueDateDisplay.classList.remove('bg-gray-50');
+                        dueDateDisplay.classList.add('bg-white', 'border');
+                    }
+                    if (dueEl) {
+                        // Convert to datetime-local format for editing
+                        const localDate = new Date(dueDate.getTime() - dueDate.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+                        dueEl.type = 'datetime-local';
+                        dueEl.value = localDate;
+                    }
                 }
                 
                 // Set assigned user
@@ -1412,7 +1425,11 @@
                 skus: selectedSkus,
                 assignedUserId: document.getElementById('assigned-user').value,
                 priority: document.getElementById('priority').value,
-                dueDate: document.getElementById('due-date').value,
+                dueDate: document.getElementById('due-date').value || (() => {
+                    // Auto-calculate 48 hours from now if not set
+                    const now = new Date();
+                    return new Date(now.getTime() + (48 * 60 * 60 * 1000)).toISOString();
+                })(),
                 specialInstructions: document.getElementById('special-instructions').value.trim()
             };
         }
@@ -1440,10 +1457,23 @@
                 // Create ONE job per store with the same product set
                 let totalAssignments = 0;
                 
-                // Convert dueDate to proper format (datetime-local to ISO string)
+                // Convert dueDate to proper format
+                // For new jobs: dueDate is already in ISO format from auto-calculation
+                // For edited jobs: convert from datetime-local to ISO string
                 let dueDateValue = null;
                 if (formData.dueDate) {
-                    dueDateValue = new Date(formData.dueDate).toISOString();
+                    // Check if it's already an ISO string or needs conversion
+                    if (formData.dueDate.includes('T') && formData.dueDate.includes('Z')) {
+                        // Already ISO format
+                        dueDateValue = formData.dueDate;
+                    } else {
+                        // datetime-local format, convert to ISO
+                        dueDateValue = new Date(formData.dueDate).toISOString();
+                    }
+                } else {
+                    // Auto-calculate 48 hours from now if not provided
+                    const now = new Date();
+                    dueDateValue = new Date(now.getTime() + (48 * 60 * 60 * 1000)).toISOString();
                 }
                 
                 for (const storeId of storeIds) {
@@ -1608,6 +1638,23 @@
 
         // Show create job form
         function showCreateJobForm() {
+            // Auto-calculate due date: 48 hours from now
+            const now = new Date();
+            const dueDate = new Date(now.getTime() + (48 * 60 * 60 * 1000)); // Add 48 hours
+            const dueDateInput = document.getElementById('due-date');
+            const dueDateDisplay = document.getElementById('due-date-display');
+            
+            if (dueDateInput) {
+                // Set hidden input value in ISO format
+                dueDateInput.value = dueDate.toISOString();
+            }
+            
+            if (dueDateDisplay) {
+                // Show formatted date to user
+                dueDateDisplay.textContent = `Auto-set to: ${dueDate.toLocaleString()} (48 hours from now)`;
+                dueDateDisplay.classList.remove('bg-white', 'border');
+                dueDateDisplay.classList.add('bg-gray-50');
+            }
             document.getElementById('jobs-list-section').classList.add('hidden');
             document.getElementById('create-job-section').classList.remove('hidden');
             document.getElementById('create-job-btn').textContent = 'Back to Jobs List';
