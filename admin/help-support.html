@@ -7,6 +7,15 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.47.5/dist/umd/supabase.min.js"></script>
     <link rel="stylesheet" href="../shared/styles.css">
+    <style>
+        .help-request-card {
+            transition: all 0.2s;
+        }
+        .help-request-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+    </style>
 </head>
 <body>
     <div class="min-h-screen bg-gray-100">
@@ -17,6 +26,9 @@
                     <div class="flex items-center">
                         <h1 class="text-2xl font-bold text-gray-900">Help & Support</h1>
                         <span class="ml-3 px-2 py-1 text-xs font-semibold text-white bg-red-600 rounded-full">ADMIN ONLY</span>
+                        <span class="ml-3 px-3 py-1 text-sm font-medium text-gray-700 bg-gray-100 rounded-full">
+                            <span id="open-count">0</span> open
+                        </span>
                     </div>
                     <div class="flex items-center space-x-4">
                         <a href="dashboard.html" class="text-gray-600 hover:text-gray-900">← Back to Dashboard</a>
@@ -28,30 +40,182 @@
 
         <!-- Main Content -->
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-            <!-- Coming Soon Card -->
-            <div class="bg-white rounded-lg shadow-sm border p-8 text-center">
-                <div class="mx-auto w-16 h-16 bg-yellow-100 rounded-full flex items-center justify-center mb-4">
-                    <svg class="w-8 h-8 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 5.636l-3.536 3.536m0 5.656l3.536 3.536M9.172 9.172L5.636 5.636m3.536 9.192L5.636 18.364M12 2.25a9.75 9.75 0 100 19.5 9.75 9.75 0 000-19.5z"></path>
-                    </svg>
+            <!-- Filters -->
+            <div class="bg-white rounded-lg shadow-sm border p-4 mb-6">
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Status</label>
+                        <select id="status-filter" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                            <option value="all">All Requests</option>
+                            <option value="open" selected>Open</option>
+                            <option value="in_progress">In Progress</option>
+                            <option value="resolved">Resolved</option>
+                            <option value="closed">Closed</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Priority</label>
+                        <select id="priority-filter" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                            <option value="all">All Priorities</option>
+                            <option value="urgent">Urgent</option>
+                            <option value="high">High</option>
+                            <option value="medium">Medium</option>
+                            <option value="low">Low</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Date Range</label>
+                        <select id="date-range-filter" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                            <option value="all">All Time</option>
+                            <option value="7">Last 7 Days</option>
+                            <option value="30" selected>Last 30 Days</option>
+                            <option value="custom">Custom Range</option>
+                        </select>
+                    </div>
+                    <div id="custom-date-range" class="hidden col-span-2">
+                        <div class="grid grid-cols-2 gap-2">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">From</label>
+                                <input type="date" id="date-from" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">To</label>
+                                <input type="date" id="date-to" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                            </div>
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">User Type</label>
+                        <select id="user-type-filter" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                            <option value="all">All Users</option>
+                            <option value="shelfer">Shelfers</option>
+                            <option value="brand_client">Brand Clients</option>
+                            <option value="admin">Admins</option>
+                        </select>
+                    </div>
                 </div>
-                <h2 class="text-2xl font-bold text-gray-900 mb-2">Coming Soon!</h2>
-                <p class="text-gray-600 mb-4">The Help & Support system is currently under development.</p>
-                <p class="text-sm text-gray-500">This will include:</p>
-                <ul class="text-sm text-gray-500 mt-2 space-y-1">
-                    <li>• View help requests from shelfers and brand clients</li>
-                    <li>• Respond to support tickets</li>
-                    <li>• Manage user issues and feedback</li>
-                    <li>• System notifications and alerts</li>
-                </ul>
+                <div class="flex justify-between items-center">
+                    <div class="flex gap-2">
+                        <button onclick="clearFilters()" class="px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 font-medium">
+                            Clear Filters
+                        </button>
+                    </div>
+                    <button onclick="loadHelpRequests()" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium">
+                        🔄 Refresh
+                    </button>
+                </div>
+            </div>
+
+            <!-- Loading State -->
+            <div id="loading" class="text-center py-12">
+                <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                <p class="mt-4 text-gray-600">Loading help requests...</p>
+            </div>
+
+            <!-- Help Requests List -->
+            <div id="help-requests-list" class="space-y-4">
+                <!-- Will be populated by JavaScript -->
+            </div>
+
+            <!-- Empty State -->
+            <div id="empty-state" class="hidden bg-white rounded-lg shadow-sm border p-12 text-center">
+                <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                </svg>
+                <h3 class="mt-4 text-lg font-medium text-gray-900">No Help Requests Found</h3>
+                <p class="mt-2 text-sm text-gray-500">There are no help requests matching your current filters.</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Response Modal -->
+    <div id="response-modal" class="hidden fixed z-50 inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full">
+        <div class="relative top-10 mx-auto p-6 border w-11/12 md:w-3/4 lg:w-1/2 shadow-lg rounded-md bg-white max-h-[90vh] overflow-y-auto">
+            <div class="mb-4">
+                <button onclick="closeResponseModal()" class="float-right text-gray-400 hover:text-gray-600 text-2xl font-bold">&times;</button>
+                <h3 class="text-xl font-bold text-gray-900 mb-4" id="response-modal-title">Respond to Help Request</h3>
+                
+                <!-- Request Details -->
+                <div id="request-details" class="mb-6 p-4 bg-gray-50 rounded-lg">
+                    <!-- Populated by JavaScript -->
+                </div>
+
+                <!-- Response Input -->
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                        Your Response *
+                    </label>
+                    <textarea id="response-text" rows="6" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" placeholder="Type your response here..."></textarea>
+                </div>
+
+                <!-- Resolution Notes (if resolving) -->
+                <div id="resolution-notes-section" class="mb-4 hidden">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                        Resolution Notes
+                    </label>
+                    <textarea id="resolution-notes" rows="3" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" placeholder="Optional: Add notes about how this was resolved..."></textarea>
+                </div>
+                
+                <!-- Actions -->
+                <div class="flex gap-3 justify-end pt-4 border-t">
+                    <button onclick="closeResponseModal()" class="px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300">
+                        Cancel
+                    </button>
+                    <button id="resolve-btn" onclick="resolveRequest()" class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 hidden">
+                        ✅ Resolve
+                    </button>
+                    <button onclick="sendResponse()" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+                        Send Response
+                    </button>
+                </div>
             </div>
         </div>
     </div>
 
     <script src="../shared/api.js"></script>
     <script>
-        // Basic admin check
+        let allHelpRequests = [];
+        let currentRequestId = null;
+
+        // Initialize page
         document.addEventListener('DOMContentLoaded', async function() {
+            await checkAdminAccess();
+            setupFilters();
+            await loadHelpRequests();
+        });
+
+        // Setup filter handlers
+        function setupFilters() {
+            document.getElementById('status-filter').addEventListener('change', filterRequests);
+            document.getElementById('priority-filter').addEventListener('change', filterRequests);
+            document.getElementById('date-range-filter').addEventListener('change', handleDateRangeChange);
+            document.getElementById('user-type-filter').addEventListener('change', filterRequests);
+        }
+
+        // Handle date range filter change
+        function handleDateRangeChange() {
+            const dateRange = document.getElementById('date-range-filter').value;
+            const customRange = document.getElementById('custom-date-range');
+            if (dateRange === 'custom') {
+                customRange.classList.remove('hidden');
+            } else {
+                customRange.classList.add('hidden');
+            }
+            filterRequests();
+        }
+
+        // Clear all filters
+        function clearFilters() {
+            document.getElementById('status-filter').value = 'open';
+            document.getElementById('priority-filter').value = 'all';
+            document.getElementById('date-range-filter').value = '30';
+            document.getElementById('user-type-filter').value = 'all';
+            document.getElementById('custom-date-range').classList.add('hidden');
+            filterRequests();
+        }
+
+        // Check admin access
+        async function checkAdminAccess() {
             try {
                 const { data: { user } } = await supabase.auth.getUser();
                 if (!user) {
@@ -59,24 +223,445 @@
                     return;
                 }
                 
-                // Check if user is admin
                 const { data: profile } = await supabase
                     .from('users')
                     .select('role')
                     .eq('id', user.id)
                     .single();
-                
+
                 if (!profile || profile.role !== 'admin') {
-                    window.location.href = '../auth/signin.html';
+                    alert('Access denied. Admin privileges required.');
+                    window.location.href = '../dashboard/brand-client.html';
                     return;
                 }
-                
-                console.log('✅ Admin access confirmed for Help & Support');
+
+                console.log('✅ Admin access confirmed');
             } catch (error) {
-                console.error('❌ Error checking admin access:', error);
+                console.error('❌ Error checking access:', error);
                 window.location.href = '../auth/signin.html';
             }
-        });
+        }
+
+        // Load all help requests
+        async function loadHelpRequests() {
+            try {
+                document.getElementById('loading').classList.remove('hidden');
+                document.getElementById('help-requests-list').innerHTML = '';
+                document.getElementById('empty-state').classList.add('hidden');
+
+                // Load help requests with user info
+                const { data: requests, error } = await supabase
+                    .from('help_requests')
+                    .select(`
+                        *,
+                        users!help_requests_user_id_fkey (
+                            id,
+                            full_name,
+                            email,
+                            role
+                        ),
+                        responded_by_user:users!help_requests_responded_by_fkey (
+                            id,
+                            full_name,
+                            email
+                        ),
+                        resolved_by_user:users!help_requests_resolved_by_fkey (
+                            id,
+                            full_name,
+                            email
+                        )
+                    `)
+                    .order('created_at', { ascending: false });
+
+                if (error) throw error;
+
+                allHelpRequests = requests || [];
+                
+                // Update open count
+                const openCount = allHelpRequests.filter(r => r.status === 'open').length;
+                document.getElementById('open-count').textContent = openCount;
+
+                filterRequests();
+
+            } catch (error) {
+                console.error('❌ Error loading help requests:', error);
+                alert('Error loading help requests. Check console for details.');
+            } finally {
+                document.getElementById('loading').classList.add('hidden');
+            }
+        }
+
+        // Filter and display requests
+        function filterRequests() {
+            const statusFilter = document.getElementById('status-filter').value;
+            const priorityFilter = document.getElementById('priority-filter').value;
+            const dateRange = document.getElementById('date-range-filter').value;
+            const userTypeFilter = document.getElementById('user-type-filter').value;
+
+            let filtered = [...allHelpRequests];
+
+            // Filter by status
+            if (statusFilter !== 'all') {
+                filtered = filtered.filter(r => r.status === statusFilter);
+            }
+
+            // Filter by priority
+            if (priorityFilter !== 'all') {
+                filtered = filtered.filter(r => r.priority === priorityFilter);
+            }
+
+            // Filter by date range
+            if (dateRange !== 'all') {
+                const now = new Date();
+                if (dateRange === 'custom') {
+                    const fromDate = document.getElementById('date-from').value;
+                    const toDate = document.getElementById('date-to').value;
+                    if (fromDate && toDate) {
+                        filtered = filtered.filter(r => {
+                            const reqDate = new Date(r.created_at);
+                            return reqDate >= new Date(fromDate) && reqDate <= new Date(toDate + 'T23:59:59');
+                        });
+                    }
+                } else {
+                    const days = parseInt(dateRange);
+                    const cutoffDate = new Date(now.getTime() - (days * 24 * 60 * 60 * 1000));
+                    filtered = filtered.filter(r => new Date(r.created_at) >= cutoffDate);
+                }
+            }
+
+            // Filter by user type
+            if (userTypeFilter !== 'all') {
+                filtered = filtered.filter(r => {
+                    const user = r.users;
+                    if (!user) return false;
+                    return user.role === userTypeFilter;
+                });
+            }
+
+            // Sort by priority (urgent first) then by date
+            filtered.sort((a, b) => {
+                const priorityOrder = { urgent: 4, high: 3, medium: 2, low: 1 };
+                const priorityDiff = (priorityOrder[b.priority] || 0) - (priorityOrder[a.priority] || 0);
+                if (priorityDiff !== 0) return priorityDiff;
+                return new Date(b.created_at) - new Date(a.created_at);
+            });
+
+            displayRequests(filtered);
+        }
+
+        // Display requests
+        function displayRequests(requests) {
+            const container = document.getElementById('help-requests-list');
+            
+            if (requests.length === 0) {
+                container.innerHTML = '';
+                document.getElementById('empty-state').classList.remove('hidden');
+                return;
+            }
+
+            document.getElementById('empty-state').classList.add('hidden');
+
+            container.innerHTML = requests.map(req => {
+                const user = req.users || {};
+                const priorityBadge = getPriorityBadge(req.priority);
+                const statusBadge = getStatusBadge(req.status);
+                const isUnread = !req.is_read && req.status === 'open';
+                
+                return `
+                    <div class="help-request-card bg-white rounded-lg shadow-sm border p-6 ${isUnread ? 'border-l-4 border-l-blue-500' : ''}">
+                        <div class="flex justify-between items-start mb-4">
+                            <div class="flex-1">
+                                <div class="flex items-center gap-3 mb-2">
+                                    <h3 class="text-xl font-semibold text-gray-900">${escapeHtml(req.subject)}</h3>
+                                    ${priorityBadge}
+                                    ${statusBadge}
+                                    ${isUnread ? '<span class="px-2 py-1 text-xs font-semibold text-white bg-blue-600 rounded-full">New</span>' : ''}
+                                </div>
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm text-gray-600 mb-2">
+                                    <div><strong>From:</strong> ${escapeHtml(user.full_name || user.email || 'Unknown User')} (${escapeHtml(user.role || 'unknown')})</div>
+                                    <div><strong>Submitted:</strong> ${new Date(req.created_at).toLocaleString()}</div>
+                                    ${req.responded_at ? `<div><strong>Responded:</strong> ${new Date(req.responded_at).toLocaleString()}</div>` : ''}
+                                    ${req.resolved_at ? `<div><strong>Resolved:</strong> ${new Date(req.resolved_at).toLocaleString()}</div>` : ''}
+                                </div>
+                                <div class="text-sm text-gray-700 mb-3 p-3 bg-gray-50 rounded-lg">
+                                    <strong>Message:</strong><br>
+                                    ${escapeHtml(req.message).replace(/\n/g, '<br>')}
+                                </div>
+                                ${req.admin_response ? `
+                                    <div class="text-sm text-blue-700 mb-3 p-3 bg-blue-50 rounded-lg border-l-4 border-blue-500">
+                                        <strong>Admin Response:</strong><br>
+                                        ${escapeHtml(req.admin_response).replace(/\n/g, '<br>')}
+                                        ${req.responded_by_user ? `<div class="mt-2 text-xs text-gray-600">— ${escapeHtml(req.responded_by_user.full_name || req.responded_by_user.email)}</div>` : ''}
+                                    </div>
+                                ` : ''}
+                                ${req.resolution_notes ? `
+                                    <div class="text-sm text-green-700 mb-3 p-3 bg-green-50 rounded-lg border-l-4 border-green-500">
+                                        <strong>Resolution Notes:</strong><br>
+                                        ${escapeHtml(req.resolution_notes).replace(/\n/g, '<br>')}
+                                        ${req.resolved_by_user ? `<div class="mt-2 text-xs text-gray-600">— ${escapeHtml(req.resolved_by_user.full_name || req.resolved_by_user.email)}</div>` : ''}
+                                    </div>
+                                ` : ''}
+                            </div>
+                            <div class="ml-4 flex flex-col gap-2">
+                                ${req.status === 'open' || req.status === 'in_progress' ? `
+                                    <button onclick="openResponseModal('${req.id}')" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium">
+                                        ${req.admin_response ? 'Update Response' : 'Respond'}
+                                    </button>
+                                ` : ''}
+                                ${req.status === 'open' || req.status === 'in_progress' ? `
+                                    <button onclick="markInProgress('${req.id}')" class="px-3 py-1 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 text-sm">
+                                        Mark In Progress
+                                    </button>
+                                ` : ''}
+                                ${req.status !== 'closed' ? `
+                                    <button onclick="closeRequest('${req.id}')" class="px-3 py-1 bg-gray-600 text-white rounded-lg hover:bg-gray-700 text-sm">
+                                        Close
+                                    </button>
+                                ` : ''}
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // Get priority badge
+        function getPriorityBadge(priority) {
+            const badges = {
+                urgent: '<span class="px-2 py-1 text-xs font-semibold text-white bg-red-600 rounded-full">🔴 Urgent</span>',
+                high: '<span class="px-2 py-1 text-xs font-semibold text-white bg-orange-600 rounded-full">🟠 High</span>',
+                medium: '<span class="px-2 py-1 text-xs font-semibold text-white bg-yellow-600 rounded-full">🟡 Medium</span>',
+                low: '<span class="px-2 py-1 text-xs font-semibold text-white bg-gray-600 rounded-full">⚪ Low</span>'
+            };
+            return badges[priority] || `<span class="px-2 py-1 text-xs font-semibold text-gray-600 bg-gray-200 rounded-full">${escapeHtml(priority)}</span>`;
+        }
+
+        // Get status badge
+        function getStatusBadge(status) {
+            const badges = {
+                open: '<span class="px-2 py-1 text-xs font-semibold text-white bg-blue-600 rounded-full">Open</span>',
+                in_progress: '<span class="px-2 py-1 text-xs font-semibold text-white bg-yellow-600 rounded-full">In Progress</span>',
+                resolved: '<span class="px-2 py-1 text-xs font-semibold text-white bg-green-600 rounded-full">✅ Resolved</span>',
+                closed: '<span class="px-2 py-1 text-xs font-semibold text-gray-600 bg-gray-200 rounded-full">Closed</span>'
+            };
+            return badges[status] || `<span class="px-2 py-1 text-xs font-semibold text-gray-600 bg-gray-200 rounded-full">${escapeHtml(status)}</span>`;
+        }
+
+        // Open response modal
+        function openResponseModal(requestId) {
+            currentRequestId = requestId;
+            const request = allHelpRequests.find(r => r.id === requestId);
+            if (!request) {
+                alert('Request not found');
+                return;
+            }
+
+            const user = request.users || {};
+            const modal = document.getElementById('response-modal');
+            const detailsDiv = document.getElementById('request-details');
+            const resolveBtn = document.getElementById('resolve-btn');
+            
+            // Populate request details
+            detailsDiv.innerHTML = `
+                <h4 class="font-semibold text-gray-900 mb-2">Request Details</h4>
+                <div class="text-sm space-y-1">
+                    <div><strong>Subject:</strong> ${escapeHtml(request.subject)}</div>
+                    <div><strong>From:</strong> ${escapeHtml(user.full_name || user.email || 'Unknown')} (${escapeHtml(user.role || 'unknown')})</div>
+                    <div><strong>Priority:</strong> ${escapeHtml(request.priority)}</div>
+                    <div><strong>Submitted:</strong> ${new Date(request.created_at).toLocaleString()}</div>
+                    <div class="mt-3 pt-3 border-t"><strong>Message:</strong><br>${escapeHtml(request.message).replace(/\n/g, '<br>')}</div>
+                    ${request.admin_response ? `<div class="mt-3 pt-3 border-t"><strong>Previous Response:</strong><br>${escapeHtml(request.admin_response).replace(/\n/g, '<br>')}</div>` : ''}
+                </div>
+            `;
+
+            // Show/hide resolve button based on status
+            if (request.status === 'open' || request.status === 'in_progress') {
+                resolveBtn.classList.remove('hidden');
+            } else {
+                resolveBtn.classList.add('hidden');
+            }
+
+            // Clear response text
+            document.getElementById('response-text').value = request.admin_response || '';
+            document.getElementById('resolution-notes').value = request.resolution_notes || '';
+            
+            modal.classList.remove('hidden');
+        }
+
+        // Close response modal
+        function closeResponseModal() {
+            document.getElementById('response-modal').classList.add('hidden');
+            document.getElementById('resolution-notes-section').classList.add('hidden');
+            currentRequestId = null;
+        }
+
+        // Send response
+        async function sendResponse() {
+            if (!currentRequestId) return;
+            
+            const responseText = document.getElementById('response-text').value.trim();
+            if (!responseText) {
+                alert('Please enter a response');
+                return;
+            }
+
+            try {
+                const { data: { user } } = await supabase.auth.getUser();
+                if (!user) throw new Error('Not authenticated');
+
+                const { error } = await supabase
+                    .from('help_requests')
+                    .update({
+                        admin_response: responseText,
+                        responded_at: new Date().toISOString(),
+                        responded_by: user.id,
+                        status: 'in_progress',
+                        is_read: true,
+                        read_at: new Date().toISOString(),
+                        updated_at: new Date().toISOString()
+                    })
+                    .eq('id', currentRequestId);
+
+                if (error) throw error;
+
+                showToast('Response sent successfully', 'success');
+                closeResponseModal();
+                await loadHelpRequests();
+
+            } catch (error) {
+                console.error('❌ Error sending response:', error);
+                alert('Error sending response: ' + error.message);
+            }
+        }
+
+        // Resolve request
+        async function resolveRequest() {
+            if (!currentRequestId) return;
+            
+            const responseText = document.getElementById('response-text').value.trim();
+            const resolutionNotes = document.getElementById('resolution-notes').value.trim();
+            
+            if (!responseText) {
+                alert('Please enter a response before resolving');
+                return;
+            }
+
+            if (!confirm('Mark this request as resolved?')) {
+                return;
+            }
+
+            try {
+                const { data: { user } } = await supabase.auth.getUser();
+                if (!user) throw new Error('Not authenticated');
+
+                const { error } = await supabase
+                    .from('help_requests')
+                    .update({
+                        admin_response: responseText,
+                        resolution_notes: resolutionNotes || null,
+                        responded_at: new Date().toISOString(),
+                        responded_by: user.id,
+                        resolved_at: new Date().toISOString(),
+                        resolved_by: user.id,
+                        status: 'resolved',
+                        is_read: true,
+                        read_at: new Date().toISOString(),
+                        updated_at: new Date().toISOString()
+                    })
+                    .eq('id', currentRequestId);
+
+                if (error) throw error;
+
+                showToast('Request resolved successfully', 'success');
+                closeResponseModal();
+                await loadHelpRequests();
+
+            } catch (error) {
+                console.error('❌ Error resolving request:', error);
+                alert('Error resolving request: ' + error.message);
+            }
+        }
+
+        // Mark as in progress
+        async function markInProgress(requestId) {
+            try {
+                const { error } = await supabase
+                    .from('help_requests')
+                    .update({
+                        status: 'in_progress',
+                        updated_at: new Date().toISOString()
+                    })
+                    .eq('id', requestId);
+
+                if (error) throw error;
+
+                showToast('Request marked as in progress', 'success');
+                await loadHelpRequests();
+
+            } catch (error) {
+                console.error('❌ Error updating status:', error);
+                alert('Error updating status: ' + error.message);
+            }
+        }
+
+        // Close request
+        async function closeRequest(requestId) {
+            if (!confirm('Close this request? It will be marked as closed.')) {
+                return;
+            }
+
+            try {
+                const { error } = await supabase
+                    .from('help_requests')
+                    .update({
+                        status: 'closed',
+                        updated_at: new Date().toISOString()
+                    })
+                    .eq('id', requestId);
+
+                if (error) throw error;
+
+                showToast('Request closed', 'success');
+                await loadHelpRequests();
+
+            } catch (error) {
+                console.error('❌ Error closing request:', error);
+                alert('Error closing request: ' + error.message);
+            }
+        }
+
+        // Show toast notification
+        function showToast(message, type) {
+            const toast = document.createElement('div');
+            toast.className = `fixed top-4 right-4 px-6 py-3 rounded-lg shadow-lg text-white z-50 ${
+                type === 'success' ? 'bg-green-600' : 'bg-red-600'
+            }`;
+            toast.textContent = message;
+            document.body.appendChild(toast);
+            
+            setTimeout(() => {
+                toast.remove();
+            }, 3000);
+        }
+
+        // Escape HTML
+        function escapeHtml(text) {
+            if (!text) return '';
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // Sign out
+        async function signOut() {
+            try {
+                await supabase.auth.signOut();
+                window.location.href = '../auth/signin.html';
+            } catch (error) {
+                console.error('Error signing out:', error);
+                window.location.href = '../auth/signin.html';
+            }
+        }
     </script>
 </body>
 </html>
