@@ -7,16 +7,8 @@ document.addEventListener('DOMContentLoaded', async function() {
     // Check if user has access
     await checkAccess();
     
-    // Initialize enhanced store selector first
-    if (typeof StoreSelector !== 'undefined') {
-        window.storeSelector = new StoreSelector();
-        const initialized = await window.storeSelector.loadStores();
-        if (initialized) {
-            console.log('✅ Enhanced store selector initialized');
-        }
-    } else {
-        console.warn('⚠️ Enhanced store selector not available, using fallback');
-    }
+    // Load stores (using enhanced store selector)
+    await loadStores();
     
     // Load products
     await loadProducts();
@@ -68,7 +60,10 @@ async function checkAccess() {
 
 // Setup enhanced store selector handlers (called after initialization)
 function setupStoreSelectorHandlers() {
-    if (!window.storeSelector) return;
+    if (!window.storeSelector) {
+        console.warn('⚠️ Store selector not available for handler setup');
+        return;
+    }
     
     // Setup search and filter handlers
     const searchInput = document.getElementById('store-search');
@@ -76,13 +71,17 @@ function setupStoreSelectorHandlers() {
     
     if (searchInput) {
         searchInput.addEventListener('input', (e) => {
-            window.storeSelector.searchStores(e.target.value);
+            if (window.storeSelector && typeof window.storeSelector.searchStores === 'function') {
+                window.storeSelector.searchStores(e.target.value);
+            }
         });
     }
     
     if (chainFilter) {
         chainFilter.addEventListener('change', (e) => {
-            window.storeSelector.filterByChain(e.target.value);
+            if (window.storeSelector && typeof window.storeSelector.filterByChain === 'function') {
+                window.storeSelector.filterByChain(e.target.value);
+            }
         });
     }
 }
