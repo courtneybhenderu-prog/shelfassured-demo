@@ -249,33 +249,59 @@
                 document.getElementById('help-requests-list').innerHTML = '';
                 document.getElementById('empty-state').classList.add('hidden');
 
-                // Load help requests with user info
+                // First, try to load help requests without joins to see if table exists
                 const { data: requests, error } = await supabase
                     .from('help_requests')
-                    .select(`
-                        *,
-                        users!help_requests_user_id_fkey (
-                            id,
-                            full_name,
-                            email,
-                            role
-                        ),
-                        responded_by_user:users!help_requests_responded_by_fkey (
-                            id,
-                            full_name,
-                            email
-                        ),
-                        resolved_by_user:users!help_requests_resolved_by_fkey (
-                            id,
-                            full_name,
-                            email
-                        )
-                    `)
+                    .select('*')
                     .order('created_at', { ascending: false });
 
-                if (error) throw error;
+                if (error) {
+                    console.error('❌ Error loading help requests:', error);
+                    // Check if table doesn't exist
+                    if (error.message && error.message.includes('relation') && error.message.includes('does not exist')) {
+                        alert('The help_requests table does not exist yet. Please run the admin-dashboard-tables.sql script in Supabase SQL Editor to create it.');
+                        throw error;
+                    }
+                    throw error;
+                }
 
-                allHelpRequests = requests || [];
+                // If we have requests, load user info separately
+                if (requests && requests.length > 0) {
+                    const userIds = new Set();
+                    requests.forEach(req => {
+                        if (req.user_id) userIds.add(req.user_id);
+                        if (req.responded_by) userIds.add(req.responded_by);
+                        if (req.resolved_by) userIds.add(req.resolved_by);
+                    });
+
+                    // Load all users at once
+                    const { data: users, error: usersError } = await supabase
+                        .from('users')
+                        .select('id, full_name, email, role')
+                        .in('id', Array.from(userIds));
+
+                    if (usersError) {
+                        console.warn('⚠️ Could not load user info:', usersError);
+                    }
+
+                    // Create a user map
+                    const userMap = {};
+                    if (users) {
+                        users.forEach(user => {
+                            userMap[user.id] = user;
+                        });
+                    }
+
+                    // Attach user info to requests
+                    allHelpRequests = requests.map(req => ({
+                        ...req,
+                        users: userMap[req.user_id] || null,
+                        responded_by_user: req.responded_by ? (userMap[req.responded_by] || null) : null,
+                        resolved_by_user: req.resolved_by ? (userMap[req.resolved_by] || null) : null
+                    }));
+                } else {
+                    allHelpRequests = [];
+                }
                 
                 // Update open count
                 const openCount = allHelpRequests.filter(r => r.status === 'open').length;
@@ -285,7 +311,7 @@
 
             } catch (error) {
                 console.error('❌ Error loading help requests:', error);
-                alert('Error loading help requests. Check console for details.');
+                alert('Error loading help requests: ' + (error.message || 'Unknown error. Check console for details.'));
             } finally {
                 document.getElementById('loading').classList.add('hidden');
             }
