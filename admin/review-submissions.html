@@ -1230,15 +1230,22 @@
 
         // Approve submission (via RPC)
         async function approveSubmission() {
-            if (!currentSubmissionId) return;
+            if (!currentSubmissionId) {
+                console.error('No submission ID set');
+                return;
+            }
+            const submissionId = currentSubmissionId; // Save before closing modal
             const notes = document.getElementById('review-notes').value.trim() || null;
             closeReviewModal();
-            await approveSubmissionRPC(currentSubmissionId, notes);
+            await approveSubmissionRPC(submissionId, notes);
         }
 
         // Reject submission (via RPC)
         async function rejectSubmission() {
-            if (!currentSubmissionId) return;
+            if (!currentSubmissionId) {
+                console.error('No submission ID set');
+                return;
+            }
             const notes = document.getElementById('review-notes').value.trim();
             if (!notes || notes === '') {
                 alert('Rejection notes are required.');
@@ -1246,8 +1253,9 @@
                 document.getElementById('review-notes').focus();
                 return;
             }
+            const submissionId = currentSubmissionId; // Save before closing modal
             closeReviewModal();
-            await rejectSubmissionRPC(currentSubmissionId, notes);
+            await rejectSubmissionRPC(submissionId, notes);
         }
 
         // Approve submission using RPC
