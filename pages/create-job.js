@@ -7,8 +7,18 @@ document.addEventListener('DOMContentLoaded', async function() {
     // Check if user has access
     await checkAccess();
     
-    // Load stores and products
-    await loadStores();
+    // Initialize enhanced store selector first
+    if (typeof StoreSelector !== 'undefined') {
+        window.storeSelector = new StoreSelector();
+        const initialized = await window.storeSelector.loadStores();
+        if (initialized) {
+            console.log('✅ Enhanced store selector initialized');
+        }
+    } else {
+        console.warn('⚠️ Enhanced store selector not available, using fallback');
+    }
+    
+    // Load products
     await loadProducts();
     
     // Setup form handlers
@@ -56,34 +66,24 @@ async function checkAccess() {
     }
 }
 
-// Load available stores
-async function loadStores() {
-    try {
-        const stores = await saGet('stores', []);
-        console.log('📊 Stores loaded:', stores);
-        
-        const storeList = document.getElementById('store-list');
-        
-        if (stores.length === 0) {
-            storeList.innerHTML = '<p class="text-sm text-gray-500">No stores available. Contact admin to add stores.</p>';
-            return;
-        }
-        
-        const storesHtml = stores.map(store => `
-            <div class="flex items-center">
-                <input type="checkbox" id="store-${store.id}" name="stores" value="${store.id}" 
-                       class="rounded border-gray-300 store-checkbox">
-                <label for="store-${store.id}" class="ml-2 text-sm text-gray-700">
-                    ${store.name} - ${store.location}
-                </label>
-            </div>
-        `).join('');
-        
-        storeList.innerHTML = storesHtml;
-        
-    } catch (error) {
-        console.error('Error loading stores:', error);
-        document.getElementById('store-list').innerHTML = '<p class="text-sm text-red-500">Error loading stores</p>';
+// Setup enhanced store selector handlers (called after initialization)
+function setupStoreSelectorHandlers() {
+    if (!window.storeSelector) return;
+    
+    // Setup search and filter handlers
+    const searchInput = document.getElementById('store-search');
+    const chainFilter = document.getElementById('chain-filter');
+    
+    if (searchInput) {
+        searchInput.addEventListener('input', (e) => {
+            window.storeSelector.searchStores(e.target.value);
+        });
+    }
+    
+    if (chainFilter) {
+        chainFilter.addEventListener('change', (e) => {
+            window.storeSelector.filterByChain(e.target.value);
+        });
     }
 }
 
@@ -109,18 +109,18 @@ function setupFormHandlers() {
     // Add store button
     document.getElementById('add-store').addEventListener('click', addNewStore);
     
-    // All stores checkbox
-    document.getElementById('all-stores').addEventListener('change', toggleAllStores);
-    
-    // Store checkboxes
-    document.addEventListener('change', function(e) {
-        if (e.target.classList.contains('store-checkbox')) {
-            updateTotalCost();
-        }
-    });
+    // Store selection is now handled by enhanced store selector
+    // No need for all-stores checkbox or individual checkbox handlers
     
     // Cost per job input
-    document.getElementById('cost-per-job').addEventListener('input', updateTotalCost);
+    const costPerJobInput = document.getElementById('cost-per-job');
+    if (costPerJobInput) {
+        costPerJobInput.addEventListener('input', updateTotalCost);
+    }
+    
+    // Update total cost periodically or when stores are selected
+    // The enhanced store selector will trigger updates when stores are selected/deselected
+    setInterval(updateTotalCost, 1000); // Update every second (simple approach)
     
     // Form submission
     document.getElementById('create-job-form').addEventListener('submit', handleFormSubmit);
@@ -214,53 +214,44 @@ async function addNewStore() {
     }
 }
 
-// Add store to the checkbox list
-function addStoreToList(store) {
-    const storeList = document.getElementById('store-list');
-    
-    const storeHtml = `
-        <div class="flex items-center">
-            <input type="checkbox" id="store-${store.id}" name="stores" value="${store.id}" 
-                   class="rounded border-gray-300 store-checkbox">
-            <label for="store-${store.id}" class="ml-2 text-sm text-gray-700">
-                ${store.name} - ${store.location}
-            </label>
-        </div>
-    `;
-    
-    storeList.insertAdjacentHTML('beforeend', storeHtml);
-    
-    // Update total cost
-    updateTotalCost();
-}
-
-// Toggle all stores selection
-function toggleAllStores() {
-    const allStoresCheckbox = document.getElementById('all-stores');
-    const storeCheckboxes = document.querySelectorAll('.store-checkbox');
-    
-    storeCheckboxes.forEach(checkbox => {
-        checkbox.checked = allStoresCheckbox.checked;
-    });
-    
-    updateTotalCost();
+// Add store to the enhanced store selector
+async function addStoreToList(store) {
+    try {
+        // Reload stores in the enhanced selector to include the new one
+        if (window.storeSelector && typeof window.storeSelector.loadStores === 'function') {
+            await window.storeSelector.loadStores();
+            // Optionally select the newly added store
+            if (window.storeSelector.selectStore) {
+                window.storeSelector.selectStore(store.id);
+            }
+        }
+        
+        // Update total cost
+        updateTotalCost();
+    } catch (error) {
+        console.error('Error adding store to selector:', error);
+    }
 }
 
 // Update total cost calculation
 function updateTotalCost() {
     const costPerJob = parseFloat(document.getElementById('cost-per-job').value) || 0;
-    const selectedStores = document.querySelectorAll('.store-checkbox:checked').length;
-    const allStoresChecked = document.getElementById('all-stores').checked;
     
-    let totalStores = selectedStores;
-    if (allStoresChecked) {
-        // Get total number of stores
-        const allStores = document.querySelectorAll('.store-checkbox').length;
-        totalStores = allStores;
+    // Get selected stores count from enhanced store selector
+    let totalStores = 0;
+    if (window.storeSelector && typeof window.storeSelector.getSelectedStores === 'function') {
+        totalStores = window.storeSelector.getSelectedStores().length;
+    } else {
+        // Fallback
+        const selectedStores = document.querySelectorAll('.store-checkbox:checked');
+        totalStores = selectedStores.length;
     }
     
     const totalCost = costPerJob * totalStores;
-    document.getElementById('total-job-cost').value = totalCost.toFixed(2);
+    const totalCostInput = document.getElementById('total-job-cost');
+    if (totalCostInput) {
+        totalCostInput.value = totalCost.toFixed(2);
+    }
 }
 
 // Handle form submission
@@ -284,16 +275,14 @@ async function handleFormSubmit(event) {
             return;
         }
         
-        // Get selected stores
-        const allStoresChecked = document.getElementById('all-stores').checked;
+        // Get selected stores from enhanced store selector
         let storeIds = [];
         
-        if (allStoresChecked) {
-            // Get all store IDs
-            const stores = await saGet('stores', []);
-            storeIds = stores.map(store => store.id);
+        if (window.storeSelector && typeof window.storeSelector.getSelectedStores === 'function') {
+            const selectedStores = window.storeSelector.getSelectedStores();
+            storeIds = selectedStores.map(store => store.id);
         } else {
-            // Get selected store IDs
+            // Fallback: try to get from checkboxes if enhanced selector not available
             const selectedStores = document.querySelectorAll('.store-checkbox:checked');
             storeIds = Array.from(selectedStores).map(checkbox => checkbox.value);
         }
