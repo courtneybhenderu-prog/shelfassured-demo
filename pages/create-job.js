@@ -58,6 +58,37 @@ async function checkAccess() {
     }
 }
 
+// Initialize enhanced store selector
+async function loadStores() {
+    try {
+        // Initialize enhanced store selector (same as admin page)
+        if (typeof StoreSelector !== 'undefined') {
+            window.storeSelector = new StoreSelector();
+            const initialized = await window.storeSelector.loadStores();
+            
+            if (initialized) {
+                console.log('✅ Enhanced store selector initialized');
+            } else {
+                console.error('❌ Failed to initialize store selector');
+            }
+        } else {
+            console.error('❌ StoreSelector class not found - enhanced-store-selector.js may not be loaded');
+            // Fallback to simple list if enhanced selector not available
+            const stores = await saGet('stores', []);
+            const storeList = document.getElementById('available-stores');
+            if (storeList) {
+                storeList.innerHTML = '<p class="text-sm text-gray-500">Store selector not available. Please refresh the page.</p>';
+            }
+        }
+    } catch (error) {
+        console.error('Error loading stores:', error);
+        const storeList = document.getElementById('available-stores');
+        if (storeList) {
+            storeList.innerHTML = '<p class="text-sm text-red-500">Error loading stores</p>';
+        }
+    }
+}
+
 // Setup enhanced store selector handlers (called after initialization)
 function setupStoreSelectorHandlers() {
     if (!window.storeSelector) {
