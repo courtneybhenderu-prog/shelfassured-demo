@@ -78,14 +78,14 @@ window.saGet = async function(key, fallback = null) {
         return brands || fallback;
         
       case 'stores':
-        const { data: stores, error: storesError } = await supabase
-          .from('stores')
-          .select('*')
-          .eq('is_active', true)
-          .order('name')
-          .limit(5000);
-        if (storesError) throw storesError;
-        return stores || fallback;
+        // SECURITY: Do not expose full store list via saGet
+        // This function should not be used to load all stores
+        // Use role-specific queries instead:
+        // - Admins: can query stores directly
+        // - Brands: must use search-first pattern
+        // - Shelfers: only see stores via jobs
+        console.warn('⚠️ saGet("stores") called - this should not be used. Use role-specific queries instead.');
+        return fallback;
         
       case 'skus':
         const { data: skus, error: skusError } = await supabase

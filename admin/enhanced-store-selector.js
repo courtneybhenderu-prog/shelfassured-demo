@@ -10,6 +10,41 @@ class StoreSelector {
         this.searchTerm = '';
         this.currentLocation = null;
         this.isInitialized = false;
+        this.userRole = null; // Will be set during initialization
+    }
+
+    // Get current user role (admin, brand_client, or shelfer)
+    async getUserRole() {
+        if (this.userRole) return this.userRole;
+        
+        try {
+            const { data: { user } } = await supabase.auth.getUser();
+            if (!user) return null;
+            
+            const { data: profile } = await supabase
+                .from('users')
+                .select('role')
+                .eq('id', user.id)
+                .single();
+            
+            this.userRole = profile?.role || null;
+            return this.userRole;
+        } catch (error) {
+            console.error('Error getting user role:', error);
+            return null;
+        }
+    }
+
+    // Check if user is admin
+    async isAdmin() {
+        const role = await this.getUserRole();
+        return role === 'admin';
+    }
+
+    // Check if user is brand
+    async isBrand() {
+        const role = await this.getUserRole();
+        return role === 'brand_client';
     }
 
     // Initialize store selector (don't load stores until search)
@@ -24,15 +59,33 @@ class StoreSelector {
                 return false;
             }
 
-            // Load banner options for dropdown
-            await this.loadBannerOptions();
+            // Get user role early
+            await this.getUserRole();
+            const isAdmin = await this.isAdmin();
+            const isBrand = await this.isBrand();
+            console.log(`👤 User role: ${this.userRole || 'unknown'} (admin: ${isAdmin}, brand: ${isBrand})`);
+
+            // Load banner options for dropdown (admins can see all, brands need search first)
+            if (isAdmin) {
+                await this.loadBannerOptions();
+            } else {
+                // For brands: don't load banner options until they search
+                console.log('🔒 Brand user: Banner options will load after search');
+            }
 
             // Don't load stores upfront - start empty
             this.allStores = [];
             this.filteredStores = [];
             this.isInitialized = true;
             
-            console.log('✅ Store selector initialized - ready for search (LAZY LOADING ENABLED)');
+            // Show appropriate message based on role
+            if (isBrand) {
+                console.log('✅ Store selector initialized for BRAND - search required');
+            } else if (isAdmin) {
+                console.log('✅ Store selector initialized for ADMIN - full access');
+            } else {
+                console.log('✅ Store selector initialized - ready for search');
+            }
             
             // Show empty state
             this.renderEmptyState();
@@ -45,15 +98,22 @@ class StoreSelector {
         }
     }
 
-    // Load chain options by extracting from STORE column
+    // Load chain options by extracting from STORE column (ADMIN ONLY - brands get chains from search results)
     async loadBannerOptions() {
-        console.log('🔄 Loading chains from STORE column...');
+        // Check if user is admin - only admins can load all chains
+        const isAdmin = await this.isAdmin();
+        if (!isAdmin) {
+            console.log('🔒 Non-admin user: Banner options will be loaded from search results only');
+            // For brands: we'll extract chains from search results instead
+            return;
+        }
+        
+        console.log('🔄 Loading chains from STORE column (ADMIN ONLY)...');
         
         // First, get all columns to see what's actually available
         const { data: sampleData, error: sampleError } = await supabase
             .from('stores')
             .select('*')
-            .eq('state', 'TX')
             .limit(5);
         
         if (sampleData && sampleData.length > 0) {
@@ -61,7 +121,8 @@ class StoreSelector {
             console.log('🔍 First store keys:', Object.keys(sampleData[0]));
         }
         
-        // Get STORE column - get ALL stores with STORE populated (paginate to get all 2,334)
+        // Get STORE column - get ALL stores with STORE populated (paginate to get all stores)
+        // ADMIN ONLY - this loads all stores to extract chains
         let allStoresData = [];
         let page = 0;
         const pageSize = 1000;
@@ -239,7 +300,19 @@ class StoreSelector {
 
     // Search stores by name, city, or address
     async searchStores(term) {
-        this.searchTerm = term.toLowerCase();
+        const trimmedTerm = (term || '').trim();
+        this.searchTerm = trimmedTerm.toLowerCase();
+        
+        // For brands: require search term (search-first pattern)
+        const isBrand = await this.isBrand();
+        if (isBrand && !trimmedTerm) {
+            this.showError('Please enter a search term (e.g., "Whole Foods Austin") to find stores.');
+            this.allStores = [];
+            this.filteredStores = [];
+            this.renderStoreList();
+            this.updateCounts();
+            return;
+        }
         
         try {
             console.log('🔍 Query built, executing with pagination...');
@@ -258,9 +331,13 @@ class StoreSelector {
                     .not('STORE', 'is', null)
                     .neq('STORE', '');
                 
-                // Apply search filters
+                // Apply search filters (required for brands, optional for admins)
                 if (this.searchTerm) {
                     pageQuery = pageQuery.or(`STORE.ilike.%${this.searchTerm}%,name.ilike.%${this.searchTerm}%,city.ilike.%${this.searchTerm}%,address.ilike.%${this.searchTerm}%,zip_code.ilike.%${this.searchTerm}%,metro.ilike.%${this.searchTerm}%,METRO.ilike.%${this.searchTerm}%,metro_norm.ilike.%${this.searchTerm}%`);
+                } else if (isBrand) {
+                    // Brand tried to search without term - should not happen due to check above
+                    this.showError('Please enter a search term to find stores.');
+                    return;
                 }
                 
                 // Apply chain filter
@@ -324,10 +401,18 @@ class StoreSelector {
         return query.order('STORE');
     }
 
-    // Load stores from database when needed
+    // Load stores from database when needed (ADMIN ONLY - brands must use search)
     async loadStoresFromDatabase() {
+        // Check if user is admin - only admins can load all stores
+        const isAdmin = await this.isAdmin();
+        if (!isAdmin) {
+            console.warn('⚠️ Non-admin user attempted to load all stores. This is blocked.');
+            this.showError('Please use the search function to find stores. Full store lists are only available to administrators.');
+            return;
+        }
+        
         try {
-            console.log('🔄 Loading stores from database...');
+            console.log('🔄 Loading stores from database (ADMIN ONLY)...');
             console.log('🔍 Query details: Using pagination to get all stores');
             
             let allStores = [];
@@ -380,16 +465,34 @@ class StoreSelector {
     }
 
     // Filter stores by chain/banner
-    filterByChain(chain) {
+    async filterByChain(chain) {
         console.log('🔍 Filtering by chain:', chain);
         
         // Store the current chain filter
         this.currentChainFilter = chain;
         
-        // Re-query database with chain filter applied
-        this.allStores = [];
-        this.filteredStores = [];
-        this.loadStoresFromDatabase();
+        // For brands: require search term before filtering
+        const isBrand = await this.isBrand();
+        if (isBrand && !this.searchTerm) {
+            this.showError('Please search for stores first (e.g., "Whole Foods") before filtering by chain.');
+            return;
+        }
+        
+        // For brands: re-run search with chain filter
+        if (isBrand && this.searchTerm) {
+            await this.searchStores(this.searchTerm);
+            return;
+        }
+        
+        // For admins: can load all stores with chain filter
+        const isAdmin = await this.isAdmin();
+        if (isAdmin) {
+            this.allStores = [];
+            this.filteredStores = [];
+            this.loadStoresFromDatabase();
+        } else {
+            this.showError('Chain filtering requires a search term. Please search for stores first.');
+        }
     }
 
     // Update active button visual state
