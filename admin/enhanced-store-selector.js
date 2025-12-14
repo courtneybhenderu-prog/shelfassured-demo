@@ -196,11 +196,16 @@ class StoreSelector {
         try {
             // Get distinct banners from store_banners view
             // Note: The view should be created by running create-store-banners-view.sql
+            // IMPORTANT: Supabase JS client queries views the same way as tables
             console.log('🔄 Attempting to load banners from store_banners view...');
+            console.log('🔄 Query: .from("store_banners").select("banner")');
+            
             const { data: banners, error } = await supabase
                 .from('store_banners')
                 .select('banner')
                 .order('banner', { ascending: true });
+            
+            console.log('🔄 Query result - data:', banners ? `${banners.length} rows` : 'null', 'error:', error ? 'yes' : 'no');
             
             if (error) {
                 console.error('❌ Error loading banners from store_banners view:', error);
