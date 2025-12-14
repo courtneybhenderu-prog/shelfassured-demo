@@ -194,15 +194,27 @@ class StoreSelector {
         console.log('🔄 Loading banners from store_banners view (ADMIN ONLY)...');
         
         try {
-            // Get distinct banners from store_banners view
-            const { data: banners, error } = await supabase
-                .from('store_banners')
+            // Get distinct banners from v_store_banners view (or store_banners table)
+            // Try view first, then table
+            let { data: banners, error } = await supabase
+                .from('v_store_banners')
                 .select('banner')
                 .order('banner', { ascending: true });
             
+            // If view doesn't exist, try store_banners table
             if (error) {
-                console.error('❌ Error loading banners from store_banners view:', error);
-                console.log('⚠️ View may not exist yet. Run create-store-banners-view.sql first.');
+                console.log('⚠️ v_store_banners view not found, trying store_banners table...');
+                const result = await supabase
+                    .from('store_banners')
+                    .select('banner')
+                    .order('banner', { ascending: true });
+                banners = result.data;
+                error = result.error;
+            }
+            
+            if (error) {
+                console.error('❌ Error loading banners from v_store_banners view/table:', error);
+                console.log('⚠️ View/table may not exist yet. Run create-store-banners-view.sql first.');
                 // Fallback: query stores directly for distinct banners from banner column
                 console.log('🔄 Falling back to querying stores directly for distinct banners...');
                 const { data: storeData, error: storeError } = await supabase
@@ -414,10 +426,11 @@ class StoreSelector {
                         break;
                     
                     case 'city_state':
-                        // City + State: query city and state together
+                        // City + State: query city and state together (AND condition)
+                        // Use ilike for case-insensitive matching
                         pageQuery = pageQuery
                             .ilike('city', `%${intent.city}%`)
-                            .ilike('state', `%${intent.state}%`);
+                            .ilike('state', intent.state); // Exact state match (WY) - case-insensitive via ilike
                         console.log('🔍 Intent: City + State - querying city:', intent.city, 'state:', intent.state);
                         break;
                     
