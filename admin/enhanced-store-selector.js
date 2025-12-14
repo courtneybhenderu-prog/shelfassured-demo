@@ -202,8 +202,9 @@ class StoreSelector {
             
             if (error) {
                 console.error('❌ Error loading banners from store_banners view:', error);
-                // Fallback: query stores directly for distinct banners
-                console.log('🔄 Falling back to querying stores directly...');
+                console.log('⚠️ View may not exist yet. Run create-store-banners-view.sql first.');
+                // Fallback: query stores directly for distinct banners from banner column
+                console.log('🔄 Falling back to querying stores directly for distinct banners...');
                 const { data: storeData, error: storeError } = await supabase
                     .from('stores')
                     .select('banner')
@@ -214,14 +215,44 @@ class StoreSelector {
                 
                 if (storeError) {
                     console.error('❌ Fallback also failed:', storeError);
-                    return [];
+                    // Last resort: extract from STORE column (first part before " - ")
+                    console.log('🔄 Last resort: Extracting from STORE column...');
+                    const { data: storeData2, error: storeError2 } = await supabase
+                        .from('stores')
+                        .select('STORE')
+                        .eq('is_active', true)
+                        .not('STORE', 'is', null)
+                        .neq('STORE', '')
+                        .limit(5000);
+                    
+                    if (storeError2) {
+                        console.error('❌ Last resort also failed:', storeError2);
+                        return [];
+                    }
+                    
+                    const extractBanner = (storeName) => {
+                        if (!storeName) return null;
+                        const dashIndex = storeName.indexOf(' - ');
+                        return dashIndex > 0 ? storeName.substring(0, dashIndex).trim() : null;
+                    };
+                    
+                    const uniqueBanners = [...new Set((storeData2 || [])
+                        .map(s => extractBanner(s.STORE || s.store))
+                        .filter(Boolean))].sort();
+                    
+                    console.log(`✅ Extracted ${uniqueBanners.length} unique banners from STORE column`);
+                    const options = [{ value: 'all', label: 'All Chains' }]
+                        .concat(uniqueBanners.map(banner => ({ value: banner, label: banner })));
+                    
+                    this.populateBannerDropdown(options);
+                    return options;
                 }
                 
                 const uniqueBanners = [...new Set((storeData || [])
                     .map(s => s.banner)
                     .filter(Boolean))].sort();
                 
-                console.log(`✅ Extracted ${uniqueBanners.length} unique banners from stores`);
+                console.log(`✅ Extracted ${uniqueBanners.length} unique banners from stores.banner column`);
                 const options = [{ value: 'all', label: 'All Chains' }]
                     .concat(uniqueBanners.map(banner => ({ value: banner, label: banner })));
                 
@@ -399,9 +430,11 @@ class StoreSelector {
                         );
                         if (stateName) {
                             // Match both code and name (e.g., "WY" or "Wyoming")
-                            pageQuery = pageQuery.or(`state.ilike.%${stateCode}%,state.ilike.%${stateName}%`);
+                            // Use OR to match either state code or full state name
+                            pageQuery = pageQuery.or(`state.eq.${stateCode},state.ilike.%${stateName}%`);
                         } else {
-                            pageQuery = pageQuery.ilike('state', `%${stateCode}%`);
+                            // Just match the state code exactly or with wildcards
+                            pageQuery = pageQuery.or(`state.eq.${stateCode},state.ilike.%${stateCode}%`);
                         }
                         console.log('🔍 Intent: State only - querying state:', stateCode, stateName ? `or "${stateName}"` : '');
                         break;
