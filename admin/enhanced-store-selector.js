@@ -327,13 +327,14 @@ class StoreSelector {
                 // Rebuild query for each page to avoid Supabase query builder issues
                 let pageQuery = supabase
                     .from('stores')
-                    .select('id, name, STORE, address, city, state, zip_code, metro, METRO, metro_norm')
+                    .select('id, name, STORE, address, city, state, zip_code, metro, METRO, metro_norm, store_number')
                     .not('STORE', 'is', null)
                     .neq('STORE', '');
                 
                 // Apply search filters (required for brands, optional for admins)
+                // Search matches: STORE, name, city, state, address, zip_code, store_number, metro
                 if (this.searchTerm) {
-                    pageQuery = pageQuery.or(`STORE.ilike.%${this.searchTerm}%,name.ilike.%${this.searchTerm}%,city.ilike.%${this.searchTerm}%,address.ilike.%${this.searchTerm}%,zip_code.ilike.%${this.searchTerm}%,metro.ilike.%${this.searchTerm}%,METRO.ilike.%${this.searchTerm}%,metro_norm.ilike.%${this.searchTerm}%`);
+                    pageQuery = pageQuery.or(`STORE.ilike.%${this.searchTerm}%,name.ilike.%${this.searchTerm}%,city.ilike.%${this.searchTerm}%,state.ilike.%${this.searchTerm}%,address.ilike.%${this.searchTerm}%,zip_code.ilike.%${this.searchTerm}%,store_number.ilike.%${this.searchTerm}%,metro.ilike.%${this.searchTerm}%,METRO.ilike.%${this.searchTerm}%,metro_norm.ilike.%${this.searchTerm}%`);
                 } else if (isBrand) {
                     // Brand tried to search without term - should not happen due to check above
                     this.showError('Please enter a search term to find stores.');
