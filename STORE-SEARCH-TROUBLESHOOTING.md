@@ -36,12 +36,26 @@ Create a store search that allows users to find stores by:
 
 ## 🔧 What We've Tried
 
+### Architecture Note
+**Current Implementation:** Client-side JavaScript filtering (not SQL queries)
+- Loads all stores into `this.allStores` array
+- Filters client-side using JavaScript `.filter()` method
+- File: `admin/enhanced-store-selector.js` (but WORKING.js shows the pattern)
+
 ### Attempt 1: Basic search with all fields
 ```javascript
-// Searched: STORE, name, city, state, address, zip_code, store_number, metro
-pageQuery = pageQuery.or(`STORE.ilike.%${term}%,city.ilike.%${term}%,state.ilike.%${term}%,address.ilike.%${term}%...`);
+// Client-side filtering - searches: name, city, address, zip_code, metro
+baseStores = baseStores.filter(store => {
+    const matches = store.name.toLowerCase().includes(this.searchTerm) ||
+        store.city.toLowerCase().includes(this.searchTerm) ||
+        store.address.toLowerCase().includes(this.searchTerm) ||
+        store.zip_code.includes(this.searchTerm) ||
+        (store.metro && store.metro.toLowerCase().includes(this.searchTerm));
+    return matches;
+});
 ```
 **Result:** ❌ Matched "Wyoming" in addresses (Wyoming Blvd), causing false positives
+**Missing:** `state` and `store_number` fields not included in search
 
 ### Attempt 2: Prioritize city/state in OR query order
 ```javascript
@@ -74,12 +88,20 @@ const { data: banners } = await supabase
 
 ## 🔍 Current Code Location
 
-**File:** `admin/enhanced-store-selector.js`
+**File:** `admin/enhanced-store-selector.js` (currently uses Supabase queries)
+**Alternative:** `admin/enhanced-store-selector-WORKING.js` (uses client-side JavaScript filtering)
 
-**Key Functions:**
-- `searchStores(term)` - Lines ~270-390
+**Current Implementation (enhanced-store-selector.js):**
+- Uses Supabase server-side queries with `.or()` method
+- `searchStores(term)` - Lines ~270-390 (builds Supabase query)
 - `loadBannerOptions()` - Lines ~117-193
-- Search query building - Lines ~315-355
+
+**Alternative Implementation (WORKING.js):**
+- Loads all stores, then filters client-side with JavaScript `.filter()`
+- `searchStores(term)` - Lines ~150-198 (JavaScript filtering)
+- Pattern: `baseStores.filter(store => store.city.includes(term) || ...)`
+
+**Question:** Should we use client-side JavaScript filtering (like WORKING.js) instead of Supabase queries?
 
 ---
 
@@ -90,18 +112,44 @@ const { data: banners } = await supabase
 - What's the structure of the `stores` table? (columns: `state`, `city`, `address`, `STORE`, etc.)
 - Is there a view like `v_distinct_banners` that we should use?
 
-### Question 2: Search Query Logic
-**Current approach:** Using Supabase `.or()` method with multiple `field.ilike.pattern` conditions.
+### Question 2: Search Implementation Approach
+**Current approach:** Supabase server-side queries with `.or()` method
 
-**Problem:** OR queries match ANY condition, so "Wyoming" matches:
-- ✅ `state = 'WY'` (correct)
-- ❌ `address LIKE '%Wyoming%'` (false positive - Wyoming Blvd)
+**Alternative approach:** Client-side JavaScript filtering (like WORKING.js)
 
-**Options to consider:**
-1. **Separate queries with priority:** Run state query first, only if no results, then search other fields?
-2. **Post-filter results:** Get all matches, then filter out address matches if state matches exist?
-3. **Use PostgreSQL full-text search** with ranking/weights?
-4. **Different query structure** - use `.and()` for city+state combos?
+**Decision needed:** Which approach should we use?
+
+**Option A: Client-side JavaScript filtering (WORKING.js pattern)**
+```javascript
+// Load all stores first, then filter client-side
+baseStores = baseStores.filter(store => {
+    const matches = store.name.toLowerCase().includes(this.searchTerm) ||
+        store.city.toLowerCase().includes(this.searchTerm) ||
+        store.state.toLowerCase().includes(this.searchTerm) ||  // ✅ Add state
+        store.address.toLowerCase().includes(this.searchTerm) ||  // ❌ Causes false positives
+        store.store_number.includes(this.searchTerm);  // ✅ Add store_number
+    return matches;
+});
+```
+**Pros:** Simple, fast for small datasets, easy to debug  
+**Cons:** Must load all stores first, slower for large datasets
+
+**Option B: Supabase server-side queries (current)**
+```javascript
+// Filter at database level
+pageQuery = pageQuery.or(`state.ilike.%${term}%,city.ilike.%${term}%,address.ilike.%${term}%...`);
+```
+**Pros:** Efficient for large datasets, only loads matching stores  
+**Cons:** Harder to prioritize matches, OR queries match any condition
+
+**Problem with both:** OR conditions match ANY field, so "Wyoming" matches:
+- ✅ `state.includes('wyoming')` (correct)
+- ❌ `address.includes('wyoming')` (false positive - Wyoming Blvd)
+
+**Fix needed (either approach):**
+1. **Priority-based filtering:** Check state first, only check address if no state match
+2. **State detection:** If search term is a state name/abbreviation, ONLY match state field
+3. **Post-filter results:** Get all matches, then remove address matches if state matches exist
 
 ### Question 3: State Detection
 **Current approach:** Hardcoded list of state names/abbreviations.
