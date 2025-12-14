@@ -1,8 +1,9 @@
--- Check if Whole Foods Market in Jackson, Wyoming exists in database
+-- Diagnostic query for Whole Foods Market in Jackson, Wyoming
 -- This helps diagnose why the store isn't appearing in search results
 
--- Search for Whole Foods stores in Wyoming
+-- 1. Check if Whole Foods in Jackson, Wyoming exists
 SELECT 
+    'WHOLE FOODS JACKSON WY CHECK' as info,
     id,
     "STORE",
     city,
@@ -13,9 +14,9 @@ SELECT
     banner,
     store_chain,
     CASE 
-        WHEN LOWER(city) LIKE '%jackson%' AND (LOWER(state) LIKE '%wyoming%' OR state = 'WY') THEN '✅ Should match Jackson, WY'
-        WHEN LOWER(state) LIKE '%wyoming%' OR state = 'WY' THEN '⚠️ Wyoming state but different city'
-        WHEN LOWER("STORE") LIKE '%jackson%' AND (LOWER(state) LIKE '%wyoming%' OR state = 'WY') THEN '✅ STORE field matches'
+        WHEN LOWER(city) = 'jackson' AND state = 'WY' THEN '✅ Exact match Jackson, WY'
+        WHEN LOWER(city) LIKE '%jackson%' AND state = 'WY' THEN '⚠️ Partial city match'
+        WHEN state = 'WY' THEN '⚠️ Wyoming but different city'
         ELSE '❌ No match'
     END as match_status
 FROM stores
@@ -26,17 +27,19 @@ WHERE (
 )
 AND (
     LOWER(city) LIKE '%jackson%'
-    OR LOWER(state) LIKE '%wyoming%'
     OR state = 'WY'
     OR LOWER("STORE") LIKE '%jackson%'
-    OR LOWER("STORE") LIKE '%wyoming%'
 )
 ORDER BY 
-    CASE WHEN LOWER(city) LIKE '%jackson%' AND (LOWER(state) LIKE '%wyoming%' OR state = 'WY') THEN 1 ELSE 2 END,
+    CASE WHEN LOWER(city) = 'jackson' AND state = 'WY' THEN 1 
+         WHEN LOWER(city) LIKE '%jackson%' AND state = 'WY' THEN 2
+         WHEN state = 'WY' THEN 3
+         ELSE 4 END,
     city, state;
 
--- Also check all Whole Foods stores in Wyoming (any city)
+-- 2. Check all Whole Foods stores in Wyoming (any city)
 SELECT 
+    'ALL WHOLE FOODS IN WYOMING' as info,
     id,
     "STORE",
     city,
@@ -44,39 +47,59 @@ SELECT
     address,
     is_active
 FROM stores
-WHERE (
+WHERE is_active = TRUE
+  AND (
     LOWER("STORE") LIKE '%whole foods%'
     OR LOWER(banner) LIKE '%whole foods%'
-)
-AND (
-    LOWER(state) LIKE '%wyoming%'
-    OR state = 'WY'
-)
+  )
+  AND state = 'WY'
 ORDER BY city;
 
--- Check what happens when we search for "Wyoming" (current search logic simulation)
+-- 3. Check data format for Jackson, Wyoming stores (any banner)
 SELECT 
+    'JACKSON WY DATA FORMAT CHECK' as info,
+    id,
+    "STORE",
+    city,
+    state,
+    address,
+    banner,
+    is_active,
+    CASE 
+        WHEN city IS NULL OR city = '' THEN '❌ City is NULL/empty'
+        WHEN state IS NULL OR state = '' THEN '❌ State is NULL/empty'
+        WHEN state != 'WY' AND LOWER(state) NOT LIKE '%wyoming%' THEN '⚠️ State format issue'
+        WHEN is_active = FALSE THEN '⚠️ Store is inactive'
+        ELSE '✅ Data looks good'
+    END as data_quality
+FROM stores
+WHERE LOWER(city) LIKE '%jackson%'
+  AND (state = 'WY' OR LOWER(state) LIKE '%wyoming%')
+ORDER BY banner, city;
+
+-- 4. Test new intent-based search logic for "Wyoming"
+-- Should ONLY match state column, not address
+SELECT 
+    'WYOMING STATE SEARCH TEST' as info,
     id,
     "STORE",
     city,
     state,
     address,
     CASE 
-        WHEN LOWER(state) LIKE '%wyoming%' OR state = 'WY' THEN '✅ State match (correct)'
-        WHEN LOWER(address) LIKE '%wyoming%' THEN '❌ Address match (false positive)'
-        WHEN LOWER("STORE") LIKE '%wyoming%' THEN '⚠️ STORE field match'
+        WHEN state = 'WY' THEN '✅ State match (should appear)'
+        WHEN LOWER(state) LIKE '%wyoming%' THEN '✅ State name match (should appear)'
+        WHEN LOWER(address) LIKE '%wyoming%' THEN '❌ Address match (should NOT appear with new logic)'
         ELSE 'Other'
     END as match_type
 FROM stores
 WHERE is_active = TRUE
   AND (
-    LOWER(state) LIKE '%wyoming%'
-    OR state = 'WY'
-    OR LOWER(address) LIKE '%wyoming%'
-    OR LOWER("STORE") LIKE '%wyoming%'
+    state = 'WY'
+    OR LOWER(state) LIKE '%wyoming%'
   )
 ORDER BY 
-    CASE WHEN LOWER(state) LIKE '%wyoming%' OR state = 'WY' THEN 1 ELSE 2 END,
+    CASE WHEN state = 'WY' THEN 1 ELSE 2 END,
     city, state
 LIMIT 20;
 
