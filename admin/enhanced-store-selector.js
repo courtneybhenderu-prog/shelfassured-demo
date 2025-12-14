@@ -425,28 +425,27 @@ class StoreSelector {
                         break;
                     
                     case 'state_only':
-                        // State only: query ONLY state column (prevents Wyoming matching Wyoming Blvd)
-                        // CRITICAL: Only query state column, do NOT include address, city, or any other fields
+                        // State only: query ONLY state column (prevents Wyoming matching Wyoming Blvd, Ohio matching Ohio Dr)
+                        // CRITICAL: Only query state column, do NOT include address, city, STORE, or any other fields
                         const stateCode = intent.state;
                         const stateName = Object.keys(this.stateNames).find(name => 
                             this.stateNames[name] === stateCode.toLowerCase()
                         );
                         
-                        // IMPORTANT: Use .or() with proper syntax for Supabase
+                        // Use .or() with proper Supabase syntax
                         // Format: "column.eq.value,column.ilike.pattern"
-                        // This creates: (state = 'WY' OR state ILIKE '%wyoming%')
+                        // This creates: (state = 'OH' OR state ILIKE '%ohio%')
+                        // IMPORTANT: This ONLY matches the state column, never address or STORE
                         if (stateName) {
-                            // Match state code exactly OR state name (case-insensitive)
-                            // Supabase .or() syntax: comma-separated conditions
                             pageQuery = pageQuery.or(`state.eq.${stateCode},state.ilike.%${stateName}%`);
                             console.log('🔍 Intent: State only - querying ONLY state column');
-                            console.log('🔍 Query conditions: state =', stateCode, 'OR state ILIKE', `%${stateName}%`);
-                            console.log('🔍 Query string:', `state.eq.${stateCode},state.ilike.%${stateName}%`);
+                            console.log('🔍 Query: state =', stateCode, 'OR state ILIKE', `%${stateName}%`);
+                            console.log('🔍 This will NOT match address or STORE column');
                         } else {
                             // Just match the state code exactly
                             pageQuery = pageQuery.eq('state', stateCode);
                             console.log('🔍 Intent: State only - querying ONLY state column (exact match)');
-                            console.log('🔍 Query condition: state =', stateCode);
+                            console.log('🔍 Query: state =', stateCode);
                         }
                         break;
                     
