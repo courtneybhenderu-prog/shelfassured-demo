@@ -389,7 +389,8 @@ class StoreSelector {
         
         // Parse search intent
         const intent = this.parseSearchIntent(trimmedTerm);
-        console.log('🎯 Search intent:', intent);
+        console.log('🎯 Parsed search intent:', JSON.stringify(intent, null, 2));
+        console.log('🎯 Intent type:', intent.type, '| State:', intent.state, '| Term:', intent.term);
         
         try {
             // Use pagination to get ALL matching stores
@@ -425,20 +426,24 @@ class StoreSelector {
                     
                     case 'state_only':
                         // State only: query ONLY state column (prevents Wyoming matching Wyoming Blvd)
-                        // Match both state code (WY) and full state name (Wyoming)
+                        // CRITICAL: Only query state column, do NOT include address, city, or any other fields
                         const stateCode = intent.state;
                         const stateName = Object.keys(this.stateNames).find(name => 
                             this.stateNames[name] === stateCode.toLowerCase()
                         );
+                        
+                        // Use exact match first (state = 'WY'), then fallback to case-insensitive match
+                        // This ensures we ONLY match the state column, never address
                         if (stateName) {
-                            // Match both code and name (e.g., "WY" or "Wyoming")
-                            // Use OR to match either state code or full state name
-                            pageQuery = pageQuery.or(`state.eq.${stateCode},state.ilike.%${stateName}%,state.ilike.%${stateCode}%`);
+                            // Match state code exactly OR state name (case-insensitive)
+                            // Format: state.eq.WY OR state.ilike.%wyoming%
+                            pageQuery = pageQuery.or(`state.eq.${stateCode},state.ilike.%${stateName}%`);
                         } else {
-                            // Just match the state code exactly or with wildcards
-                            pageQuery = pageQuery.or(`state.eq.${stateCode},state.ilike.%${stateCode}%`);
+                            // Just match the state code exactly
+                            pageQuery = pageQuery.eq('state', stateCode);
                         }
-                        console.log('🔍 Intent: State only - querying state:', stateCode, stateName ? `or "${stateName}"` : '');
+                        console.log('🔍 Intent: State only - querying ONLY state column:', stateCode, stateName ? `or "${stateName}"` : '');
+                        console.log('🔍 Query will match: state =', stateCode, 'OR state ILIKE', stateName ? `%${stateName}%` : 'N/A');
                         break;
                     
                     case 'banner_general':
@@ -473,6 +478,16 @@ class StoreSelector {
             }
             
             console.log(`✅ Search returned ${allResults.length} stores (paginated)`);
+            
+            // Debug: Log sample results to verify query is correct
+            if (allResults.length > 0) {
+                console.log(`📋 Sample results (first 3):`, allResults.slice(0, 3).map(s => ({
+                    STORE: s.STORE,
+                    state: s.state,
+                    city: s.city,
+                    address: s.address?.substring(0, 30) + '...'
+                })));
+            }
             
             // Rank and sort results
             if (allResults.length > 0) {
