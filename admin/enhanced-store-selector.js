@@ -432,18 +432,22 @@ class StoreSelector {
                             this.stateNames[name] === stateCode.toLowerCase()
                         );
                         
-                        // Use exact match first (state = 'WY'), then fallback to case-insensitive match
-                        // This ensures we ONLY match the state column, never address
+                        // IMPORTANT: Use .or() with proper syntax for Supabase
+                        // Format: "column.eq.value,column.ilike.pattern"
+                        // This creates: (state = 'WY' OR state ILIKE '%wyoming%')
                         if (stateName) {
                             // Match state code exactly OR state name (case-insensitive)
-                            // Format: state.eq.WY OR state.ilike.%wyoming%
+                            // Supabase .or() syntax: comma-separated conditions
                             pageQuery = pageQuery.or(`state.eq.${stateCode},state.ilike.%${stateName}%`);
+                            console.log('🔍 Intent: State only - querying ONLY state column');
+                            console.log('🔍 Query conditions: state =', stateCode, 'OR state ILIKE', `%${stateName}%`);
+                            console.log('🔍 Query string:', `state.eq.${stateCode},state.ilike.%${stateName}%`);
                         } else {
                             // Just match the state code exactly
                             pageQuery = pageQuery.eq('state', stateCode);
+                            console.log('🔍 Intent: State only - querying ONLY state column (exact match)');
+                            console.log('🔍 Query condition: state =', stateCode);
                         }
-                        console.log('🔍 Intent: State only - querying ONLY state column:', stateCode, stateName ? `or "${stateName}"` : '');
-                        console.log('🔍 Query will match: state =', stateCode, 'OR state ILIKE', stateName ? `%${stateName}%` : 'N/A');
                         break;
                     
                     case 'banner_general':
