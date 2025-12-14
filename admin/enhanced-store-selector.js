@@ -196,14 +196,17 @@ class StoreSelector {
         try {
             // Get distinct banners from store_banners view
             // Note: The view should be created by running create-store-banners-view.sql
+            console.log('🔄 Attempting to load banners from store_banners view...');
             const { data: banners, error } = await supabase
                 .from('store_banners')
                 .select('banner')
                 .order('banner', { ascending: true });
             
             if (error) {
-                console.error('❌ Error loading banners from v_store_banners view/table:', error);
-                console.log('⚠️ View/table may not exist yet. Run create-store-banners-view.sql first.');
+                console.error('❌ Error loading banners from store_banners view:', error);
+                console.error('❌ Error details:', JSON.stringify(error, null, 2));
+                console.log('⚠️ View may not exist yet. Run create-store-banners-view.sql first.');
+                console.log('⚠️ Or the view exists but has a different name/structure.');
                 // Fallback: query stores directly for distinct banners from banner column
                 console.log('🔄 Falling back to querying stores directly for distinct banners...');
                 const { data: storeData, error: storeError } = await supabase
@@ -409,6 +412,14 @@ class StoreSelector {
         const intent = this.parseSearchIntent(trimmedTerm);
         console.log('🎯 Parsed search intent:', JSON.stringify(intent, null, 2));
         console.log('🎯 Intent type:', intent.type, '| State:', intent.state, '| Term:', intent.term);
+        
+        // CRITICAL DEBUG: Verify state detection
+        if (intent.type === 'state_only') {
+            console.log('✅ STATE-ONLY DETECTED - Will query ONLY state column');
+            console.log('✅ State code:', intent.state);
+        } else if (intent.type === 'banner_general') {
+            console.log('⚠️ FALLING BACK TO BANNER_GENERAL - Will search STORE column (may match addresses)');
+        }
         
         try {
             // Use pagination to get ALL matching stores
