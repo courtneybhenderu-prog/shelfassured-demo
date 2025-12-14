@@ -135,20 +135,32 @@ class StoreSelector {
             
             if (error) {
                 console.error('❌ Error loading banners from retailer_banners:', error);
-                // Fallback: try to get unique banners from stores.banner column
-                console.log('🔄 Falling back to extracting banners from stores table...');
-                const { data: storeBanners, error: storeError } = await supabase
+                // Fallback: extract unique banners from STORE column (first part before " - ")
+                console.log('🔄 Falling back to extracting banners from STORE column...');
+                const { data: storeData, error: storeError } = await supabase
                     .from('stores')
-                    .select('banner')
-                    .not('banner', 'is', null)
-                    .neq('banner', '');
+                    .select('STORE')
+                    .not('STORE', 'is', null)
+                    .neq('STORE', '')
+                    .limit(5000); // Get enough to extract unique banners
                 
                 if (storeError) {
                     console.error('❌ Fallback also failed:', storeError);
                     return [];
                 }
                 
-                const uniqueBanners = [...new Set((storeBanners || []).map(s => s.banner).filter(Boolean))].sort();
+                // Extract banner name (first part before " - ")
+                const extractBanner = (storeName) => {
+                    if (!storeName) return null;
+                    const dashIndex = storeName.indexOf(' - ');
+                    return dashIndex > 0 ? storeName.substring(0, dashIndex).trim() : storeName.trim();
+                };
+                
+                const uniqueBanners = [...new Set((storeData || [])
+                    .map(s => extractBanner(s.STORE || s.store))
+                    .filter(Boolean))].sort();
+                
+                console.log(`✅ Extracted ${uniqueBanners.length} unique banners from STORE column`);
                 const options = [{ value: 'all', label: 'All Chains' }]
                     .concat(uniqueBanners.map(banner => ({ value: banner, label: banner })));
                 
@@ -312,8 +324,12 @@ class StoreSelector {
                     // Build OR query - Supabase format: "field.ilike.pattern,field2.ilike.pattern"
                     let orQuery;
                     
+                    // Check if search term is a state name or abbreviation
+                    const stateNames = ['ohio', 'texas', 'tx', 'oh', 'california', 'ca', 'new york', 'ny', 'florida', 'fl'];
+                    const isStateSearch = stateNames.includes(this.searchTerm.toLowerCase());
+                    
                     if (parts.length >= 2) {
-                        // City + State search - prioritize city and state matches
+                        // City + State search - prioritize city and state matches, exclude address
                         const cityPart = parts[0];
                         const statePart = parts[parts.length - 1].toUpperCase();
                         
@@ -321,17 +337,23 @@ class StoreSelector {
                             `city.ilike.%${cityPart}%,state.ilike.%${statePart}%,` +
                             `city.ilike.${searchPattern},state.ilike.${searchPattern},` +
                             `STORE.ilike.${searchPattern},name.ilike.${searchPattern},` +
-                            `address.ilike.${searchPattern},zip_code.ilike.${searchPattern},` +
+                            `zip_code.ilike.${searchPattern},` +
                             `store_number.ilike.${searchPattern},metro.ilike.${searchPattern},` +
                             `METRO.ilike.${searchPattern},metro_norm.ilike.${searchPattern}`;
+                        // Note: Excluded address from city+state searches to avoid "Ohio Drive" matches
+                    } else if (isStateSearch) {
+                        // State-only search - ONLY match state field, not addresses
+                        orQuery = `state.ilike.${searchPattern}`;
+                        console.log('🔍 State search detected - only matching state field');
                     } else {
-                        // Single term - search all fields, prioritize city/state
+                        // Single term - search all fields, but prioritize city/state over address
                         orQuery = 
                             `city.ilike.${searchPattern},state.ilike.${searchPattern},` +
                             `STORE.ilike.${searchPattern},name.ilike.${searchPattern},` +
-                            `address.ilike.${searchPattern},zip_code.ilike.${searchPattern},` +
+                            `zip_code.ilike.${searchPattern},` +
                             `store_number.ilike.${searchPattern},metro.ilike.${searchPattern},` +
-                            `METRO.ilike.${searchPattern},metro_norm.ilike.${searchPattern}`;
+                            `METRO.ilike.${searchPattern},metro_norm.ilike.${searchPattern},` +
+                            `address.ilike.${searchPattern}`; // Address last to deprioritize street names
                     }
                     
                     pageQuery = pageQuery.or(orQuery);
@@ -366,12 +388,18 @@ class StoreSelector {
             
             console.log(`✅ Search returned ${allResults.length} stores (paginated)`);
             
-            this.allStores = allResults;
-            
-            // Apply active filters after search
-            this.applyFilters();
-            
-            console.log(`🔍 Search "${term}" + Filters = ${this.filteredStores.length} stores`);
+            // Only set allStores if we got results - don't load all stores if search fails
+            if (allResults.length > 0) {
+                this.allStores = allResults;
+                // Apply active filters after search
+                this.applyFilters();
+                console.log(`🔍 Search "${term}" + Filters = ${this.filteredStores.length} stores`);
+            } else {
+                // No results found
+                this.allStores = [];
+                this.filteredStores = [];
+                console.log(`🔍 No stores found for search term: "${term}"`);
+            }
             
             this.renderStoreList();
             this.updateCounts();
