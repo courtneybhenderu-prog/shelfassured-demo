@@ -42,3 +42,4 @@ WHERE j.status = 'completed'
 GROUP BY j.id, j.title, j.status
 ORDER BY MAX(js.validated_at) DESC;
 
+

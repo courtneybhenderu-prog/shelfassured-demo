@@ -48,3 +48,4 @@ WHERE tc.constraint_type = 'FOREIGN KEY'
     AND tc.table_name = 'job_store_skus'
 ORDER BY tc.constraint_name;
 
+

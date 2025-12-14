@@ -1,0 +1,110 @@
+================================================================================
+STORE RECONCILIATION - DRY RUN SUMMARY
+================================================================================
+
+📊 STATISTICS
+   Total rows in Excel: 2595
+   New stores to insert: 2592
+   Existing stores matched: 0
+   Duplicate rows removed: 3
+   Stores to deactivate: 2344
+
+🆕 SAMPLE NEW STORES (first 10):
+   1. ALBERTSONS – ARLINGTON – TX – PLAZA
+      Banner: ALBERTSONS
+      Address: 301 SW PLAZA SHOPPING CENTER, ARLINGTON, TX 76016.0
+      Store #: 4142
+
+   2. ALBERTSONS – ARLINGTON – TX – COOPER
+      Banner: ALBERTSONS
+      Address: 5950 S COOPER ST, ARLINGTON, TX 76017.0
+      Store #: 4163
+
+   3. ALBERTSONS – ARLINGTON – TX – US
+      Banner: ALBERTSONS
+      Address: 6220 US HWY 287, ARLINGTON, TX 76017.0
+      Store #: 3042
+
+   4. ALBERTSONS – AZLE – TX – NORTHWEST
+      Banner: ALBERTSONS
+      Address: 480 NORTHWEST PKWY, AZLE, TX 76020.0
+      Store #: 4290
+
+   5. ALBERTSONS – BEDFORD – TX – AIRPORT
+      Banner: ALBERTSONS
+      Address: 1300 AIRPORT FWY, BEDFORD, TX 76022.0
+      Store #: 1262
+
+   6. ALBERTSONS – BURLESON – TX – ALSBURY
+      Banner: ALBERTSONS
+      Address: 833 NE ALSBURY BLVD, BURLESON, TX 76028.0
+      Store #: 4279
+
+   7. ALBERTSONS – CARROLLTON – TX – JOSEY
+      Banner: ALBERTSONS
+      Address: 2149 N JOSEY LN, CARROLLTON, TX 75006.0
+      Store #: 4269
+
+   8. ALBERTSONS – CARROLLTON – TX – JOSEY
+      Banner: ALBERTSONS
+      Address: 2150 N JOSEY LN, CARROLLTON, TX 75006.0
+      Store #: 269
+
+   9. ALBERTSONS – CEDAR HILL – TX – FM
+      Banner: ALBERTSONS
+      Address: 427 E FM 1382, CEDAR HILL, TX 75104.0
+      Store #: 4133
+
+   10. ALBERTSONS – CLEBURNE – TX – KATHERINE
+      Banner: ALBERTSONS
+      Address: 210 W KATHERINE P RAINES RD, CLEBURNE, TX 76033.0
+      Store #: 4294
+
+   ... and 2582 more
+
+⚠️  SAMPLE STORES TO DEACTIVATE (first 10):
+   1. Unknown
+      ID: 81d93c76-1e0f-4f37-a9ac-3f9eaa5dcb4d
+      Address: None, None, None
+
+   2. LOWE'S MARKET
+      ID: 003cf2a1-1f30-4944-906f-481a0fd235cc
+      Address: 103 E RICHARDSON ST, SUNDOWN, 79372
+
+   3. HEB - HOUSTON 58
+      ID: 016ae935-24ba-4dc4-b9b1-2db47924ef59
+      Address: 1701 W ALABAMA ST, HOUSTON, 77098
+
+   4. FIESTA MART
+      ID: 016f82ea-68c7-4625-9aaf-19568efcb2ff
+      Address: 14315 BELLAIRE BLVD, HOUSTON, 77083
+
+   5. HEB - TEXAS CITY
+      ID: 01e54433-ac8d-44d0-9608-e2c1c98268b1
+      Address: 3502 PALMER HWY, TEXAS CITY, 77590
+
+   6. Sprouts Farmers Market
+      ID: d7e318e4-8edf-429a-8450-33fffd1f0a18
+      Address: 1530 Cypress Creek Rd, Cedar Park, TX
+
+   7. Sprouts Farmers Market
+      ID: 9b43daa9-12c9-401f-8efe-ab3cf669bc25
+      Address: 150 Heroes Memorial Dr. Building B, Kyle, TX
+
+   8. Sprouts Farmers Market
+      ID: 19e09deb-c723-4a09-b65f-7bc9ae2d8945
+      Address: 4610 Cedar Breaks West Williams Dr Suite 107, Georgetown, TX
+
+   9. Sprouts Farmers Market
+      ID: 6569b9bc-8860-4122-86f7-b6339ff1a67f
+      Address: 7055 Highway 6 N. Unit A, Houston, TX
+
+   10. Sprouts Farmers Market
+      ID: 54f51f08-acbd-430e-abff-196483c1e276
+      Address: 22506 Tomball Pkwy, Houston, TX
+
+   ... and 2334 more
+
+================================================================================
+⚠️  This is a DRY RUN - no changes have been made to the database
+================================================================================

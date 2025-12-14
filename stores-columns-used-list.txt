@@ -1,0 +1,16 @@
+id
+STORE
+name
+address
+city
+state
+zip_code
+metro
+METRO
+metro_norm
+is_active
+banner
+store_chain
+created_at
+updated_at
+

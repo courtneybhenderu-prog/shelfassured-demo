@@ -34,3 +34,4 @@ if (data && data[0]) {
 -- Job creation: { data: [{ id: <UUID>, title: 'Console Smoke Test', ... }], error: null }
 -- Cleanup: { deleteError: null }
 
+

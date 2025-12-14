@@ -66,3 +66,4 @@ WHERE table_name = 'job_store_skus'
   AND table_schema = 'public'
 ORDER BY ordinal_position;
 
+

@@ -121,3 +121,4 @@ GRANT ALL ON job_photos TO authenticated;
 GRANT ALL ON retailers TO authenticated;
 GRANT ALL ON app_users TO authenticated;
 
+

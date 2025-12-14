@@ -23,3 +23,4 @@ USING (true);
 -- Refresh PostgREST schema so policies take effect
 NOTIFY pgrst, 'reload schema';
 
+

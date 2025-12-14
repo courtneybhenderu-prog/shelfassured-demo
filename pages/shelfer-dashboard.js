@@ -14,30 +14,95 @@ async function loadDashboard() {
     try {
         console.log('🔄 Loading dashboard data...');
         
-        // Load jobs
-        const allJobs = await saGet('jobs', []);
-        console.log('📊 All jobs loaded:', allJobs);
+        // Load jobs with stores and brands (using Supabase query for better joins)
+        const { data: allJobs, error: jobsError } = await supabase
+            .from('jobs')
+            .select(`
+                *,
+                brands (
+                    id,
+                    name
+                ),
+                job_store_skus (
+                    store_id,
+                    stores (
+                        id,
+                        STORE,
+                        name,
+                        address,
+                        city,
+                        state,
+                        zip_code
+                    )
+                )
+            `)
+            .in('status', ['pending', 'assigned'])
+            .order('created_at', { ascending: false });
         
-        // Filter jobs for shelfers - only show pending and assigned jobs
-        const jobs = allJobs.filter(job => job.status === 'pending' || job.status === 'assigned');
-        console.log('📊 Filtered jobs for shelfer:', jobs);
+        if (jobsError) {
+            console.error('❌ Error loading jobs:', jobsError);
+            throw jobsError;
+        }
+        
+        console.log('📊 Jobs loaded with stores:', allJobs);
         
         // Update UI
-        document.getElementById('available-jobs').textContent = jobs.length;
+        document.getElementById('available-jobs').textContent = allJobs?.length || 0;
         
         // Render jobs
         const jobsList = document.getElementById('jobs-list');
-        if (jobs.length === 0) {
+        if (!allJobs || allJobs.length === 0) {
             jobsList.innerHTML = saEmptyState('No jobs available', 'Check back later for new opportunities');
         } else {
-            jobsList.innerHTML = jobs.map(job => `
-                <div class="sa-card p-4 cursor-pointer" onclick="viewJob('${job.id}')">
-                    <h4 class="font-semibold">${job.title}</h4>
-                    <p class="text-sm text-gray-600">${job.brands?.name || 'Unknown Brand'}</p>
-                    <p class="text-sm text-gray-600">$${job.total_payout || 0} total</p>
-                    <span class="inline-block px-2 py-1 bg-yellow-100 text-yellow-800 rounded text-xs mt-2">${job.status}</span>
-                </div>
-            `).join('');
+            jobsList.innerHTML = allJobs.map(job => {
+                // Get stores from job_store_skus
+                const jobStores = job.job_store_skus || [];
+                const stores = jobStores
+                    .map(jss => jss.stores)
+                    .filter(Boolean)
+                    .filter((store, index, self) => 
+                        index === self.findIndex(s => s?.id === store?.id) // Deduplicate stores
+                    );
+                
+                // Display first store (or multiple if there are many)
+                const storeDisplay = stores.length > 0 ? stores[0] : null;
+                const storeName = storeDisplay ? (storeDisplay.STORE || storeDisplay.name || 'Store') : null;
+                const storeAddress = storeDisplay && storeDisplay.address ? 
+                    `${storeDisplay.address}${storeDisplay.city ? ', ' + storeDisplay.city : ''}${storeDisplay.state ? ', ' + storeDisplay.state : ''}${storeDisplay.zip_code ? ' ' + storeDisplay.zip_code : ''}`.trim() : 
+                    null;
+                
+                const multipleStores = stores.length > 1;
+                
+                // Escape HTML helper
+                const escapeHtml = (text) => {
+                    if (!text) return '';
+                    const div = document.createElement('div');
+                    div.textContent = text;
+                    return div.innerHTML;
+                };
+                
+                return `
+                    <div class="sa-card p-4 cursor-pointer hover:shadow-md transition-shadow" onclick="viewJob('${job.id}')">
+                        <div class="flex justify-between items-start mb-2">
+                            <h4 class="font-semibold text-gray-900">${escapeHtml(job.title || 'Untitled Job')}</h4>
+                            <span class="inline-block px-2 py-1 bg-yellow-100 text-yellow-800 rounded text-xs ml-2">${escapeHtml(job.status)}</span>
+                        </div>
+                        <p class="text-sm text-gray-600 mb-1">
+                            <strong>Brand:</strong> ${escapeHtml(job.brands?.name || 'Unknown Brand')}
+                        </p>
+                        ${storeName ? `
+                            <p class="text-sm text-gray-700 font-medium mt-2 mb-1">
+                                📍 ${escapeHtml(storeName)}
+                                ${multipleStores ? ` <span class="text-xs text-gray-500">(+${stores.length - 1} more)</span>` : ''}
+                            </p>
+                            ${storeAddress ? `
+                                <p class="text-xs text-gray-500 mb-2">${escapeHtml(storeAddress)}</p>
+                            ` : ''}
+                        ` : '<p class="text-sm text-gray-500 italic">Store information not available</p>'}
+                        <p class="text-sm font-semibold text-blue-600 mt-2">$${parseFloat(job.payout_per_store || 0).toFixed(2)} per store</p>
+                    </div>
+                `;
+            }).join('');
         }
         
     } catch (error) {

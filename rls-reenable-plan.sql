@@ -51,3 +51,4 @@ SELECT
 FROM pg_tables 
 WHERE tablename = 'job_store_skus';
 
+

@@ -80,3 +80,4 @@ INSERT INTO brands(name, website, data_source, data_confidence, broker_name)
 VALUES ('DJ''s Boudain','https://djsboudain.com','admin_added','medium','Mana Foods')
 ON CONFLICT DO NOTHING;
 
+

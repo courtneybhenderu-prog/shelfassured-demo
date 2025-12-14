@@ -44,3 +44,4 @@ INNER JOIN job_submissions js ON js.job_id = j.id
 WHERE j.status = 'pending_review'
 GROUP BY j.id, j.title, j.status;
 
+

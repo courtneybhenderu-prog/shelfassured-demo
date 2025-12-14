@@ -2,3 +2,4 @@
 -- Prevents any stale "relation" ghosts
 NOTIFY pgrst, 'reload schema';
 
+

@@ -39,3 +39,4 @@ DROP FUNCTION IF EXISTS public.recalculate_job_payout() CASCADE;
 DROP FUNCTION IF EXISTS public.calculate_job_payout() CASCADE;
 */
 
+

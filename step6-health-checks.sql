@@ -64,3 +64,4 @@ SELECT
     MAX(created_at) as latest_assignment
 FROM job_store_skus;
 
+

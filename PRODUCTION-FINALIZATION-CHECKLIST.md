@@ -42,3 +42,4 @@
 -- You're functionally there. Run the schema reload, confirm the execution FKs (if applicable), and keep jobs protected. 
 -- When you're ready, flip on the parent-deferred RLS policy for job_store_skus.
 
+

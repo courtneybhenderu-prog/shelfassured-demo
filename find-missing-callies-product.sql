@@ -22,3 +22,4 @@ FROM products
 WHERE brand LIKE '%Callie%'
 GROUP BY brand;
 
+

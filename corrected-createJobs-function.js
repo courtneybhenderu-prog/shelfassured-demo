@@ -83,3 +83,4 @@ async function createJobs(formData) {
 // - supabase.from('job_skus').insert
 // - Any references to the old two-table approach
 
+

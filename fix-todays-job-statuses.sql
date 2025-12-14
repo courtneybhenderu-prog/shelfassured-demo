@@ -48,3 +48,4 @@ WHERE j.status = 'pending_review'
 GROUP BY j.id, j.title, j.status
 ORDER BY MAX(js.created_at) DESC;
 
+

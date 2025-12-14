@@ -7,3 +7,4 @@ WHERE table_name = 'stores'
 AND table_schema = 'public'
 ORDER BY ordinal_position;
 
+

@@ -42,3 +42,4 @@ FROM pg_tables
 WHERE tablename IN ('jobs', 'job_store_skus')
 ORDER BY tablename;
 
+

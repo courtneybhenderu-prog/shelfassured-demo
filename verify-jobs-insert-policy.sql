@@ -11,3 +11,4 @@ WHERE schemaname = 'public'
   AND cmd = 'INSERT'
 ORDER BY policyname;
 
+

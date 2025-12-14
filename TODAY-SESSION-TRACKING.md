@@ -68,7 +68,36 @@
    - Store selection should work correctly ✅
 
 ## 🚨 Critical Items (Don't Miss)
-None at the moment - all critical issues addressed.
+
+### Job Submission "Bucket" Error
+**Issue:** Job submissions failing with bucket error message that disappears too quickly. Job doesn't show as completed.
+
+**Symptoms:**
+- Error mentioning "bucket" appears briefly when submitting job
+- Job doesn't appear in completed jobs on brand dashboard
+- Error message disappears too fast to read
+
+**Likely Cause:** 
+- `job_submissions` storage bucket doesn't exist in Supabase
+- OR bucket exists but RLS policies are blocking uploads
+
+**Files:**
+- `dashboard/job-details.html` - Job submission form (tries to upload to `job_submissions` bucket)
+- `JOB-SUBMISSION-TROUBLESHOOTING.md` - Full troubleshooting guide created
+- `check-job-submission-setup.sql` - Diagnostic SQL script
+
+**What we fixed:**
+- ✅ Improved error handling - errors now show in alert that stays visible
+- ✅ Better error messages for bucket/permission issues
+- ✅ Enhanced console logging for debugging
+- ✅ Removed auto-redirect on error (user can see error and retry)
+
+**What needs to be done:**
+1. Check if `job_submissions` bucket exists in Supabase Storage
+2. Create bucket if missing (public bucket)
+3. Set up RLS policies for contractors to upload
+4. Test job submission again
+5. Check browser console (F12) for full error details
 
 ## 📅 Next Steps
 1. Test category auto-population functionality

@@ -181,3 +181,4 @@ Once fixed, the page should:
 **Last Updated:** After creating help_requests table
 **Status:** Table created, page shows error (likely RLS/auth issue)
 
+

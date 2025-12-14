@@ -410,6 +410,26 @@
       e.preventDefault();
       
       try {
+        // Check if job already has a submission
+        const { data: existingSubmissions, error: checkError } = await supabase
+          .from('job_submissions')
+          .select('id, created_at')
+          .eq('job_id', currentJob.id)
+          .eq('contractor_id', currentUser.id);
+        
+        if (checkError) {
+          console.warn('⚠️ Could not check for existing submissions:', checkError);
+        } else if (existingSubmissions && existingSubmissions.length > 0) {
+          const confirmResubmit = confirm(
+            `You've already submitted this job (${new Date(existingSubmissions[0].created_at).toLocaleString()}).\n\n` +
+            `Submitting again will create a new submission. The previous one will be marked as superseded during review.\n\n` +
+            `Do you want to continue?`
+          );
+          if (!confirmResubmit) {
+            return;
+          }
+        }
+
         // Validate required photos
         const requiredPhotos = ['product_closeup', 'section_context', 'wide_angle'];
         const missingPhotos = requiredPhotos.filter(key => !window[key + 'File']);
@@ -447,22 +467,56 @@
           files: photoUrls
         };
 
-        const { data: submission, error } = await supabase
+        const { data: submission, error: submitError } = await supabase
           .from('job_submissions')
           .insert(submissionData)
           .select()
           .single();
 
-        if (error) throw error;
+        if (submitError) {
+          console.error('❌ Job submission database error:', submitError);
+          throw new Error(`Failed to save submission to database: ${submitError.message}. Details: ${submitError.details || 'N/A'}. Hint: ${submitError.hint || 'N/A'}`);
+        }
+        
+        console.log('✅ Job submission record created:', submission);
 
-        // Update job status
-        await supabase
+        // Update job status - CRITICAL: must happen after submission is saved
+        const { data: updatedJobs, error: updateError } = await supabase
           .from('jobs')
           .update({ 
             status: 'pending_review',
             updated_at: new Date().toISOString()
           })
-          .eq('id', currentJob.id);
+          .eq('id', currentJob.id)
+          .select('id, status');
+          
+        if (updateError) {
+          console.error('❌ Job status update failed:', updateError);
+          console.error('Update error details:', {
+            message: updateError.message,
+            code: updateError.code,
+            details: updateError.details,
+            hint: updateError.hint
+          });
+          
+          // This is critical - show error but don't block
+          const errorMsg = `⚠️ Submission saved but status update failed: ${updateError.message}. Admin can fix with SQL script.`;
+          console.error(errorMsg);
+          alert(errorMsg);
+          showError(errorMsg);
+          
+          // Still show success since submission was saved
+          // But log that admin intervention needed
+        } else if (updatedJobs && updatedJobs.length > 0) {
+          const updatedJob = updatedJobs[0];
+          console.log('✅ Job status updated to pending_review:', updatedJob);
+          // Verify the update
+          if (updatedJob.status !== 'pending_review') {
+            console.error('⚠️ Status update returned wrong status:', updatedJob.status);
+          }
+        } else {
+          console.warn('⚠️ Job status update returned no rows - job may not exist or update may have failed silently');
+        }
 
         // Show success with storage info
         const hasStorageIssues = photoUrls.some(photo => photo.error);
@@ -479,7 +533,31 @@
 
       } catch (error) {
         console.error('❌ Error submitting job:', error);
-        showError('Failed to submit job. Please try again.');
+        
+        // Show detailed error message that stays visible
+        const errorMsg = error.message || 'Failed to submit job. Please try again.';
+        console.error('Full error details:', {
+          message: error.message,
+          code: error.code,
+          details: error.details,
+          hint: error.hint,
+          stack: error.stack
+        });
+        
+        // Check for specific bucket errors
+        let displayMsg = errorMsg;
+        if (errorMsg.includes('Bucket not found') || errorMsg.includes('bucket')) {
+          displayMsg = `Storage bucket error: ${errorMsg}\n\nPlease contact admin. The 'job_submissions' bucket may need to be created in Supabase Storage.`;
+        } else if (errorMsg.includes('policy') || errorMsg.includes('permission') || errorMsg.includes('RLS')) {
+          displayMsg = `Permission error: ${errorMsg}\n\nStorage bucket RLS policies may need to be configured.`;
+        }
+        
+        // Show error in a way that won't disappear
+        alert(`❌ Job Submission Error\n\n${displayMsg}\n\nCheck browser console (F12) for full details.`);
+        showError(displayMsg);
+        
+        // Don't redirect on error - let user see the error and try again
+        // Remove auto-redirect so error stays visible
       } finally {
         setLoading(false);
       }
@@ -576,11 +654,14 @@
       showSuccess('Draft saved locally');
     }
 
-    // Show error message
+    // Show error message (stays visible, doesn't auto-clear)
     function showError(message) {
       const msgEl = document.getElementById('formMsg');
       msgEl.textContent = message;
       msgEl.style.color = '#C62828';
+      msgEl.style.fontWeight = '600';
+      msgEl.style.fontSize = '14px';
+      // Don't auto-clear - let user read it
     }
 
     // Show success message

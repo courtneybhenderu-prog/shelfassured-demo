@@ -97,13 +97,13 @@ SELECT
 -- ========================================
 -- PART 4: Check job_submissions review_outcome column
 -- ========================================
-SELECT 
+
     'REVIEW_OUTCOME COLUMN' as check_type,
     column_name,
     data_type,
     is_nullable,
     column_default
-FROM information_schema.columns
+FROM information_sSELECT chema.columns
 WHERE table_name = 'job_submissions' 
   AND column_name = 'review_outcome';
 

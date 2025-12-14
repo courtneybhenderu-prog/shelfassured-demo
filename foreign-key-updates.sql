@@ -38,3 +38,4 @@ WHERE tc.constraint_type = 'FOREIGN KEY'
     AND tc.table_name IN ('submissions', 'submission_photos', 'job_store_skus')
 ORDER BY tc.table_name, tc.constraint_name;
 
+

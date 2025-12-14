@@ -41,3 +41,4 @@ USING (true);
 -- Refresh PostgREST schema
 NOTIFY pgrst, 'reload schema';
 
+

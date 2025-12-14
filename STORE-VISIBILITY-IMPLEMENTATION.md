@@ -194,3 +194,4 @@ if (!isAdmin) {
 **Last Updated:** After implementing role-based store visibility
 **Status:** Implementation complete, ready for testing
 
+

@@ -36,3 +36,4 @@ LEFT JOIN public.brands b ON b.id = sk.brand_id
 ORDER BY jss.created_at DESC
 LIMIT 5;
 
+

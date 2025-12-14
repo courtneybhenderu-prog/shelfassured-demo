@@ -13,3 +13,4 @@ CREATE POLICY anon_select_stores ON stores FOR SELECT TO anon USING (true);
 CREATE POLICY anon_insert_retailers ON retailers FOR INSERT TO anon WITH CHECK (true);
 CREATE POLICY anon_select_retailers ON retailers FOR SELECT TO anon USING (true);
 
+

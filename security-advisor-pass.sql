@@ -63,3 +63,4 @@ SELECT
         ELSE 'RLS status unknown' 
     END as rls_status;
 
+

@@ -10,3 +10,4 @@ VITE_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFz
 # 2. Make sure your Supabase project has the schema and RPCs deployed
 # 3. Test the admin brand creation page at /admin/brands/new
 
+

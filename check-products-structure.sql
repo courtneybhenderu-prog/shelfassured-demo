@@ -7,3 +7,4 @@ WHERE table_name = 'products'
 AND table_schema = 'public'
 ORDER BY ordinal_position;
 
+

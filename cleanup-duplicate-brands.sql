@@ -57,3 +57,4 @@ FROM brands
 WHERE LOWER(name) LIKE '%dj%' 
 ORDER BY created_at;
 
+
