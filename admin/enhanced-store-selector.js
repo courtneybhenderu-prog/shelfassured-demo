@@ -20,9 +20,12 @@ class StoreSelector {
 
     // Debounce function for typeahead search
     debounce(func, wait) {
-        return (...args) => {
-            clearTimeout(this.searchDebounceTimer);
-            this.searchDebounceTimer = setTimeout(() => func.apply(this, args), wait);
+        const self = this; // Capture 'this' context
+        return function(...args) {
+            clearTimeout(self.searchDebounceTimer);
+            self.searchDebounceTimer = setTimeout(() => {
+                func.apply(self, args);
+            }, wait);
         };
     }
 
@@ -316,6 +319,8 @@ class StoreSelector {
         const trimmedTerm = (term || '').trim();
         this.searchTerm = trimmedTerm.toLowerCase();
         
+        console.log('🔍 searchStores called with term:', trimmedTerm);
+        
         // For brands: require search term (search-first pattern)
         const isBrand = await this.isBrand();
         if (isBrand && !trimmedTerm) {
@@ -324,6 +329,18 @@ class StoreSelector {
             this.filteredStores = [];
             this.renderStoreList();
             this.updateCounts();
+            return;
+        }
+        
+        // For admins: if no search term, show empty state or load all (depending on preference)
+        // For now, require search term for admins too to avoid loading all stores
+        if (!trimmedTerm) {
+            console.log('⚠️ No search term provided, clearing results');
+            this.allStores = [];
+            this.filteredStores = [];
+            this.renderStoreList();
+            this.updateCounts();
+            this.renderFilterChips();
             return;
         }
         
@@ -347,10 +364,12 @@ class StoreSelector {
                 // Apply search filters (required for brands, optional for admins)
                 // Search matches: STORE, name, city, state, address, zip_code, store_number, metro
                 if (this.searchTerm) {
-                    pageQuery = pageQuery.or(`STORE.ilike.%${this.searchTerm}%,name.ilike.%${this.searchTerm}%,city.ilike.%${this.searchTerm}%,state.ilike.%${this.searchTerm}%,address.ilike.%${this.searchTerm}%,zip_code.ilike.%${this.searchTerm}%,store_number.ilike.%${this.searchTerm}%,metro.ilike.%${this.searchTerm}%,METRO.ilike.%${this.searchTerm}%,metro_norm.ilike.%${this.searchTerm}%`);
-                } else if (isBrand) {
-                    // Brand tried to search without term - should not happen due to check above
-                    this.showError('Please enter a search term to find stores.');
+                    const searchPattern = `%${this.searchTerm}%`;
+                    pageQuery = pageQuery.or(`STORE.ilike.${searchPattern},name.ilike.${searchPattern},city.ilike.${searchPattern},state.ilike.${searchPattern},address.ilike.${searchPattern},zip_code.ilike.${searchPattern},store_number.ilike.${searchPattern},metro.ilike.${searchPattern},METRO.ilike.${searchPattern},metro_norm.ilike.${searchPattern}`);
+                    console.log('🔍 Applied search filter for term:', this.searchTerm);
+                } else {
+                    // No search term - should not reach here due to check above
+                    console.warn('⚠️ No search term but reached query building');
                     return;
                 }
                 
@@ -992,12 +1011,17 @@ document.addEventListener('DOMContentLoaded', async function() {
         const searchInput = document.getElementById('store-search');
         if (searchInput) {
             const debouncedSearch = storeSelector.debounce(async (value) => {
+                console.log('🔍 Debounced search triggered with value:', value);
                 await storeSelector.searchStores(value);
             }, 300); // 300ms debounce for typeahead
 
             searchInput.addEventListener('input', (e) => {
-                debouncedSearch(e.target.value);
+                const value = e.target.value;
+                console.log('📝 Search input changed:', value);
+                debouncedSearch(value);
             });
+        } else {
+            console.error('❌ Search input element not found!');
         }
 
         // Set up chain filter
