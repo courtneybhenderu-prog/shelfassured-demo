@@ -194,23 +194,12 @@ class StoreSelector {
         console.log('🔄 Loading banners from store_banners view (ADMIN ONLY)...');
         
         try {
-            // Get distinct banners from v_store_banners view (or store_banners table)
-            // Try view first, then table
-            let { data: banners, error } = await supabase
-                .from('v_store_banners')
+            // Get distinct banners from store_banners view
+            // Note: The view should be created by running create-store-banners-view.sql
+            const { data: banners, error } = await supabase
+                .from('store_banners')
                 .select('banner')
                 .order('banner', { ascending: true });
-            
-            // If view doesn't exist, try store_banners table
-            if (error) {
-                console.log('⚠️ v_store_banners view not found, trying store_banners table...');
-                const result = await supabase
-                    .from('store_banners')
-                    .select('banner')
-                    .order('banner', { ascending: true });
-                banners = result.data;
-                error = result.error;
-            }
             
             if (error) {
                 console.error('❌ Error loading banners from v_store_banners view/table:', error);
