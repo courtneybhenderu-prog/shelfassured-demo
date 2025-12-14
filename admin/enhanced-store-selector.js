@@ -114,7 +114,7 @@ class StoreSelector {
         }
     }
 
-    // Load chain options by extracting from STORE column (ADMIN ONLY - brands get chains from search results)
+    // Load banner options from retailer_banners table (ADMIN ONLY - brands get chains from search results)
     async loadBannerOptions() {
         // Check if user is admin - only admins can load all chains
         const isAdmin = await this.isAdmin();
@@ -124,133 +124,72 @@ class StoreSelector {
             return;
         }
         
-        console.log('🔄 Loading chains from STORE column (ADMIN ONLY)...');
+        console.log('🔄 Loading banners from retailer_banners table (ADMIN ONLY)...');
         
-        // First, get all columns to see what's actually available
-        const { data: sampleData, error: sampleError } = await supabase
-            .from('stores')
-            .select('*')
-            .limit(5);
-        
-        if (sampleData && sampleData.length > 0) {
-            console.log('🔍 First store sample (all columns):', sampleData[0]);
-            console.log('🔍 First store keys:', Object.keys(sampleData[0]));
-        }
-        
-        // Get STORE column - get ALL stores with STORE populated (paginate to get all stores)
-        // ADMIN ONLY - this loads all stores to extract chains
-        let allStoresData = [];
-        let page = 0;
-        const pageSize = 1000;
-        let hasMore = true;
-        
-        while (hasMore) {
-            const { data: pageData, error: pageError } = await supabase
-                .from('stores')
-                .select('STORE')
-                .not('STORE', 'is', null)
-                .neq('STORE', '')
-                .order('STORE', { ascending: true })
-                .range(page * pageSize, (page + 1) * pageSize - 1);
+        try {
+            // Get unique banner names from retailer_banners table
+            const { data: banners, error } = await supabase
+                .from('retailer_banners')
+                .select('name')
+                .order('name', { ascending: true });
             
-            if (pageError) {
-                console.error('❌ Error loading page', page, ':', pageError);
-                if (page === 0) {
-                    // First page failed, try without pagination
-                    const { data: data2, error: error2 } = await supabase
-                        .from('stores')
-                        .select('STORE')
-                        .not('STORE', 'is', null)
-                        .neq('STORE', '')
-                        .order('STORE', { ascending: true })
-                        .limit(1000);
-                    if (error2) {
-                        console.error('❌ Fallback also failed:', error2);
-                        return [];
-                    }
-                    allStoresData = data2 || [];
-                    break;
+            if (error) {
+                console.error('❌ Error loading banners from retailer_banners:', error);
+                // Fallback: try to get unique banners from stores.banner column
+                console.log('🔄 Falling back to extracting banners from stores table...');
+                const { data: storeBanners, error: storeError } = await supabase
+                    .from('stores')
+                    .select('banner')
+                    .not('banner', 'is', null)
+                    .neq('banner', '');
+                
+                if (storeError) {
+                    console.error('❌ Fallback also failed:', storeError);
+                    return [];
                 }
-                break;
+                
+                const uniqueBanners = [...new Set((storeBanners || []).map(s => s.banner).filter(Boolean))].sort();
+                const options = [{ value: 'all', label: 'All Chains' }]
+                    .concat(uniqueBanners.map(banner => ({ value: banner, label: banner })));
+                
+                this.populateBannerDropdown(options);
+                return options;
             }
             
-            if (pageData && pageData.length > 0) {
-                allStoresData = allStoresData.concat(pageData);
-                hasMore = pageData.length === pageSize;
-                page++;
-                console.log(`📄 Loaded page ${page}, total so far: ${allStoresData.length}`);
-            } else {
-                hasMore = false;
+            if (!banners || banners.length === 0) {
+                console.warn('⚠️ No banners found in retailer_banners table');
+                return [];
             }
-        }
-        
-        const data = allStoresData;
-        
-        if (!data || data.length === 0) {
-            console.warn('⚠️ No store data returned');
+            
+            console.log('✅ Loaded', banners.length, 'banners from retailer_banners table');
+            
+            const options = [{ value: 'all', label: 'All Chains' }]
+                .concat(banners.map(b => ({ value: b.name, label: b.name })));
+            
+            this.populateBannerDropdown(options);
+            return options;
+        } catch (error) {
+            console.error('❌ Error in loadBannerOptions:', error);
             return [];
         }
+    }
 
-        // Check what keys are actually in the response
-        if (data && data.length > 0) {
-            console.log('🔍 Sample row keys:', Object.keys(data[0]));
-            console.log('🔍 Sample row:', data[0]);
-            console.log(`📊 Total stores loaded: ${data.length}`);
-        }
+    // Populate banner dropdown with options
+    populateBannerDropdown(options) {
 
-        // Extract chain name (banner)
-        // If STORE has " - ", extract part before it (e.g., "United Supermarkets - Andrews" → "United Supermarkets")
-        // If STORE has no " - ", use whole value (e.g., "BIG 8 FOODS" → "BIG 8 FOODS")
-        const extractChain = (storeName) => {
-            if (!storeName) return null;
-            const trimmed = storeName.trim();
-            const dashIndex = trimmed.indexOf(' - ');
-            if (dashIndex > 0) {
-                return trimmed.substring(0, dashIndex).trim();
-            }
-            return trimmed; // No dash, use whole value as chain
-        };
-
-        // Extract unique chains from all stores
-        const unique = [...new Set(data.map(r => {
-            const storeValue = r.STORE || r.store || r.name || r['STORE'];
-            return extractChain(storeValue);
-        }).filter(Boolean))];
-        
-        console.log('📊 Found', unique.length, 'unique chains (expected: 72)');
-        console.log('📊 First 10 chains:', unique.slice(0, 10));
-        console.log('📊 Last 10 chains:', unique.slice(-10));
-        
-        const options = [{ value: 'all', label: 'All Chains' }]
-            .concat(unique.map(chain => ({ value: chain, label: chain })));
-
-        console.log('✅ Loaded', options.length - 1, 'chain options from STORE column');
-
-        // Populate dropdown
         const dropdown = document.getElementById('chain-filter');
         if (dropdown) {
             dropdown.innerHTML = '';
-            let addedCount = 0;
             options.forEach(opt => {
                 const option = document.createElement('option');
                 option.value = opt.value;
                 option.textContent = opt.label;
                 dropdown.appendChild(option);
-                addedCount++;
             });
-            console.log(`✅ Added ${addedCount} options to dropdown (should be ${options.length})`);
-            console.log('✅ Dropdown now has', dropdown.options.length, 'total options');
-            
-            // Log last few options to verify
-            if (dropdown.options.length > 0) {
-                const lastFew = Array.from(dropdown.options).slice(-5).map(opt => opt.textContent);
-                console.log('📋 Last 5 options in dropdown:', lastFew);
-            }
+            console.log(`✅ Populated dropdown with ${options.length} banner options`);
         } else {
             console.warn('⚠️ Chain filter dropdown not found!');
         }
-
-        return options;
     }
 
     // Show empty state
@@ -361,11 +300,41 @@ class StoreSelector {
                     .not('STORE', 'is', null)
                     .neq('STORE', '');
                 
-                // Apply search filters (required for brands, optional for admins)
+                // Apply search filters with priority: city/state first, then address, then others
                 // Search matches: STORE, name, city, state, address, zip_code, store_number, metro
                 if (this.searchTerm) {
                     const searchPattern = `%${this.searchTerm}%`;
-                    pageQuery = pageQuery.or(`STORE.ilike.${searchPattern},name.ilike.${searchPattern},city.ilike.${searchPattern},state.ilike.${searchPattern},address.ilike.${searchPattern},zip_code.ilike.${searchPattern},store_number.ilike.${searchPattern},metro.ilike.${searchPattern},METRO.ilike.${searchPattern},metro_norm.ilike.${searchPattern}`);
+                    
+                    // Check if search term looks like a city/state combo (e.g., "Columbus Ohio", "Columbus, Ohio")
+                    const cityStatePattern = this.searchTerm.replace(/[,\s]+/g, ' ').trim();
+                    const parts = cityStatePattern.split(' ').filter(p => p.length > 0);
+                    
+                    // Build OR query - Supabase format: "field.ilike.pattern,field2.ilike.pattern"
+                    let orQuery;
+                    
+                    if (parts.length >= 2) {
+                        // City + State search - prioritize city and state matches
+                        const cityPart = parts[0];
+                        const statePart = parts[parts.length - 1].toUpperCase();
+                        
+                        orQuery = 
+                            `city.ilike.%${cityPart}%,state.ilike.%${statePart}%,` +
+                            `city.ilike.${searchPattern},state.ilike.${searchPattern},` +
+                            `STORE.ilike.${searchPattern},name.ilike.${searchPattern},` +
+                            `address.ilike.${searchPattern},zip_code.ilike.${searchPattern},` +
+                            `store_number.ilike.${searchPattern},metro.ilike.${searchPattern},` +
+                            `METRO.ilike.${searchPattern},metro_norm.ilike.${searchPattern}`;
+                    } else {
+                        // Single term - search all fields, prioritize city/state
+                        orQuery = 
+                            `city.ilike.${searchPattern},state.ilike.${searchPattern},` +
+                            `STORE.ilike.${searchPattern},name.ilike.${searchPattern},` +
+                            `address.ilike.${searchPattern},zip_code.ilike.${searchPattern},` +
+                            `store_number.ilike.${searchPattern},metro.ilike.${searchPattern},` +
+                            `METRO.ilike.${searchPattern},metro_norm.ilike.${searchPattern}`;
+                    }
+                    
+                    pageQuery = pageQuery.or(orQuery);
                     console.log('🔍 Applied search filter for term:', this.searchTerm);
                 } else {
                     // No search term - should not reach here due to check above
