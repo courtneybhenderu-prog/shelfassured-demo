@@ -233,15 +233,33 @@ class StoreSelector {
                     
                     const extractBanner = (storeName) => {
                         if (!storeName) return null;
+                        // Look for " - " pattern (space-dash-space)
                         const dashIndex = storeName.indexOf(' - ');
-                        return dashIndex > 0 ? storeName.substring(0, dashIndex).trim() : null;
+                        if (dashIndex > 0) {
+                            const banner = storeName.substring(0, dashIndex).trim();
+                            // Validate: banner should not be empty and should be reasonable length
+                            if (banner && banner.length > 0 && banner.length < 100) {
+                                return banner;
+                            }
+                        }
+                        return null;
                     };
                     
-                    const uniqueBanners = [...new Set((storeData2 || [])
+                    const extractedBanners = (storeData2 || [])
                         .map(s => extractBanner(s.STORE || s.store))
-                        .filter(Boolean))].sort();
+                        .filter(Boolean);
+                    
+                    const uniqueBanners = [...new Set(extractedBanners)].sort();
                     
                     console.log(`✅ Extracted ${uniqueBanners.length} unique banners from STORE column`);
+                    console.log(`📋 Sample extracted banners (first 5):`, uniqueBanners.slice(0, 5));
+                    console.log(`📋 Sample extracted banners (last 5):`, uniqueBanners.slice(-5));
+                    
+                    if (uniqueBanners.length > 100) {
+                        console.warn(`⚠️ WARNING: Found ${uniqueBanners.length} unique banners (expected ~72). This suggests extraction may be incorrect.`);
+                        console.warn(`⚠️ Check if STORE column format is consistent (should be "Banner - City - State")`);
+                    }
+                    
                     const options = [{ value: 'all', label: 'All Chains' }]
                         .concat(uniqueBanners.map(banner => ({ value: banner, label: banner })));
                     
