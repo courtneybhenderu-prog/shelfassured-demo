@@ -11,6 +11,19 @@ class StoreSelector {
         this.currentLocation = null;
         this.isInitialized = false;
         this.userRole = null; // Will be set during initialization
+        this.activeFilters = {
+            state: null,
+            banner: null
+        };
+        this.searchDebounceTimer = null;
+    }
+
+    // Debounce function for typeahead search
+    debounce(func, wait) {
+        return (...args) => {
+            clearTimeout(this.searchDebounceTimer);
+            this.searchDebounceTimer = setTimeout(() => func.apply(this, args), wait);
+        };
     }
 
     // Get current user role (admin, brand_client, or shelfer)
@@ -366,12 +379,15 @@ class StoreSelector {
             console.log(`✅ Search returned ${allResults.length} stores (paginated)`);
             
             this.allStores = allResults;
-            this.filteredStores = [...this.allStores];
             
-            console.log(`🔍 Search "${term}" + Chain "${this.currentChainFilter || 'all'}" = ${this.filteredStores.length} stores`);
+            // Apply active filters after search
+            this.applyFilters();
+            
+            console.log(`🔍 Search "${term}" + Filters = ${this.filteredStores.length} stores`);
             
             this.renderStoreList();
             this.updateCounts();
+            this.renderFilterChips();
         } catch (error) {
             console.error('❌ Search failed:', error);
             this.showError('Search failed. Please try again.');
@@ -465,34 +481,47 @@ class StoreSelector {
         }
     }
 
-    // Filter stores by chain/banner
+    // Filter stores by chain/banner (legacy method - now uses filterByBanner)
     async filterByChain(chain) {
-        console.log('🔍 Filtering by chain:', chain);
+        // Map to new filterByBanner method for backward compatibility
+        await this.filterByBanner(chain);
+    }
+
+    // Filter stores by chain/banner (new method)
+    async filterByBanner(banner) {
+        console.log('🔍 Filtering by banner:', banner);
         
-        // Store the current chain filter
-        this.currentChainFilter = chain;
+        // Store the current chain filter for backward compatibility
+        this.currentChainFilter = banner;
         
         // For brands: require search term before filtering
         const isBrand = await this.isBrand();
         if (isBrand && !this.searchTerm) {
-            this.showError('Please search for stores first (e.g., "Whole Foods") before filtering by chain.');
+            this.showError('Please search for stores first (e.g., "Whole Foods") before filtering by banner.');
             return;
         }
         
-        // For brands: re-run search with chain filter
+        // Apply banner filter
+        if (banner === 'all' || !banner) {
+            this.activeFilters.banner = null;
+        } else {
+            this.activeFilters.banner = banner;
+        }
+        
+        // For brands: re-run search with banner filter
         if (isBrand && this.searchTerm) {
             await this.searchStores(this.searchTerm);
+            this.renderFilterChips();
             return;
         }
         
-        // For admins: can load all stores with chain filter
-        const isAdmin = await this.isAdmin();
-        if (isAdmin) {
-            this.allStores = [];
-            this.filteredStores = [];
-            this.loadStoresFromDatabase();
+        // For admins: apply filter to existing stores
+        if (this.allStores.length > 0) {
+            this.applyFilters();
+            this.renderFilterChips();
         } else {
-            this.showError('Chain filtering requires a search term. Please search for stores first.');
+            // No stores loaded yet - will apply when stores are loaded
+            this.renderFilterChips();
         }
     }
 
@@ -554,6 +583,105 @@ class StoreSelector {
         this.updateJobSummary();
         
         console.log('✅ All stores cleared');
+    }
+
+    // Apply state filter
+    filterByState(state) {
+        if (state === 'all' || !state) {
+            this.activeFilters.state = null;
+        } else {
+            this.activeFilters.state = state;
+        }
+        this.applyFilters();
+        this.renderFilterChips();
+    }
+
+    // Apply banner filter (chain)
+    filterByBanner(banner) {
+        if (banner === 'all' || !banner) {
+            this.activeFilters.banner = null;
+        } else {
+            this.activeFilters.banner = banner;
+        }
+        this.applyFilters();
+        this.renderFilterChips();
+    }
+
+    // Apply all active filters
+    applyFilters() {
+        let filtered = [...this.allStores];
+
+        // Apply state filter
+        if (this.activeFilters.state) {
+            filtered = filtered.filter(store => 
+                (store.state && store.state.toUpperCase() === this.activeFilters.state.toUpperCase()) ||
+                (store.STATE && store.STATE.toUpperCase() === this.activeFilters.state.toUpperCase())
+            );
+        }
+
+        // Apply banner filter
+        if (this.activeFilters.banner) {
+            filtered = filtered.filter(store => {
+                const storeName = store.STORE || store.store || store.name || '';
+                return storeName.toLowerCase().startsWith(this.activeFilters.banner.toLowerCase() + ' -');
+            });
+        }
+
+        this.filteredStores = filtered;
+        this.renderStoreList();
+        this.updateCounts();
+    }
+
+    // Clear all filters
+    clearFilters() {
+        this.activeFilters = { state: null, banner: null };
+        this.applyFilters();
+        this.renderFilterChips();
+        
+        // Also clear chain filter dropdown if it exists
+        const chainFilter = document.getElementById('chain-filter');
+        if (chainFilter) {
+            chainFilter.value = 'all';
+        }
+    }
+
+    // Render filter chips
+    renderFilterChips() {
+        const container = document.getElementById('filter-chips');
+        if (!container) return;
+
+        const chips = [];
+        
+        if (this.activeFilters.state) {
+            chips.push(`
+                <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800">
+                    State: ${this.activeFilters.state}
+                    <button onclick="storeSelector.filterByState('all')" class="ml-2 text-blue-600 hover:text-blue-800">×</button>
+                </span>
+            `);
+        }
+
+        if (this.activeFilters.banner) {
+            chips.push(`
+                <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800">
+                    ${this.activeFilters.banner}
+                    <button onclick="storeSelector.filterByBanner('all')" class="ml-2 text-green-600 hover:text-green-800">×</button>
+                </span>
+            `);
+        }
+
+        if (chips.length > 0) {
+            container.innerHTML = `
+                <div class="flex flex-wrap gap-2 items-center">
+                    ${chips.join('')}
+                    <button onclick="storeSelector.clearFilters()" class="text-sm text-gray-600 hover:text-gray-800 underline">
+                        Clear all
+                    </button>
+                </div>
+            `;
+        } else {
+            container.innerHTML = '';
+        }
     }
 
     // Render the store list with search results
@@ -860,11 +988,15 @@ document.addEventListener('DOMContentLoaded', async function() {
             console.log('📍 Location not available - using search only');
         }
 
-        // Set up search input
+        // Set up search input with debounced typeahead
         const searchInput = document.getElementById('store-search');
         if (searchInput) {
-            searchInput.addEventListener('input', async (e) => {
-                await storeSelector.searchStores(e.target.value);
+            const debouncedSearch = storeSelector.debounce(async (value) => {
+                await storeSelector.searchStores(value);
+            }, 300); // 300ms debounce for typeahead
+
+            searchInput.addEventListener('input', (e) => {
+                debouncedSearch(e.target.value);
             });
         }
 
