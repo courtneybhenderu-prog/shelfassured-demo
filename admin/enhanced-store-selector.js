@@ -16,6 +16,32 @@ class StoreSelector {
             banner: null
         };
         this.searchDebounceTimer = null;
+        
+        // State detection mapping
+        this.stateCodes = new Set([
+            'al', 'ak', 'az', 'ar', 'ca', 'co', 'ct', 'de', 'dc', 'fl', 'ga',
+            'hi', 'id', 'il', 'in', 'ia', 'ks', 'ky', 'la', 'me', 'md',
+            'ma', 'mi', 'mn', 'ms', 'mo', 'mt', 'ne', 'nv', 'nh', 'nj',
+            'nm', 'ny', 'nc', 'nd', 'oh', 'ok', 'or', 'pa', 'ri', 'sc',
+            'sd', 'tn', 'tx', 'ut', 'vt', 'va', 'wa', 'wv', 'wi', 'wy'
+        ]);
+        
+        this.stateNames = {
+            'alabama': 'al', 'alaska': 'ak', 'arizona': 'az', 'arkansas': 'ar',
+            'california': 'ca', 'colorado': 'co', 'connecticut': 'ct', 'delaware': 'de',
+            'district of columbia': 'dc', 'florida': 'fl', 'georgia': 'ga',
+            'hawaii': 'hi', 'idaho': 'id', 'illinois': 'il', 'indiana': 'in',
+            'iowa': 'ia', 'kansas': 'ks', 'kentucky': 'ky', 'louisiana': 'la',
+            'maine': 'me', 'maryland': 'md', 'massachusetts': 'ma', 'michigan': 'mi',
+            'minnesota': 'mn', 'mississippi': 'ms', 'missouri': 'mo', 'montana': 'mt',
+            'nebraska': 'ne', 'nevada': 'nv', 'new hampshire': 'nh', 'new jersey': 'nj',
+            'new mexico': 'nm', 'new york': 'ny', 'north carolina': 'nc', 'north dakota': 'nd',
+            'ohio': 'oh', 'oklahoma': 'ok', 'oregon': 'or', 'pennsylvania': 'pa',
+            'rhode island': 'ri', 'south carolina': 'sc', 'south dakota': 'sd',
+            'tennessee': 'tn', 'texas': 'tx', 'utah': 'ut', 'vermont': 'vt',
+            'virginia': 'va', 'washington': 'wa', 'west virginia': 'wv',
+            'wisconsin': 'wi', 'wyoming': 'wy'
+        };
     }
 
     // Debounce function for typeahead search
@@ -27,6 +53,48 @@ class StoreSelector {
                 func.apply(self, args);
             }, wait);
         };
+    }
+
+    // Parse search intent
+    parseSearchIntent(term) {
+        const trimmed = term.trim();
+        if (!trimmed) return { type: 'empty', term: '' };
+        
+        const lowerTerm = trimmed.toLowerCase();
+        const tokens = trimmed.split(/\s+/).filter(t => t.length > 0);
+        
+        // Intent 1: Store number (digits only or starts with digits)
+        if (/^\d+$/.test(trimmed) || /^\d+/.test(trimmed)) {
+            return { type: 'store_number', term: trimmed, prefix: /^\d+/.exec(trimmed)[0] };
+        }
+        
+        // Intent 2: City + State (last token is valid US state code)
+        if (tokens.length >= 2) {
+            const lastToken = tokens[tokens.length - 1].toLowerCase();
+            const stateCode = this.stateCodes.has(lastToken) ? lastToken.toUpperCase() : 
+                            (this.stateNames[lastToken] ? this.stateNames[lastToken].toUpperCase() : null);
+            
+            if (stateCode) {
+                const cityPart = tokens.slice(0, -1).join(' ');
+                return { 
+                    type: 'city_state', 
+                    term: trimmed,
+                    city: cityPart,
+                    state: stateCode
+                };
+            }
+        }
+        
+        // Intent 3: State only (entire input is state name or code)
+        if (this.stateCodes.has(lowerTerm)) {
+            return { type: 'state_only', term: trimmed, state: lowerTerm.toUpperCase() };
+        }
+        if (this.stateNames[lowerTerm]) {
+            return { type: 'state_only', term: trimmed, state: this.stateNames[lowerTerm].toUpperCase() };
+        }
+        
+        // Intent 4: Banner or general (query banner and STORE only, not address)
+        return { type: 'banner_general', term: trimmed };
     }
 
     // Get current user role (admin, brand_client, or shelfer)
@@ -114,53 +182,46 @@ class StoreSelector {
         }
     }
 
-    // Load banner options from retailer_banners table (ADMIN ONLY - brands get chains from search results)
+    // Load banner options from store_banners view (ADMIN ONLY - brands get chains from search results)
     async loadBannerOptions() {
         // Check if user is admin - only admins can load all chains
         const isAdmin = await this.isAdmin();
         if (!isAdmin) {
             console.log('🔒 Non-admin user: Banner options will be loaded from search results only');
-            // For brands: we'll extract chains from search results instead
             return;
         }
         
-        console.log('🔄 Loading banners from retailer_banners table (ADMIN ONLY)...');
+        console.log('🔄 Loading banners from store_banners view (ADMIN ONLY)...');
         
         try {
-            // Get unique banner names from retailer_banners table
+            // Get distinct banners from store_banners view
             const { data: banners, error } = await supabase
-                .from('retailer_banners')
-                .select('name')
-                .order('name', { ascending: true });
+                .from('store_banners')
+                .select('banner')
+                .order('banner', { ascending: true });
             
             if (error) {
-                console.error('❌ Error loading banners from retailer_banners:', error);
-                // Fallback: extract unique banners from STORE column (first part before " - ")
-                console.log('🔄 Falling back to extracting banners from STORE column...');
+                console.error('❌ Error loading banners from store_banners view:', error);
+                // Fallback: query stores directly for distinct banners
+                console.log('🔄 Falling back to querying stores directly...');
                 const { data: storeData, error: storeError } = await supabase
                     .from('stores')
-                    .select('STORE')
-                    .not('STORE', 'is', null)
-                    .neq('STORE', '')
-                    .limit(5000); // Get enough to extract unique banners
+                    .select('banner')
+                    .eq('is_active', true)
+                    .not('banner', 'is', null)
+                    .neq('banner', '')
+                    .limit(5000);
                 
                 if (storeError) {
                     console.error('❌ Fallback also failed:', storeError);
                     return [];
                 }
                 
-                // Extract banner name (first part before " - ")
-                const extractBanner = (storeName) => {
-                    if (!storeName) return null;
-                    const dashIndex = storeName.indexOf(' - ');
-                    return dashIndex > 0 ? storeName.substring(0, dashIndex).trim() : storeName.trim();
-                };
-                
                 const uniqueBanners = [...new Set((storeData || [])
-                    .map(s => extractBanner(s.STORE || s.store))
+                    .map(s => s.banner)
                     .filter(Boolean))].sort();
                 
-                console.log(`✅ Extracted ${uniqueBanners.length} unique banners from STORE column`);
+                console.log(`✅ Extracted ${uniqueBanners.length} unique banners from stores`);
                 const options = [{ value: 'all', label: 'All Chains' }]
                     .concat(uniqueBanners.map(banner => ({ value: banner, label: banner })));
                 
@@ -169,14 +230,14 @@ class StoreSelector {
             }
             
             if (!banners || banners.length === 0) {
-                console.warn('⚠️ No banners found in retailer_banners table');
+                console.warn('⚠️ No banners found in store_banners view');
                 return [];
             }
             
-            console.log('✅ Loaded', banners.length, 'banners from retailer_banners table');
+            console.log('✅ Loaded', banners.length, 'banners from store_banners view');
             
             const options = [{ value: 'all', label: 'All Chains' }]
-                .concat(banners.map(b => ({ value: b.name, label: b.name })));
+                .concat(banners.map(b => ({ value: b.banner, label: b.banner })));
             
             this.populateBannerDropdown(options);
             return options;
@@ -265,7 +326,7 @@ class StoreSelector {
         });
     }
 
-    // Search stores by name, city, or address
+    // Search stores with intent-based queries and ranking
     async searchStores(term) {
         const trimmedTerm = (term || '').trim();
         this.searchTerm = trimmedTerm.toLowerCase();
@@ -283,8 +344,7 @@ class StoreSelector {
             return;
         }
         
-        // For admins: if no search term, show empty state or load all (depending on preference)
-        // For now, require search term for admins too to avoid loading all stores
+        // For admins: if no search term, show empty state
         if (!trimmedTerm) {
             console.log('⚠️ No search term provided, clearing results');
             this.allStores = [];
@@ -295,76 +355,57 @@ class StoreSelector {
             return;
         }
         
+        // Parse search intent
+        const intent = this.parseSearchIntent(trimmedTerm);
+        console.log('🎯 Search intent:', intent);
+        
         try {
-            console.log('🔍 Query built, executing with pagination...');
-            
-            // Use pagination to get ALL matching stores (not just first 2000)
+            // Use pagination to get ALL matching stores
             let allResults = [];
             let from = 0;
             const pageSize = 1000;
             let hasMore = true;
             
             while (hasMore) {
-                // Rebuild query for each page to avoid Supabase query builder issues
                 let pageQuery = supabase
                     .from('stores')
-                    .select('id, name, STORE, address, city, state, zip_code, metro, METRO, metro_norm, store_number')
+                    .select('id, name, STORE, address, city, state, zip_code, metro, METRO, metro_norm, store_number, banner')
                     .not('STORE', 'is', null)
-                    .neq('STORE', '');
+                    .neq('STORE', '')
+                    .eq('is_active', true);
                 
-                // Apply search filters with priority: city/state first, then address, then others
-                // Search matches: STORE, name, city, state, address, zip_code, store_number, metro
-                if (this.searchTerm) {
-                    const searchPattern = `%${this.searchTerm}%`;
+                // Build query based on intent
+                switch (intent.type) {
+                    case 'store_number':
+                        // Store number: query store_number only, prefix match
+                        pageQuery = pageQuery.ilike('store_number', `${intent.prefix}%`);
+                        console.log('🔍 Intent: Store number - querying store_number prefix:', intent.prefix);
+                        break;
                     
-                    // Check if search term looks like a city/state combo (e.g., "Columbus Ohio", "Columbus, Ohio")
-                    const cityStatePattern = this.searchTerm.replace(/[,\s]+/g, ' ').trim();
-                    const parts = cityStatePattern.split(' ').filter(p => p.length > 0);
+                    case 'city_state':
+                        // City + State: query city and state together
+                        pageQuery = pageQuery
+                            .ilike('city', `%${intent.city}%`)
+                            .ilike('state', `%${intent.state}%`);
+                        console.log('🔍 Intent: City + State - querying city:', intent.city, 'state:', intent.state);
+                        break;
                     
-                    // Build OR query - Supabase format: "field.ilike.pattern,field2.ilike.pattern"
-                    let orQuery;
+                    case 'state_only':
+                        // State only: query ONLY state column (prevents Wyoming matching Wyoming Blvd)
+                        pageQuery = pageQuery.ilike('state', `%${intent.state}%`);
+                        console.log('🔍 Intent: State only - querying state:', intent.state);
+                        break;
                     
-                    // Check if search term is a state name or abbreviation
-                    const stateNames = ['ohio', 'texas', 'tx', 'oh', 'california', 'ca', 'new york', 'ny', 'florida', 'fl'];
-                    const isStateSearch = stateNames.includes(this.searchTerm.toLowerCase());
-                    
-                    if (parts.length >= 2) {
-                        // City + State search - prioritize city and state matches, exclude address
-                        const cityPart = parts[0];
-                        const statePart = parts[parts.length - 1].toUpperCase();
-                        
-                        orQuery = 
-                            `city.ilike.%${cityPart}%,state.ilike.%${statePart}%,` +
-                            `city.ilike.${searchPattern},state.ilike.${searchPattern},` +
-                            `STORE.ilike.${searchPattern},name.ilike.${searchPattern},` +
-                            `zip_code.ilike.${searchPattern},` +
-                            `store_number.ilike.${searchPattern},metro.ilike.${searchPattern},` +
-                            `METRO.ilike.${searchPattern},metro_norm.ilike.${searchPattern}`;
-                        // Note: Excluded address from city+state searches to avoid "Ohio Drive" matches
-                    } else if (isStateSearch) {
-                        // State-only search - ONLY match state field, not addresses
-                        orQuery = `state.ilike.${searchPattern}`;
-                        console.log('🔍 State search detected - only matching state field');
-                    } else {
-                        // Single term - search all fields, but prioritize city/state over address
-                        orQuery = 
-                            `city.ilike.${searchPattern},state.ilike.${searchPattern},` +
-                            `STORE.ilike.${searchPattern},name.ilike.${searchPattern},` +
-                            `zip_code.ilike.${searchPattern},` +
-                            `store_number.ilike.${searchPattern},metro.ilike.${searchPattern},` +
-                            `METRO.ilike.${searchPattern},metro_norm.ilike.${searchPattern},` +
-                            `address.ilike.${searchPattern}`; // Address last to deprioritize street names
-                    }
-                    
-                    pageQuery = pageQuery.or(orQuery);
-                    console.log('🔍 Applied search filter for term:', this.searchTerm);
-                } else {
-                    // No search term - should not reach here due to check above
-                    console.warn('⚠️ No search term but reached query building');
-                    return;
+                    case 'banner_general':
+                    default:
+                        // Banner or general: query banner and STORE only, NOT address
+                        const searchPattern = `%${intent.term}%`;
+                        pageQuery = pageQuery.or(`banner.ilike.${searchPattern},STORE.ilike.${searchPattern}`);
+                        console.log('🔍 Intent: Banner/General - querying banner and STORE only');
+                        break;
                 }
                 
-                // Apply chain filter
+                // Apply chain filter if active
                 pageQuery = this.filterByChainQuery(pageQuery, this.currentChainFilter);
                 
                 const { data: pageData, error: pageError } = await pageQuery
@@ -379,7 +420,7 @@ class StoreSelector {
                 if (pageData && pageData.length > 0) {
                     allResults = allResults.concat(pageData);
                     from += pageSize;
-                    hasMore = pageData.length === pageSize; // If we got a full page, there might be more
+                    hasMore = pageData.length === pageSize;
                     console.log(`📄 Loaded page ${Math.floor(from/pageSize)}, total so far: ${allResults.length} stores`);
                 } else {
                     hasMore = false;
@@ -388,17 +429,17 @@ class StoreSelector {
             
             console.log(`✅ Search returned ${allResults.length} stores (paginated)`);
             
-            // Only set allStores if we got results - don't load all stores if search fails
+            // Rank and sort results
             if (allResults.length > 0) {
-                this.allStores = allResults;
+                const rankedResults = this.rankSearchResults(allResults, intent);
+                this.allStores = rankedResults;
                 // Apply active filters after search
                 this.applyFilters();
-                console.log(`🔍 Search "${term}" + Filters = ${this.filteredStores.length} stores`);
+                console.log(`🔍 Search "${term}" (${intent.type}) + Filters = ${this.filteredStores.length} stores`);
             } else {
-                // No results found
                 this.allStores = [];
                 this.filteredStores = [];
-                console.log(`🔍 No stores found for search term: "${term}"`);
+                console.log(`🔍 No stores found for search term: "${term}" (${intent.type})`);
             }
             
             this.renderStoreList();
@@ -408,6 +449,73 @@ class StoreSelector {
             console.error('❌ Search failed:', error);
             this.showError('Search failed. Please try again.');
         }
+    }
+
+    // Rank search results by match quality
+    rankSearchResults(results, intent) {
+        return results.map(store => {
+            let rank = 0;
+            const term = intent.term.toLowerCase();
+            
+            switch (intent.type) {
+                case 'store_number':
+                    // Exact match = highest rank
+                    if (store.store_number && store.store_number.toLowerCase() === term) {
+                        rank = 100;
+                    }
+                    // Prefix match = high rank
+                    else if (store.store_number && store.store_number.toLowerCase().startsWith(term)) {
+                        rank = 90;
+                    }
+                    break;
+                
+                case 'city_state':
+                    // Exact city + exact state = highest rank
+                    if (store.city && store.state &&
+                        store.city.toLowerCase() === intent.city.toLowerCase() &&
+                        store.state.toUpperCase() === intent.state) {
+                        rank = 100;
+                    }
+                    // Partial city + exact state = high rank
+                    else if (store.city && store.state &&
+                             store.city.toLowerCase().includes(intent.city.toLowerCase()) &&
+                             store.state.toUpperCase() === intent.state) {
+                        rank = 80;
+                    }
+                    break;
+                
+                case 'state_only':
+                    // Exact state match = highest rank
+                    if (store.state && store.state.toUpperCase() === intent.state) {
+                        rank = 100;
+                    }
+                    break;
+                
+                case 'banner_general':
+                default:
+                    // Banner exact match = highest rank
+                    if (store.banner && store.banner.toLowerCase() === term) {
+                        rank = 100;
+                    }
+                    // STORE prefix match = high rank
+                    else if (store.STORE && store.STORE.toLowerCase().startsWith(term)) {
+                        rank = 90;
+                    }
+                    // STORE contains = medium rank
+                    else if (store.STORE && store.STORE.toLowerCase().includes(term)) {
+                        rank = 70;
+                    }
+                    break;
+            }
+            
+            return { ...store, _searchRank: rank };
+        }).sort((a, b) => {
+            // Sort by rank (descending), then by STORE name
+            if (b._searchRank !== a._searchRank) {
+                return b._searchRank - a._searchRank;
+            }
+            return (a.STORE || a.name || '').localeCompare(b.STORE || b.name || '');
+        });
     }
 
     // Helper function to apply chain filter to query (matches chain from STORE column)
