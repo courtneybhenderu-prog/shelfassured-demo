@@ -431,7 +431,7 @@ class StoreSelector {
                         if (stateName) {
                             // Match both code and name (e.g., "WY" or "Wyoming")
                             // Use OR to match either state code or full state name
-                            pageQuery = pageQuery.or(`state.eq.${stateCode},state.ilike.%${stateName}%`);
+                            pageQuery = pageQuery.or(`state.eq.${stateCode},state.ilike.%${stateName}%,state.ilike.%${stateCode}%`);
                         } else {
                             // Just match the state code exactly or with wildcards
                             pageQuery = pageQuery.or(`state.eq.${stateCode},state.ilike.%${stateCode}%`);
