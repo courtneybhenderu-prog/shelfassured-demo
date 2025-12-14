@@ -392,8 +392,18 @@ class StoreSelector {
                     
                     case 'state_only':
                         // State only: query ONLY state column (prevents Wyoming matching Wyoming Blvd)
-                        pageQuery = pageQuery.ilike('state', `%${intent.state}%`);
-                        console.log('🔍 Intent: State only - querying state:', intent.state);
+                        // Match both state code (WY) and full state name (Wyoming)
+                        const stateCode = intent.state;
+                        const stateName = Object.keys(this.stateNames).find(name => 
+                            this.stateNames[name] === stateCode.toLowerCase()
+                        );
+                        if (stateName) {
+                            // Match both code and name (e.g., "WY" or "Wyoming")
+                            pageQuery = pageQuery.or(`state.ilike.%${stateCode}%,state.ilike.%${stateName}%`);
+                        } else {
+                            pageQuery = pageQuery.ilike('state', `%${stateCode}%`);
+                        }
+                        console.log('🔍 Intent: State only - querying state:', stateCode, stateName ? `or "${stateName}"` : '');
                         break;
                     
                     case 'banner_general':
