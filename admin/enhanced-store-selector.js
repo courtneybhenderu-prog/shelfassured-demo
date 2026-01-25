@@ -149,13 +149,9 @@ class StoreSelector {
             const isBrand = await this.isBrand();
             console.log(`👤 User role: ${this.userRole || 'unknown'} (admin: ${isAdmin}, brand: ${isBrand})`);
 
-            // Load banner options for dropdown (admins can see all, brands need search first)
-            if (isAdmin) {
-                await this.loadBannerOptions();
-            } else {
-                // For brands: don't load banner options until they search
-                console.log('🔒 Brand user: Banner options will load after search');
-            }
+            // Banner dropdown is deprecated - using text input search instead
+            // No need to load banner options for dropdown anymore
+            console.log('ℹ️ Chain filter is now a text input - no dropdown to populate');
 
             // Don't load stores upfront - start empty
             this.allStores = [];
@@ -171,6 +167,9 @@ class StoreSelector {
                 console.log('✅ Store selector initialized - ready for search');
             }
             
+            // Setup chain filter text input
+            this.setupChainFilterInput();
+            
             // Show empty state
             this.renderEmptyState();
             this.updateCounts();
@@ -185,142 +184,129 @@ class StoreSelector {
     // Load banner options from store_banners view (ADMIN ONLY - brands get chains from search results)
     async loadBannerOptions() {
         // Check if user is admin - only admins can load all chains
+        // TEMPORARY: Allow testing for all users (remove this after testing)
         const isAdmin = await this.isAdmin();
         if (!isAdmin) {
             console.log('🔒 Non-admin user: Banner options will be loaded from search results only');
-            return;
+            console.log('⚠️ TESTING MODE: Loading banners anyway for testing purposes');
+            // return; // Commented out for testing
         }
         
-        console.log('🔄 Loading banners from store_banners view (ADMIN ONLY)...');
+        console.log('🔄 Loading banners for dropdown (ADMIN ONLY)...');
         
         try {
-            // Get distinct banners from store_banners view
-            // Note: The view should be created by running create-store-banners-view.sql
-            // IMPORTANT: Supabase JS client queries views the same way as tables
+            // Strategy 1: Try store_banners view first (if it exists and works)
             console.log('🔄 Attempting to load banners from store_banners view...');
-            console.log('🔄 Query: .from("store_banners").select("banner")');
-            
-            const { data: banners, error } = await supabase
+            const { data: viewBanners, error: viewError } = await supabase
                 .from('store_banners')
                 .select('banner')
                 .order('banner', { ascending: true });
             
-            console.log('🔄 Query result - data:', banners ? `${banners.length} rows` : 'null', 'error:', error ? 'yes' : 'no');
-            
-            if (error) {
-                console.error('❌ Error loading banners from store_banners view:', error);
-                console.error('❌ Error details:', JSON.stringify(error, null, 2));
-                console.log('⚠️ View may not exist yet. Run create-store-banners-view.sql first.');
-                console.log('⚠️ Or the view exists but has a different name/structure.');
-                // Fallback: query stores directly for distinct banners from banner column
-                console.log('🔄 Falling back to querying stores directly for distinct banners...');
-                const { data: storeData, error: storeError } = await supabase
-                    .from('stores')
-                    .select('banner')
-                    .eq('is_active', true)
-                    .not('banner', 'is', null)
-                    .neq('banner', '')
-                    .limit(5000);
-                
-                if (storeError) {
-                    console.error('❌ Fallback also failed:', storeError);
-                    // Last resort: extract from STORE column (first part before " - ")
-                    console.log('🔄 Last resort: Extracting from STORE column...');
-                    const { data: storeData2, error: storeError2 } = await supabase
-                        .from('stores')
-                        .select('STORE')
-                        .eq('is_active', true)
-                        .not('STORE', 'is', null)
-                        .neq('STORE', '')
-                        .limit(5000);
-                    
-                    if (storeError2) {
-                        console.error('❌ Last resort also failed:', storeError2);
-                        return [];
-                    }
-                    
-                    const extractBanner = (storeName) => {
-                        if (!storeName) return null;
-                        // Look for " - " pattern (space-dash-space)
-                        const dashIndex = storeName.indexOf(' - ');
-                        if (dashIndex > 0) {
-                            const banner = storeName.substring(0, dashIndex).trim();
-                            // Validate: banner should not be empty and should be reasonable length
-                            if (banner && banner.length > 0 && banner.length < 100) {
-                                return banner;
-                            }
-                        }
-                        return null;
-                    };
-                    
-                    const extractedBanners = (storeData2 || [])
-                        .map(s => extractBanner(s.STORE || s.store))
-                        .filter(Boolean);
-                    
-                    const uniqueBanners = [...new Set(extractedBanners)].sort();
-                    
-                    console.log(`✅ Extracted ${uniqueBanners.length} unique banners from STORE column`);
-                    console.log(`📋 Sample extracted banners (first 5):`, uniqueBanners.slice(0, 5));
-                    console.log(`📋 Sample extracted banners (last 5):`, uniqueBanners.slice(-5));
-                    
-                    if (uniqueBanners.length > 100) {
-                        console.warn(`⚠️ WARNING: Found ${uniqueBanners.length} unique banners (expected ~72). This suggests extraction may be incorrect.`);
-                        console.warn(`⚠️ Check if STORE column format is consistent (should be "Banner - City - State")`);
-                    }
-                    
-                    const options = [{ value: 'all', label: 'All Chains' }]
-                        .concat(uniqueBanners.map(banner => ({ value: banner, label: banner })));
-                    
-                    this.populateBannerDropdown(options);
-                    return options;
-                }
-                
-                const uniqueBanners = [...new Set((storeData || [])
-                    .map(s => s.banner)
-                    .filter(Boolean))].sort();
-                
-                console.log(`✅ Extracted ${uniqueBanners.length} unique banners from stores.banner column`);
+            if (!viewError && viewBanners && viewBanners.length > 0) {
+                console.log('✅ Loaded', viewBanners.length, 'banners from store_banners view');
                 const options = [{ value: 'all', label: 'All Chains' }]
-                    .concat(uniqueBanners.map(banner => ({ value: banner, label: banner })));
-                
+                    .concat(viewBanners.map(b => ({ value: b.banner, label: b.banner })));
                 this.populateBannerDropdown(options);
                 return options;
             }
             
-            if (!banners || banners.length === 0) {
-                console.warn('⚠️ No banners found in store_banners view');
+            // Strategy 2: Query stores directly for distinct banners (more reliable)
+            console.log('🔄 View query failed or returned no data, querying stores directly...');
+            console.log('🔄 Query: .from("stores").select("banner, STORE").eq("is_active", true)');
+            
+            // Get both banner and STORE columns to handle cases where banner might be empty
+            const { data: storeData, error: storeError } = await supabase
+                .from('stores')
+                .select('banner, STORE')
+                .eq('is_active', true);
+            
+            if (storeError) {
+                console.error('❌ Error querying stores for banners:', storeError);
+                console.error('❌ Error details:', JSON.stringify(storeError, null, 2));
                 return [];
             }
             
-            console.log('✅ Loaded', banners.length, 'banners from store_banners view');
+            if (!storeData || storeData.length === 0) {
+                console.warn('⚠️ No stores found');
+                return [];
+            }
+            
+            console.log(`📊 Total stores retrieved: ${storeData.length}`);
+            console.log(`📊 Stores with banner column: ${storeData.filter(s => s.banner && s.banner.trim()).length}`);
+            console.log(`📊 Stores with STORE column: ${storeData.filter(s => s.STORE && s.STORE.trim()).length}`);
+            
+            // Extract unique banners - prefer banner column, fallback to STORE column extraction
+            const extractBannerFromStore = (storeName) => {
+                if (!storeName) return null;
+                // Look for " - " pattern (space-dash-space) - format: "Banner - City - State"
+                const dashIndex = storeName.indexOf(' - ');
+                if (dashIndex > 0) {
+                    const banner = storeName.substring(0, dashIndex).trim();
+                    if (banner && banner.length > 0 && banner.length < 100) {
+                        return banner;
+                    }
+                }
+                return null;
+            };
+            
+            const banners = new Set();
+            
+            // First, try to use banner column
+            storeData.forEach(s => {
+                if (s.banner && s.banner.trim()) {
+                    banners.add(s.banner.trim());
+                }
+            });
+            
+            // If banner column is mostly empty, extract from STORE column
+            if (banners.size < 10 && storeData.some(s => s.STORE)) {
+                console.log('⚠️ Banner column appears empty, extracting from STORE column...');
+                storeData.forEach(s => {
+                    if (s.STORE) {
+                        const extracted = extractBannerFromStore(s.STORE);
+                        if (extracted) {
+                            banners.add(extracted);
+                        }
+                    }
+                });
+            }
+            
+            const uniqueBanners = Array.from(banners).sort();
+            
+            console.log(`✅ Extracted ${uniqueBanners.length} unique banners`);
+            
+            if (uniqueBanners.length > 100) {
+                console.warn(`⚠️ WARNING: Found ${uniqueBanners.length} unique banners (expected ~72).`);
+            }
+            
+            // Log sample banners for debugging
+            if (uniqueBanners.length > 0) {
+                console.log(`📋 Sample banners (first 10):`, uniqueBanners.slice(0, 10));
+            } else {
+                console.error('❌ No banners extracted! Check banner column data.');
+            }
             
             const options = [{ value: 'all', label: 'All Chains' }]
-                .concat(banners.map(b => ({ value: b.banner, label: b.banner })));
+                .concat(uniqueBanners.map(banner => ({ value: banner, label: banner })));
+            
+            console.log(`🔄 About to populate dropdown with ${options.length} total options`);
+            console.log(`🔄 Options array:`, options.slice(0, 5));
             
             this.populateBannerDropdown(options);
             return options;
+            
         } catch (error) {
             console.error('❌ Error in loadBannerOptions:', error);
             return [];
         }
     }
 
-    // Populate banner dropdown with options
+    // Populate banner dropdown with options (DEPRECATED - no longer using dropdown)
+    // Keeping for backward compatibility but it's not used anymore
     populateBannerDropdown(options) {
-
-        const dropdown = document.getElementById('chain-filter');
-        if (dropdown) {
-            dropdown.innerHTML = '';
-            options.forEach(opt => {
-                const option = document.createElement('option');
-                option.value = opt.value;
-                option.textContent = opt.label;
-                dropdown.appendChild(option);
-            });
-            console.log(`✅ Populated dropdown with ${options.length} banner options`);
-        } else {
-            console.warn('⚠️ Chain filter dropdown not found!');
-        }
+        console.log('⚠️ populateBannerDropdown called but dropdown is deprecated - using text input instead');
+        // Dropdown is no longer used - chain filter is now a text input
+        // This method is kept for backward compatibility but does nothing
     }
 
     // Show empty state
@@ -840,11 +826,25 @@ class StoreSelector {
             );
         }
 
-        // Apply banner filter
+        // Apply banner filter (matches banner name in STORE column or banner column)
         if (this.activeFilters.banner) {
+            const bannerFilter = this.activeFilters.banner.toLowerCase().trim();
             filtered = filtered.filter(store => {
-                const storeName = store.STORE || store.store || store.name || '';
-                return storeName.toLowerCase().startsWith(this.activeFilters.banner.toLowerCase() + ' -');
+                // Check STORE column (format: "Banner - City - State")
+                const storeName = (store.STORE || store.store || '').toLowerCase();
+                if (storeName.includes(bannerFilter)) {
+                    // Check if it matches the banner part (before first " - ")
+                    const bannerPart = storeName.split(' - ')[0];
+                    if (bannerPart.includes(bannerFilter)) {
+                        return true;
+                    }
+                }
+                // Check banner column directly
+                const banner = (store.banner || '').toLowerCase();
+                if (banner.includes(bannerFilter)) {
+                    return true;
+                }
+                return false;
             });
         }
 
@@ -853,13 +853,155 @@ class StoreSelector {
         this.updateCounts();
     }
 
+    // Search stores by banner/chain name (similar to searchStores but for banners)
+    async searchStoresByBanner(bannerTerm) {
+        const trimmedTerm = (bannerTerm || '').trim();
+        
+        if (!trimmedTerm) {
+            // Clear results if empty
+            this.allStores = [];
+            this.filteredStores = [];
+            this.renderStoreList();
+            this.updateCounts();
+            return;
+        }
+        
+        console.log('🔍 searchStoresByBanner called with term:', trimmedTerm);
+        
+        try {
+            // Query stores where banner matches
+            let allResults = [];
+            let from = 0;
+            const pageSize = 1000;
+            let hasMore = true;
+            
+            while (hasMore) {
+                let pageQuery = supabase
+                    .from('stores')
+                    .select('id, name, STORE, address, city, state, zip_code, metro, METRO, metro_norm, store_number, banner')
+                    .not('STORE', 'is', null)
+                    .neq('STORE', '')
+                    .eq('is_active', true);
+                
+                // Search in banner column and STORE column (banner part)
+                const searchPattern = `%${trimmedTerm}%`;
+                pageQuery = pageQuery.or(`banner.ilike.${searchPattern},STORE.ilike.${searchPattern}`);
+                
+                const { data: pageData, error: pageError } = await pageQuery
+                    .range(from, from + pageSize - 1);
+                
+                if (pageError) {
+                    console.error('Search error:', pageError);
+                    this.showError('Failed to search stores by banner');
+                    return;
+                }
+                
+                if (pageData && pageData.length > 0) {
+                    allResults = allResults.concat(pageData);
+                    from += pageSize;
+                    hasMore = pageData.length === pageSize;
+                } else {
+                    hasMore = false;
+                }
+            }
+            
+            console.log(`✅ Banner search returned ${allResults.length} stores`);
+            
+            // Filter to only stores where banner part matches (not just any part of STORE)
+            const filteredResults = allResults.filter(store => {
+                const storeName = (store.STORE || '').toLowerCase();
+                const banner = (store.banner || '').toLowerCase();
+                const searchLower = trimmedTerm.toLowerCase();
+                
+                // Check if banner column matches
+                if (banner.includes(searchLower)) {
+                    return true;
+                }
+                
+                // Check if STORE starts with banner (format: "Banner - City - State")
+                if (storeName.includes(searchLower)) {
+                    const bannerPart = storeName.split(' - ')[0];
+                    if (bannerPart.includes(searchLower)) {
+                        return true;
+                    }
+                }
+                
+                return false;
+            });
+            
+            this.allStores = filteredResults;
+            this.filteredStores = filteredResults;
+            this.renderStoreList();
+            this.updateCounts();
+            this.renderFilterChips();
+            
+            console.log(`✅ Filtered to ${filteredResults.length} stores matching banner "${trimmedTerm}"`);
+            
+        } catch (error) {
+            console.error('❌ Banner search failed:', error);
+            this.showError('Search failed. Please try again.');
+        }
+    }
+
+    // Setup chain filter text input (searches database like search stores)
+    setupChainFilterInput() {
+        const chainInput = document.getElementById('chain-filter-input');
+        if (!chainInput) {
+            console.error('❌ Chain filter input not found! Looking for id="chain-filter-input"');
+            console.error('❌ Available elements:', document.querySelectorAll('[id*="chain"]'));
+            return;
+        }
+        
+        console.log('✅ Found chain filter input element:', chainInput);
+        console.log('✅ Element type:', chainInput.tagName, '| Type:', chainInput.type);
+        
+        // Debounced search function (similar to store search)
+        let searchTimeout;
+        chainInput.addEventListener('input', async (e) => {
+            clearTimeout(searchTimeout);
+            const value = e.target.value.trim();
+            
+            searchTimeout = setTimeout(async () => {
+                if (value === '') {
+                    // Clear results if empty
+                    this.allStores = [];
+                    this.filteredStores = [];
+                    this.renderStoreList();
+                    this.updateCounts();
+                } else {
+                    // Search stores by banner
+                    await this.searchStoresByBanner(value);
+                }
+            }, 500); // Wait 500ms after user stops typing
+        });
+        
+        // Clear search on Escape key
+        chainInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                chainInput.value = '';
+                this.allStores = [];
+                this.filteredStores = [];
+                this.renderStoreList();
+                this.updateCounts();
+            }
+        });
+        
+        console.log('✅ Chain filter search input initialized');
+    }
+
     // Clear all filters
     clearFilters() {
         this.activeFilters = { state: null, banner: null };
         this.applyFilters();
         this.renderFilterChips();
         
-        // Also clear chain filter dropdown if it exists
+        // Clear chain filter input if it exists
+        const chainInput = document.getElementById('chain-filter-input');
+        if (chainInput) {
+            chainInput.value = '';
+        }
+        
+        // Also clear chain filter dropdown if it exists (legacy)
         const chainFilter = document.getElementById('chain-filter');
         if (chainFilter) {
             chainFilter.value = 'all';
@@ -1226,13 +1368,8 @@ document.addEventListener('DOMContentLoaded', async function() {
             console.error('❌ Search input element not found!');
         }
 
-        // Set up chain filter
-        const chainFilter = document.getElementById('chain-filter');
-        if (chainFilter) {
-            chainFilter.addEventListener('change', (e) => {
-                storeSelector.filterByChain(e.target.value);
-            });
-        }
+        // Chain filter is now a text input, set up in setupChainFilterInput()
+        // No need to set up dropdown event listener
 
         console.log('✅ Enhanced store selector initialized');
     }, 1000); // Wait 1 second for other scripts to load

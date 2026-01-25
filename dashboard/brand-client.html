@@ -7,6 +7,10 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.47.5/dist/umd/supabase.min.js"></script>
     <link rel="stylesheet" href="../shared/styles.css">
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     
     <!-- Set page role BEFORE loading shared/api.js -->
     <script>
@@ -35,77 +39,94 @@
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
             <!-- Welcome Section -->
             <div class="mb-8">
-                <div class="flex items-center space-x-4">
-                    <img id="brand-logo-greeting" src="" alt="Brand logo" 
-                         class="w-16 h-16 object-contain rounded border border-gray-200 bg-white p-2 hidden"
-                         onerror="this.style.display='none'; document.getElementById('no-logo-placeholder').classList.remove('hidden');">
-                    <div id="no-logo-placeholder" class="w-16 h-16 flex items-center justify-center bg-gray-100 rounded border border-gray-200 text-gray-400 text-sm hidden">
-                        No Logo
+                <h2 class="text-3xl font-bold text-gray-900">Hello, Brand Client!</h2>
+            </div>
+
+            <!-- Brand Profile Card -->
+            <div id="brand-profile-card" class="bg-white rounded-lg shadow p-6 mb-8" style="display: none;">
+                <div class="flex flex-col md:flex-row gap-6">
+                    <div class="flex-1">
+                        <div id="brand-profile-content">
+                            <!-- Brand info will be populated here -->
+                        </div>
+                        <div class="mt-4">
+                            <button onclick="goToPage('create-job.html')" class="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded-lg font-medium">
+                                Create New Job
+                            </button>
+                        </div>
                     </div>
-                    <div>
-                        <h2 class="text-3xl font-bold text-gray-900" id="greeting-text">Hello, Brand Client!</h2>
-                        <p class="text-gray-600 mt-2">Manage your brand's shelf presence and audit jobs.</p>
+                    <div class="md:w-80 flex-shrink-0">
+                        <div id="brand-profile-image" class="w-full h-48 md:h-64 bg-gray-100 rounded-lg overflow-hidden flex items-center justify-center">
+                            <span class="text-gray-400">Loading image...</span>
+                        </div>
                     </div>
                 </div>
             </div>
 
-            <!-- Stats Cards -->
+            <!-- Performance Metrics -->
             <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
                 <div class="bg-white rounded-lg shadow p-6">
-                    <h3 class="text-lg font-semibold text-gray-900">Active Jobs</h3>
-                    <p class="text-3xl font-bold text-blue-600 mt-2" id="active-jobs">0</p>
-                    <p class="text-sm text-gray-500 mt-1">Currently in progress</p>
+                    <h3 class="text-lg font-semibold text-gray-900 mb-2">Active Jobs</h3>
+                    <p class="text-2xl font-bold text-blue-600" id="active-jobs-count">0</p>
+                    <p class="text-sm text-gray-500 mt-1" id="active-jobs-subtext">No jobs yet</p>
+                    <div class="mt-4">
+                        <div class="w-full bg-gray-200 rounded-full h-2">
+                            <div id="active-jobs-progress" class="bg-green-600 h-2 rounded-full transition-all duration-300" style="width: 0%"></div>
+                        </div>
+                    </div>
                 </div>
                 <div class="bg-white rounded-lg shadow p-6">
-                    <h3 class="text-lg font-semibold text-gray-900">Jobs Completed</h3>
-                    <p class="text-3xl font-bold text-green-600 mt-2" id="completed-audits">0</p>
+                    <h3 class="text-lg font-semibold text-gray-900 mb-2">Jobs Completed</h3>
+                    <p class="text-2xl font-bold text-green-600 mt-2" id="completed-audits">0</p>
                     <p class="text-sm text-gray-500 mt-1">Successful audits</p>
                 </div>
                 <div class="bg-white rounded-lg shadow p-6">
-                    <h3 class="text-lg font-semibold text-gray-900">Success Rate</h3>
-                    <p class="text-3xl font-bold text-purple-600 mt-2" id="success-rate">0%</p>
-                    <p class="text-sm text-gray-500 mt-1" id="success-rate-desc">Start creating jobs to track your success rate</p>
+                    <h3 class="text-lg font-semibold text-gray-900 mb-2">Success Rate</h3>
+                    <p class="text-2xl font-bold text-purple-600 mt-2" id="success-rate">No jobs yet</p>
+                    <p class="text-sm text-gray-500 mt-1">Completed jobs divided by total jobs created</p>
                 </div>
             </div>
 
-            <!-- Quick Actions -->
+            <!-- Recent Photos from Audits -->
+            <div id="photos-section" class="bg-white rounded-lg shadow mb-8" style="display: none;">
+                <div class="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
+                    <div>
+                        <h3 class="text-lg font-semibold text-gray-900">Recent Photos from Audits</h3>
+                        <p class="text-sm text-gray-500">Latest shelf photos confirmed by our field team</p>
+                    </div>
+                    <a href="#" class="text-sm text-blue-600 hover:underline">View All Photos</a>
+                </div>
+                <div id="photos-grid" class="p-6 grid grid-cols-2 md:grid-cols-3 gap-4">
+                    <!-- Photos will be populated here -->
+                </div>
+                <div id="photos-empty" class="p-6 text-center text-gray-500" style="display: none;">
+                    No audit photos yet
+                </div>
+            </div>
+
+            <!-- Notable Shelfer Notes -->
+            <div id="notes-section" class="bg-white rounded-lg shadow mb-8" style="display: none;">
+                <div class="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
+                    <h3 class="text-lg font-semibold text-gray-900">Notable Shelfer Notes</h3>
+                    <a href="#" class="text-sm text-blue-600 hover:underline">View All Notes &gt;</a>
+                </div>
+                <div id="notes-content" class="p-6 space-y-4">
+                    <!-- Notes will be populated here -->
+                </div>
+                <div id="notes-empty" class="p-6 text-center text-gray-500" style="display: none;">
+                    No notes yet
+                </div>
+            </div>
+
+            <!-- Store Coverage Map -->
             <div class="bg-white rounded-lg shadow p-6 mb-8">
-                <h3 class="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h3>
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <button onclick="goToPage('create-job.html')" class="btn-red">
-                        Create New Job
-                    </button>
-                    <button onclick="goToPage('request-audit.html')" class="btn-red">
-                        Request New Audit
-                    </button>
-                    <button onclick="goToPage('brand-jobs.html')" class="btn-red">
-                        View Jobs
-                    </button>
-                </div>
-            </div>
-
-            <!-- Motivational Section -->
-            <div class="bg-gradient-to-r from-green-50 to-blue-50 border border-green-200 rounded-lg p-6 mb-8">
-                <div class="flex items-center">
-                    <div class="flex-shrink-0">
-                        <div class="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
-                            <span class="text-green-600 text-lg">📊</span>
-                        </div>
+                <h3 class="text-lg font-semibold text-gray-900 mb-4">Store Coverage Map</h3>
+                <div id="store-map" class="rounded-lg" style="height: 400px; width: 100%;"></div>
+                <div id="map-empty" class="bg-gray-100 rounded-lg h-64 flex items-center justify-center" style="display: none;">
+                    <div class="text-center text-gray-500">
+                        <p class="text-lg font-medium mb-2">No store locations available</p>
+                        <p class="text-sm">Store locations will appear here once jobs are created</p>
                     </div>
-                    <div class="ml-4">
-                        <h3 class="text-lg font-semibold text-gray-900">Build Your Shelf Intelligence</h3>
-                        <p class="text-gray-600 mt-1" id="motivational-text">Each audit brings valuable insights to optimize your brand's retail presence. Start building your data library today!</p>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Recent Jobs -->
-            <div class="bg-white rounded-lg shadow">
-                <div class="px-6 py-4 border-b border-gray-200">
-                    <h3 class="text-lg font-medium text-gray-900">Recent Jobs</h3>
-                </div>
-                <div id="recent-jobs" class="p-6">
-                    <div class="text-center text-gray-500">No jobs created yet</div>
                 </div>
             </div>
         </div>
@@ -212,7 +233,7 @@
                     // Load brand info
                     const { data: brand, error: brandError } = await supabase
                         .from('brands')
-                        .select('id, name, website, logo_url, created_at')
+                        .select('id, name, website, logo_url, primary_email, contact_email, phone, contact_phone, address, created_at')
                         .eq('id', brandId)
                         .single();
                     
@@ -222,53 +243,9 @@
                         brandInfo = brand;
                         // Update page title with brand name
                         document.querySelector('h1').textContent = `${brand.name} Dashboard`;
-                        
-                        // Always update greeting with logo instead of brand name
-                        const greetingLogo = document.getElementById('brand-logo-greeting');
-                        const noLogoPlaceholder = document.getElementById('no-logo-placeholder');
-                        const greetingText = document.getElementById('greeting-text');
-                        
-                        // Always change greeting text to "Hello!" (remove brand name)
-                        if (greetingText) {
-                            greetingText.textContent = 'Hello!';
-                        }
-                        
-                        if (brand.logo_url && greetingLogo) {
-                            // Fix URL encoding issues (spaces, etc.)
-                            let logoUrl = brand.logo_url;
-                            // Check if URL has unencoded spaces in bucket name path
-                            if (logoUrl.includes('/brand logos/')) {
-                                logoUrl = logoUrl.replace('/brand logos/', '/brand_logos/');
-                                console.warn(`⚠️ Fixed logo URL space issue for ${brand.name}, replacing 'brand logos' with 'brand_logos'`);
-                            }
-                            // Encode any remaining spaces in the URL
-                            logoUrl = encodeURI(logoUrl);
-                            
-                            console.log(`🎨 Attempting to load logo for ${brand.name}: ${logoUrl.substring(0, 100)}...`);
-                            greetingLogo.src = logoUrl;
-                            greetingLogo.classList.remove('hidden');
-                            noLogoPlaceholder.classList.add('hidden');
-                            greetingLogo.onerror = function() {
-                                console.error('❌ Greeting logo failed to load for', brand.name);
-                                this.style.display = 'none';
-                                this.classList.add('hidden');
-                                if (noLogoPlaceholder) {
-                                    noLogoPlaceholder.classList.remove('hidden');
-                                }
-                            };
-                            greetingLogo.onload = function() {
-                                console.log('✅ Greeting logo loaded successfully for', brand.name);
-                            };
-                        } else {
-                            // No logo - show placeholder
-                            console.log(`ℹ️ No logo URL for ${brand.name}, showing placeholder`);
-                            if (greetingLogo) {
-                                greetingLogo.style.display = 'none';
-                                greetingLogo.classList.add('hidden');
-                            }
-                            if (noLogoPlaceholder) {
-                                noLogoPlaceholder.classList.remove('hidden');
-                            }
+                        const greeting = document.querySelector('h2');
+                        if (greeting) {
+                            greeting.textContent = `Hello, ${brand.name}!`;
                         }
                     }
                     
@@ -283,189 +260,600 @@
                     const jobs = await saGet('jobs', []);
                     clientJobs = jobs.filter(job => job.client_id === user.id);
                     
-                    // Try to load brand info from user's jobs
-                    if (clientJobs.length > 0 && clientJobs[0].brand_id) {
-                        const userBrandId = clientJobs[0].brand_id;
-                        const { data: brand, error: brandError } = await supabase
-                            .from('brands')
-                            .select('id, name, website, logo_url, created_at')
-                            .eq('id', userBrandId)
-                            .single();
-                        
-                        if (!brandError && brand) {
-                            brandInfo = brand;
-                            // Update greeting with logo instead of brand name
-                            const greetingLogo = document.getElementById('brand-logo-greeting');
-                            const noLogoPlaceholder = document.getElementById('no-logo-placeholder');
-                            const greetingText = document.getElementById('greeting-text');
-                            
-                            // Always change greeting text to "Hello!" (remove brand name)
-                            if (greetingText) {
-                                greetingText.textContent = 'Hello!';
-                            }
-                            
-                            if (brand.logo_url && greetingLogo) {
-                                // Fix URL encoding issues (spaces, etc.)
-                                let logoUrl = brand.logo_url;
-                                // Check if URL has unencoded spaces in bucket name path
-                                if (logoUrl.includes('/brand logos/')) {
-                                    logoUrl = logoUrl.replace('/brand logos/', '/brand_logos/');
-                                    console.warn(`⚠️ Fixed logo URL space issue for ${brand.name}, replacing 'brand logos' with 'brand_logos'`);
-                                }
-                                // Encode any remaining spaces in the URL
-                                logoUrl = encodeURI(logoUrl);
-                                
-                                console.log(`🎨 Attempting to load logo for ${brand.name}: ${logoUrl.substring(0, 100)}...`);
-                                greetingLogo.src = logoUrl;
-                                greetingLogo.classList.remove('hidden');
-                                noLogoPlaceholder.classList.add('hidden');
-                                greetingLogo.onerror = function() {
-                                    console.error('❌ Greeting logo failed to load for', brand.name);
-                                    this.style.display = 'none';
-                                    this.classList.add('hidden');
-                                    if (noLogoPlaceholder) {
-                                        noLogoPlaceholder.classList.remove('hidden');
-                                    }
-                                };
-                                greetingLogo.onload = function() {
-                                    console.log('✅ Greeting logo loaded successfully for', brand.name);
-                                };
-                            } else {
-                                // No logo - show placeholder
-                                console.log(`ℹ️ No logo URL for ${brand.name}, showing placeholder`);
-                                if (greetingLogo) {
-                                    greetingLogo.style.display = 'none';
-                                    greetingLogo.classList.add('hidden');
-                                }
-                                if (noLogoPlaceholder) {
-                                    noLogoPlaceholder.classList.remove('hidden');
-                                }
-                            }
-                        }
-                    }
                 }
                 
-                // Update stats
-                // Active jobs: pending, assigned, or pending_review (waiting for admin review)
+                // Calculate stats
+                const totalJobs = clientJobs.length;
                 const activeStatuses = ['pending', 'assigned', 'pending_review'];
                 const activeJobs = clientJobs.filter(job => activeStatuses.includes(job.status)).length;
-                document.getElementById('active-jobs').textContent = activeJobs;
-                
-                // Completed jobs: only 'completed' status
                 const completedJobs = clientJobs.filter(job => job.status === 'completed').length;
-                document.getElementById('completed-audits').textContent = completedJobs;
                 
-                // Calculate success rate
-                const totalJobs = clientJobs.length;
-                const successRate = totalJobs > 0 ? Math.round((completedJobs / totalJobs) * 100) : 0;
-                document.getElementById('success-rate').textContent = `${successRate}%`;
+                // Update performance metrics
+                updatePerformanceMetrics(activeJobs, completedJobs, totalJobs);
+                
+                // Get brand_id - use URL param, or find from user's jobs/brands
+                const finalBrandId = brandId || (await getBrandIdFromUser());
+                console.log('🔍 Final brand_id:', finalBrandId);
+                
+                // Load brand profile and image (even if no jobs)
+                if (finalBrandId) {
+                    await loadBrandProfile(finalBrandId, clientJobs);
+                } else {
+                    console.log('⚠️ No brand_id found - brand profile will not be shown');
+                }
+                
+                // Load photos and notes (only if there are jobs)
+                if (clientJobs.length > 0) {
+                    await loadPhotosGallery(clientJobs);
+                    await loadShelferNotes(clientJobs);
+                } else {
+                    // Hide sections if no jobs
+                    document.getElementById('photos-section').style.display = 'none';
+                    document.getElementById('notes-section').style.display = 'none';
+                }
+                
+                // Load map - shows all stores from brand_stores (even if no jobs)
+                await loadStoreMap(clientJobs);
                 
                 console.log('📊 Dashboard stats:', {
                     total: totalJobs,
                     active: activeJobs,
-                    completed: completedJobs,
-                    pending_review: clientJobs.filter(job => job.status === 'pending_review').length
+                    completed: completedJobs
                 });
-                
-                // Update success rate description based on data availability
-                const successRateDesc = document.getElementById('success-rate-desc');
-                if (totalJobs === 0) {
-                    successRateDesc.textContent = 'Start creating jobs to track your success rate';
-                } else if (completedJobs === 0) {
-                    successRateDesc.textContent = 'No completed jobs yet - success rate will appear here';
-                } else if (successRate >= 90) {
-                    successRateDesc.textContent = 'Excellent performance!';
-                } else if (successRate >= 75) {
-                    successRateDesc.textContent = 'Great job completion rate';
-                } else if (successRate >= 50) {
-                    successRateDesc.textContent = 'Good completion rate';
-                } else {
-                    successRateDesc.textContent = 'Focus on completing more jobs';
-                }
-                
-                // Update motivational text based on progress
-                updateMotivationalText(totalJobs, completedJobs);
-                
-                // Display recent jobs - sort by most recent first
-                const sortedJobs = [...clientJobs].sort((a, b) => {
-                    return new Date(b.created_at || b.updated_at) - new Date(a.created_at || a.updated_at);
-                });
-                displayRecentJobs(sortedJobs.slice(0, 5));
                 
             } catch (error) {
                 console.error('Error loading dashboard data:', error);
             }
         }
 
-        // Update motivational text based on user progress
-        function updateMotivationalText(totalJobs, completedJobs) {
-            const motivationalText = document.getElementById('motivational-text');
-            
-            if (totalJobs === 0) {
-                motivationalText.textContent = 'Each audit brings valuable insights to optimize your brand\'s retail presence. Start building your data library today!';
-            } else if (completedJobs === 0) {
-                motivationalText.textContent = 'You\'ve created jobs - now watch your shelf intelligence grow as they get completed!';
-            } else if (completedJobs === 1) {
-                motivationalText.textContent = 'Great start! Your first completed audit is building valuable retail insights. Keep going!';
-            } else if (completedJobs < 5) {
-                motivationalText.textContent = `You're building momentum with ${completedJobs} completed audits! Each one adds to your retail intelligence.`;
-            } else if (completedJobs < 10) {
-                motivationalText.textContent = `Impressive! ${completedJobs} completed audits are creating a solid foundation of shelf intelligence.`;
-            } else {
-                motivationalText.textContent = `Outstanding! ${completedJobs} completed audits have built a comprehensive retail intelligence database.`;
+        // Get brand_id from user - check jobs first, then brands where user is creator
+        async function getBrandIdFromUser() {
+            try {
+                const { data: { user } } = await supabase.auth.getUser();
+                if (!user) return null;
+                
+                // First, try to get brand_id from user's jobs
+                const jobs = await saGet('jobs', []);
+                const userJobs = jobs.filter(job => job.client_id === user.id);
+                if (userJobs.length > 0) {
+                    return userJobs[0].brand_id;
+                }
+                
+                // If no jobs, try to find brand where user is the creator
+                const { data: brands, error } = await supabase
+                    .from('brands')
+                    .select('id')
+                    .eq('created_by', user.id)
+                    .limit(1);
+                
+                if (!error && brands && brands.length > 0) {
+                    return brands[0].id;
+                }
+                
+                return null;
+            } catch (error) {
+                console.error('Error getting brand_id:', error);
+                return null;
             }
         }
 
-        // Display recent jobs
-        function displayRecentJobs(jobs) {
-            const container = document.getElementById('recent-jobs');
+        // Update performance metrics
+        function updatePerformanceMetrics(activeJobs, completedJobs, totalJobs) {
+            // Active Jobs card
+            const activeCountEl = document.getElementById('active-jobs-count');
+            const activeSubtextEl = document.getElementById('active-jobs-subtext');
+            const activeProgressEl = document.getElementById('active-jobs-progress');
             
-            if (jobs.length === 0) {
-                container.innerHTML = '<div class="text-center text-gray-500">No jobs created yet</div>';
-                return;
+            if (totalJobs === 0) {
+                activeCountEl.textContent = '0';
+                activeSubtextEl.textContent = 'No jobs yet';
+                activeProgressEl.style.width = '0%';
+            } else {
+                activeCountEl.textContent = activeJobs;
+                activeSubtextEl.textContent = `${activeJobs} active out of ${totalJobs} total`;
+                const completionPct = Math.round((completedJobs / Math.max(totalJobs, 1)) * 100);
+                activeProgressEl.style.width = `${completionPct}%`;
             }
+            
+            // Jobs Completed
+            document.getElementById('completed-audits').textContent = completedJobs;
+            
+            // Success Rate
+            const successRateEl = document.getElementById('success-rate');
+            if (totalJobs === 0) {
+                successRateEl.textContent = 'No jobs yet';
+            } else {
+                const successRate = Math.round((completedJobs / totalJobs) * 100);
+                successRateEl.textContent = `${successRate}%`;
+            }
+        }
 
-            const jobsHtml = jobs.map(job => {
-                // Determine status styling and label
-                let statusClass = 'text-gray-600';
-                let statusLabel = job.status;
-                let statusIcon = '⏳';
+        // Load brand profile with image
+        async function loadBrandProfile(brandId, jobs) {
+            if (!brandId) return;
+            
+            try {
+                const { data: brand, error } = await supabase
+                    .from('brands')
+                    .select('id, name, logo_url, website, primary_email, contact_email, phone, contact_phone, address')
+                    .eq('id', brandId)
+                    .single();
                 
-                if (job.status === 'completed') {
-                    statusClass = 'text-green-600';
-                    statusLabel = 'Completed';
-                    statusIcon = '✅';
-                } else if (job.status === 'pending_review') {
-                    statusClass = 'text-orange-600';
-                    statusLabel = 'Pending Review';
-                    statusIcon = '👀';
-                } else if (job.status === 'pending') {
-                    statusClass = 'text-blue-600';
-                    statusLabel = 'Pending';
-                    statusIcon = '⏳';
-                } else if (job.status === 'assigned') {
-                    statusClass = 'text-purple-600';
-                    statusLabel = 'Assigned';
-                    statusIcon = '📋';
+                if (error || !brand) {
+                    console.error('Error loading brand:', error);
+                    return;
                 }
                 
-                return `
-                <div class="py-3 border-b border-gray-200 last:border-b-0">
-                    <div class="flex items-start justify-between">
-                        <div class="flex-1">
-                            <div class="font-medium text-gray-900">${job.title}</div>
-                            <div class="text-sm text-gray-600">Status: <span class="font-medium ${statusClass}">${statusLabel}</span></div>
-                            <div class="text-sm text-gray-500">Created: ${new Date(job.created_at).toLocaleDateString()}</div>
-                        </div>
-                        <div class="text-right">
-                            <div class="text-sm font-medium ${statusClass}">${statusIcon} ${statusLabel}</div>
-                        </div>
-                    </div>
-                </div>
-            `;
-            }).join('');
+                const email = brand.primary_email || brand.contact_email || null;
+                const phone = brand.phone || brand.contact_phone || null;
+                // Show card if brand has name (required field) or any other data
+                const hasData = brand.name || brand.logo_url || brand.website || email || phone || brand.address;
+                
+                if (!hasData) {
+                    console.log('⚠️ Brand has no data to display');
+                    return;
+                }
+                
+                console.log('✅ Loading brand profile for:', brand.name);
+                
+                const profileCard = document.getElementById('brand-profile-card');
+                const profileContent = document.getElementById('brand-profile-content');
+                
+                let html = '';
+                if (brand.logo_url) {
+                    html += `<div class="mb-4"><img src="${brand.logo_url}" alt="${brand.name || 'Brand logo'}" class="h-12 object-contain" /></div>`;
+                }
+                if (brand.name) {
+                    html += `<h3 class="text-2xl font-bold text-gray-900 mb-4">${brand.name}</h3>`;
+                }
+                if (brand.website) {
+                    html += `<div class="mb-2"><span class="text-gray-600">Website:</span> <a href="${brand.website}" target="_blank" class="text-blue-600 hover:underline">${brand.website}</a></div>`;
+                }
+                if (phone) {
+                    html += `<div class="mb-2"><span class="text-gray-600">Phone:</span> <a href="tel:${phone}" class="text-blue-600 hover:underline">${phone}</a></div>`;
+                }
+                if (email) {
+                    html += `<div class="mb-2"><span class="text-gray-600">Email:</span> <a href="mailto:${email}" class="text-blue-600 hover:underline">${email}</a></div>`;
+                }
+                if (brand.address) {
+                    html += `<div class="mb-2"><span class="text-gray-600">Address:</span> <span class="text-gray-900">${brand.address}</span></div>`;
+                }
+                
+                profileContent.innerHTML = html;
+                profileCard.style.display = 'block';
+                
+                // Load most recent photo for right side image
+                await loadBrandProfileImage(jobs);
+            } catch (error) {
+                console.error('Error loading brand profile:', error);
+            }
+        }
 
-            container.innerHTML = jobsHtml;
+        // Load brand profile image (most recent approved submission photo)
+        async function loadBrandProfileImage(jobs) {
+            if (jobs.length === 0) {
+                // Show placeholder
+                const imageEl = document.getElementById('brand-profile-image');
+                imageEl.innerHTML = '<div class="text-gray-400 text-center p-4"><p>No photos yet</p></div>';
+                return;
+            }
+            
+            try {
+                const jobIds = jobs.map(j => j.id);
+                const { data: submissions } = await supabase
+                    .from('job_submissions')
+                    .select('files, created_at')
+                    .in('job_id', jobIds)
+                    .or('review_outcome.eq.approved,is_validated.eq.true')
+                    .order('created_at', { ascending: false })
+                    .limit(1);
+                
+                const imageEl = document.getElementById('brand-profile-image');
+                
+                if (submissions && submissions.length > 0 && submissions[0].files && Array.isArray(submissions[0].files) && submissions[0].files.length > 0) {
+                    const firstPhoto = submissions[0].files[0];
+                    const photoUrl = typeof firstPhoto === 'string' ? firstPhoto : (firstPhoto.url || firstPhoto);
+                    imageEl.innerHTML = `<img src="${photoUrl}" alt="Recent audit photo" class="w-full h-full object-cover" onerror="this.parentElement.innerHTML='<div class=\\'text-gray-400 text-center p-4\\'><p>Image unavailable</p></div>'" />`;
+                } else {
+                    // Placeholder
+                    imageEl.innerHTML = '<div class="text-gray-400 text-center p-4"><p>No photos yet</p></div>';
+                }
+            } catch (error) {
+                console.error('Error loading brand profile image:', error);
+                const imageEl = document.getElementById('brand-profile-image');
+                imageEl.innerHTML = '<div class="text-gray-400 text-center p-4"><p>Image unavailable</p></div>';
+            }
+        }
+
+        // Load photos gallery
+        async function loadPhotosGallery(jobs) {
+            if (jobs.length === 0) return;
+            
+            const photosSection = document.getElementById('photos-section');
+            const photosGrid = document.getElementById('photos-grid');
+            const photosEmpty = document.getElementById('photos-empty');
+            
+            photosSection.style.display = 'block';
+            
+            try {
+                const jobIds = jobs.map(j => j.id);
+                
+                // Get approved submissions
+                const { data: submissions, error } = await supabase
+                    .from('job_submissions')
+                    .select('id, job_id, files, created_at, store_id')
+                    .in('job_id', jobIds)
+                    .or('review_outcome.eq.approved,is_validated.eq.true')
+                    .order('created_at', { ascending: false });
+                
+                // Get job titles separately
+                const jobMap = {};
+                jobs.forEach(job => {
+                    jobMap[job.id] = job.title || 'Job';
+                });
+                
+                if (error) {
+                    console.error('Error loading submissions:', error);
+                    photosEmpty.style.display = 'block';
+                    photosGrid.style.display = 'none';
+                    return;
+                }
+                
+                // Extract photos with metadata
+                let allPhotos = [];
+                submissions.forEach(sub => {
+                    if (sub.files && Array.isArray(sub.files)) {
+                        sub.files.forEach(file => {
+                            if (file && (file.url || typeof file === 'string')) {
+                                allPhotos.push({
+                                    url: typeof file === 'string' ? file : (file.url || file),
+                                    jobTitle: jobMap[sub.job_id] || 'Job',
+                                    createdAt: sub.created_at,
+                                    storeId: sub.store_id
+                                });
+                            }
+                        });
+                    }
+                });
+                
+                const recentPhotos = allPhotos.slice(0, 6);
+                
+                if (recentPhotos.length === 0) {
+                    photosEmpty.style.display = 'block';
+                    photosGrid.style.display = 'none';
+                    return;
+                }
+                
+                // Try to get store names (simple join if available)
+                const storeIds = [...new Set(recentPhotos.map(p => p.storeId).filter(Boolean))];
+                let storeMap = {};
+                if (storeIds.length > 0) {
+                    try {
+                        const { data: stores } = await supabase
+                            .from('stores')
+                            .select('id, STORE, city, state')
+                            .in('id', storeIds);
+                        if (stores) {
+                            stores.forEach(store => {
+                                storeMap[store.id] = store;
+                            });
+                        }
+                    } catch (e) {
+                        console.log('Store join not available, using job title');
+                    }
+                }
+                
+                photosEmpty.style.display = 'none';
+                photosGrid.style.display = 'grid';
+                photosGrid.innerHTML = recentPhotos.map(photo => {
+                    const date = new Date(photo.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+                    const store = storeMap[photo.storeId];
+                    let locationText = photo.jobTitle;
+                    if (store) {
+                        if (store.STORE) {
+                            locationText = store.STORE;
+                        } else if (store.city && store.state) {
+                            locationText = `${store.city}, ${store.state}`;
+                        }
+                    }
+                    
+                    return `
+                        <div class="relative aspect-square bg-gray-100 rounded-lg overflow-hidden group">
+                            <img src="${photo.url}" alt="Audit photo" class="w-full h-full object-cover" onerror="this.style.display='none'" />
+                            <div class="absolute bottom-0 left-0 right-0 bg-black bg-opacity-60 text-white text-xs p-2">
+                                <div class="font-medium">${date}</div>
+                                <div class="text-gray-300 truncate">${locationText}</div>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            } catch (error) {
+                console.error('Error loading photos gallery:', error);
+                photosEmpty.style.display = 'block';
+                photosGrid.style.display = 'none';
+            }
+        }
+
+        // Load shelfer notes
+        async function loadShelferNotes(jobs) {
+            if (jobs.length === 0) return;
+            
+            const notesSection = document.getElementById('notes-section');
+            const notesContent = document.getElementById('notes-content');
+            const notesEmpty = document.getElementById('notes-empty');
+            
+            notesSection.style.display = 'block';
+            
+            try {
+                const jobIds = jobs.map(j => j.id);
+                
+                const { data: submissions, error } = await supabase
+                    .from('job_submissions')
+                    .select('id, job_id, data, created_at, contractor_id')
+                    .in('job_id', jobIds)
+                    .or('review_outcome.eq.approved,is_validated.eq.true')
+                    .order('created_at', { ascending: false });
+                
+                // Create job lookup map
+                const jobMap = {};
+                jobs.forEach(job => {
+                    jobMap[job.id] = job.title || 'Job';
+                });
+                
+                if (error) {
+                    console.error('Error loading submissions for notes:', error);
+                    notesEmpty.style.display = 'block';
+                    notesContent.style.display = 'none';
+                    return;
+                }
+                
+                // Get contractor names
+                const contractorIds = [...new Set(submissions.map(s => s.contractor_id).filter(Boolean))];
+                let contractorMap = {};
+                if (contractorIds.length > 0) {
+                    try {
+                        const { data: contractors } = await supabase
+                            .from('users')
+                            .select('id, full_name')
+                            .in('id', contractorIds);
+                        if (contractors) {
+                            contractors.forEach(c => {
+                                contractorMap[c.id] = c.full_name || `Shelfer (ID ending ${c.id.slice(-4)})`;
+                            });
+                        }
+                    } catch (e) {
+                        console.log('Contractor join not available');
+                    }
+                }
+                
+                // Extract notes
+                let notes = [];
+                submissions.forEach(sub => {
+                    if (sub.data) {
+                        const noteText = sub.data.notes || sub.data.comment || sub.data.shelfer_notes;
+                        if (noteText && noteText.trim()) {
+                            const contractorName = contractorMap[sub.contractor_id] || `Shelfer (ID ending ${sub.contractor_id ? sub.contractor_id.slice(-4) : 'N/A'})`;
+                            notes.push({
+                                text: noteText,
+                                jobTitle: jobMap[sub.job_id] || 'Job',
+                                contractorName: contractorName,
+                                createdAt: sub.created_at
+                            });
+                        }
+                    }
+                });
+                
+                const recentNotes = notes.slice(0, 3);
+                
+                if (recentNotes.length === 0) {
+                    notesEmpty.style.display = 'block';
+                    notesContent.style.display = 'none';
+                    return;
+                }
+                
+                notesEmpty.style.display = 'none';
+                notesContent.style.display = 'block';
+                notesContent.innerHTML = recentNotes.map(note => {
+                    const date = new Date(note.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+                    const initials = note.contractorName.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2) || 'S';
+                    
+                    return `
+                        <div class="flex gap-4">
+                            <div class="flex-shrink-0">
+                                <div class="w-10 h-10 rounded-full bg-blue-500 flex items-center justify-center text-white font-medium text-sm">
+                                    ${initials}
+                                </div>
+                            </div>
+                            <div class="flex-1">
+                                <div class="flex items-center gap-2 mb-1">
+                                    <span class="font-medium text-gray-900">${note.contractorName}</span>
+                                    <span class="text-sm text-gray-500">•</span>
+                                    <span class="text-sm text-gray-500">${date}</span>
+                                </div>
+                                <div class="text-sm text-gray-600 mb-1">${note.jobTitle}</div>
+                                <div class="text-gray-900">${note.text}</div>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            } catch (error) {
+                console.error('Error loading shelfer notes:', error);
+                notesEmpty.style.display = 'block';
+                notesContent.style.display = 'none';
+            }
+        }
+
+        // Load store coverage map - shows all stores where brand's products are located
+        async function loadStoreMap(jobs) {
+            try {
+                // Get brand_id
+                const urlParams = new URLSearchParams(window.location.search);
+                const brandId = urlParams.get('brand_id') || (await getBrandIdFromUser());
+                
+                if (!brandId) {
+                    document.getElementById('map-empty').style.display = 'block';
+                    return;
+                }
+                
+                // Get all stores from brand_stores (where brand's products are located)
+                const { data: brandStores, error: brandStoresError } = await supabase
+                    .from('brand_stores')
+                    .select('store_id')
+                    .eq('brand_id', brandId);
+                
+                if (brandStoresError) {
+                    console.error('Error loading brand_stores:', brandStoresError);
+                    document.getElementById('map-empty').style.display = 'block';
+                    return;
+                }
+                
+                if (!brandStores || brandStores.length === 0) {
+                    document.getElementById('map-empty').style.display = 'block';
+                    return;
+                }
+                
+                const storeIds = brandStores.map(bs => bs.store_id).filter(Boolean);
+                
+                // Get stores with lat/lng
+                const { data: stores, error } = await supabase
+                    .from('stores')
+                    .select('id, name, STORE, address, city, state, latitude, longitude')
+                    .in('id', storeIds)
+                    .not('latitude', 'is', null)
+                    .not('longitude', 'is', null);
+                
+                if (error || !stores || stores.length === 0) {
+                    console.error('Error loading stores:', error);
+                    document.getElementById('map-empty').style.display = 'block';
+                    return;
+                }
+                
+                // Get stores that have been audited (have jobs)
+                const jobIds = jobs.map(j => j.id);
+                let auditedStoreIds = new Set();
+                
+                if (jobIds.length > 0) {
+                    // Try job_store_skus
+                    try {
+                        const { data: jobStoreSkus } = await supabase
+                            .from('job_store_skus')
+                            .select('store_id')
+                            .in('job_id', jobIds);
+                        
+                        if (jobStoreSkus) {
+                            jobStoreSkus.forEach(js => {
+                                if (js.store_id) auditedStoreIds.add(js.store_id);
+                            });
+                        }
+                    } catch (e) {
+                        // Try job_stores as fallback
+                        try {
+                            const { data: jobStores } = await supabase
+                                .from('job_stores')
+                                .select('store_id')
+                                .in('job_id', jobIds);
+                            
+                            if (jobStores) {
+                                jobStores.forEach(js => {
+                                    if (js.store_id) auditedStoreIds.add(js.store_id);
+                                });
+                            }
+                        } catch (e2) {
+                            console.log('Could not determine audited stores');
+                        }
+                    }
+                }
+                
+                // Initialize map
+                const mapEl = document.getElementById('store-map');
+                const mapEmpty = document.getElementById('map-empty');
+                
+                mapEmpty.style.display = 'none';
+                mapEl.style.display = 'block';
+                
+                // Create map centered on first store
+                const firstStore = stores[0];
+                const map = L.map('store-map').setView(
+                    [firstStore.latitude, firstStore.longitude],
+                    stores.length === 1 ? 12 : 6
+                );
+                
+                // Add tile layer
+                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                    attribution: '© OpenStreetMap contributors',
+                    maxZoom: 19
+                }).addTo(map);
+                
+                // Create custom icons
+                const auditedIcon = L.divIcon({
+                    className: 'custom-marker audited',
+                    html: '<div style="background-color: #10b981; width: 20px; height: 20px; border-radius: 50%; border: 3px solid white; box-shadow: 0 2px 4px rgba(0,0,0,0.3);"></div>',
+                    iconSize: [20, 20],
+                    iconAnchor: [10, 10]
+                });
+                
+                const notAuditedIcon = L.divIcon({
+                    className: 'custom-marker not-audited',
+                    html: '<div style="background-color: #6b7280; width: 20px; height: 20px; border-radius: 50%; border: 3px solid white; box-shadow: 0 2px 4px rgba(0,0,0,0.3);"></div>',
+                    iconSize: [20, 20],
+                    iconAnchor: [10, 10]
+                });
+                
+                // Add markers for each store
+                stores.forEach(store => {
+                    const storeName = store.STORE || store.name || 'Store';
+                    const location = [store.city, store.state].filter(Boolean).join(', ');
+                    const address = store.address || '';
+                    const isAudited = auditedStoreIds.has(store.id);
+                    
+                    const popupContent = `
+                        <div style="min-width: 200px;">
+                            <div class="font-semibold text-gray-900 mb-1">${storeName}</div>
+                            ${location ? `<div class="text-sm text-gray-600 mb-1">${location}</div>` : ''}
+                            ${address ? `<div class="text-xs text-gray-500 mb-2">${address}</div>` : ''}
+                            <div class="text-xs ${isAudited ? 'text-green-600' : 'text-gray-500'} font-medium">
+                                ${isAudited ? '✓ Audited' : 'Not yet audited'}
+                            </div>
+                        </div>
+                    `;
+                    
+                    L.marker([store.latitude, store.longitude], {
+                        icon: isAudited ? auditedIcon : notAuditedIcon
+                    })
+                        .addTo(map)
+                        .bindPopup(popupContent);
+                });
+                
+                // Fit map to show all markers
+                if (stores.length > 1) {
+                    const bounds = stores.map(s => [s.latitude, s.longitude]);
+                    map.fitBounds(bounds, { padding: [50, 50] });
+                }
+                
+                // Add legend
+                const legend = L.control({ position: 'bottomright' });
+                legend.onAdd = function(map) {
+                    const div = L.DomUtil.create('div', 'map-legend');
+                    div.style.cssText = 'background: white; padding: 10px; border-radius: 5px; box-shadow: 0 2px 4px rgba(0,0,0,0.2); font-size: 12px;';
+                    div.innerHTML = `
+                        <div style="margin-bottom: 5px;"><strong>Store Status</strong></div>
+                        <div style="display: flex; align-items: center; margin-bottom: 3px;">
+                            <div style="width: 12px; height: 12px; background-color: #10b981; border-radius: 50%; margin-right: 5px; border: 2px solid white; box-shadow: 0 1px 2px rgba(0,0,0,0.2);"></div>
+                            <span>Audited</span>
+                        </div>
+                        <div style="display: flex; align-items: center;">
+                            <div style="width: 12px; height: 12px; background-color: #6b7280; border-radius: 50%; margin-right: 5px; border: 2px solid white; box-shadow: 0 1px 2px rgba(0,0,0,0.2);"></div>
+                            <span>Not yet audited</span>
+                        </div>
+                    `;
+                    return div;
+                };
+                legend.addTo(map);
+                
+            } catch (error) {
+                console.error('Error loading store map:', error);
+                document.getElementById('map-empty').style.display = 'block';
+            }
         }
 
         // Handle sign out
