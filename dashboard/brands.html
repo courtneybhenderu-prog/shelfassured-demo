@@ -26,10 +26,23 @@
         </div>
 
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+            <!-- Search and Filters -->
+            <div class="bg-white rounded-lg shadow p-6 mb-6">
+                <div class="flex flex-col sm:flex-row gap-4">
+                    <div class="flex-1">
+                        <input type="text" id="brand-search" placeholder="Search brands by name or website..." 
+                               class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    </div>
+                    <div class="text-sm text-gray-500 flex items-center">
+                        <span id="brand-count">Loading...</span>
+                    </div>
+                </div>
+            </div>
+
             <!-- Brands List -->
             <div class="bg-white rounded-lg shadow">
                 <div class="px-6 py-4 border-b border-gray-200">
-                    <h3 class="text-lg font-medium text-gray-900">Available Brands</h3>
+                    <h3 class="text-lg font-medium text-gray-900">All Brands</h3>
                 </div>
                 <div id="brands-list" class="p-6">
                     <div class="text-center text-gray-500">Loading brands...</div>
@@ -42,14 +55,34 @@
     <script src="../shared/api.js?v=20250113-4"></script>
     
     <script>
+        // Declare variables
+        let currentUser_brands = null;
+        let userProfile_brands = null;
+        let allBrandsList = [];
+
         // Initialize page
         document.addEventListener('DOMContentLoaded', async function() {
             console.log('🔧 Brands page initialized');
-            await checkAdminAccess();
+            
+            // Wait for Supabase to be available
+            let attempts = 0;
+            while (!window.supabase && attempts < 10) {
+                console.log('⏳ Waiting for Supabase to load...', attempts);
+                await new Promise(resolve => setTimeout(resolve, 100));
+                attempts++;
+            }
+            
+            if (!window.supabase) {
+                console.error('❌ Supabase failed to load');
+                window.location.href = '../auth/signin.html';
+                return;
+            }
+            
+            await checkUserAccess();
         });
 
-        // Check if user is admin
-        async function checkAdminAccess() {
+        // Check if user is authenticated
+        async function checkUserAccess() {
             try {
                 const { data: { user } } = await supabase.auth.getUser();
                 
@@ -59,7 +92,7 @@
                     return;
                 }
 
-                // Get user profile to check role
+                // Get user profile
                 const { data: profile, error } = await supabase
                     .from('users')
                     .select('role, full_name')
@@ -73,20 +106,16 @@
                     return;
                 }
 
-                if (profile.role !== 'admin') {
-                    alert('Access denied. Admin privileges required.');
-                    window.location.href = '../dashboard/shelfer.html';
-                    return;
-                }
-
+                currentUser_brands = user;
+                userProfile_brands = profile;
                 document.getElementById('user-info').textContent = `Welcome, ${profile.full_name || user.email}`;
-                console.log('✅ Admin access confirmed');
+                console.log('✅ User access confirmed');
                 
-                // Load brands after confirming admin access
+                // Load brands
                 await loadBrands();
                 
             } catch (error) {
-                console.error('Error checking admin access:', error);
+                console.error('Error checking user access:', error);
                 alert('Error checking permissions');
                 window.location.href = '../auth/signin.html';
             }
@@ -95,40 +124,180 @@
         // Load brands
         async function loadBrands() {
             try {
-                const brands = await saGet('brands', []);
-                displayBrands(brands);
+                console.log('🔄 Loading brands...');
+                const container = document.getElementById('brands-list');
+                if (!container) {
+                    console.error('❌ Brands container not found');
+                    return;
+                }
+                
+                const { data: brands, error } = await supabase
+                    .from('brands')
+                    .select('id, name, website, created_at, logo_url, description, contact_email, contact_phone, primary_email, phone, address')
+                    .order('created_at', { ascending: false })
+                    .limit(100);
+                
+                console.log('📊 Brands query result:', { data: brands, error: error });
+                
+                if (error) {
+                    console.error('❌ Error loading brands:', error);
+                    container.innerHTML = '<div class="text-center text-red-500 py-8">Error loading brands. Please check the console and refresh the page.</div>';
+                    return;
+                }
+                
+                allBrandsList = brands || [];
+                console.log('✅ Brands loaded:', allBrandsList.length);
+                
+                if (allBrandsList.length === 0) {
+                    console.warn('⚠️ No brands returned from query');
+                    container.innerHTML = '<div class="text-center text-gray-500 py-8">No brands found in database</div>';
+                    return;
+                }
+                
+                displayBrands(allBrandsList);
+                setupSearch();
+                
             } catch (error) {
-                console.error('Error loading brands:', error);
-                document.getElementById('brands-list').innerHTML = '<div class="text-center text-red-500">Error loading brands</div>';
+                console.error('❌ Exception loading brands:', error);
+                console.error('Exception stack:', error.stack);
+                const container = document.getElementById('brands-list');
+                if (container) {
+                    container.innerHTML = '<div class="text-center text-red-500 py-8">Error loading brands. Please refresh the page.</div>';
+                }
             }
         }
 
         // Display brands
         function displayBrands(brands) {
             const container = document.getElementById('brands-list');
+            const countElement = document.getElementById('brand-count');
+            
+            if (!container) {
+                console.error('❌ Brands container not found');
+                return;
+            }
+            
+            if (countElement) {
+                countElement.textContent = `${brands.length} brand${brands.length !== 1 ? 's' : ''}`;
+            }
             
             if (brands.length === 0) {
-                container.innerHTML = '<div class="text-center text-gray-500">No brands available</div>';
+                container.innerHTML = '<div class="text-center text-gray-500 py-8">No brands found</div>';
                 return;
             }
 
-            const brandsHtml = brands.map(brand => `
-                <div class="py-4 border-b border-gray-200 last:border-b-0">
+            console.log(`🎨 Displaying ${brands.length} brands in UI`);
+            
+            const brandsHtml = brands.map(brand => {
+                let logoHtml;
+                if (brand.logo_url) {
+                    // Fix URL encoding issues (spaces, etc.)
+                    let logoUrl = brand.logo_url;
+                    // Check if URL has unencoded spaces in bucket name path
+                    if (logoUrl.includes('/brand logos/')) {
+                        logoUrl = logoUrl.replace('/brand logos/', '/brand_logos/');
+                    }
+                    // Encode any remaining spaces in the URL
+                    logoUrl = encodeURI(logoUrl);
+                    
+                    // Create image with error handling
+                    const brandId = brand.id;
+                    logoHtml = `<img src="${escapeHtml(logoUrl)}" alt="${escapeHtml(brand.name)} logo" 
+                         class="w-16 h-16 object-contain rounded border border-gray-200 bg-white p-1"
+                         loading="lazy"
+                         data-brand-id="${brandId}"
+                         onerror="handleLogoError(this)">`;
+                } else {
+                    logoHtml = `<div class="w-16 h-16 flex items-center justify-center bg-gray-100 rounded border border-gray-200 text-gray-400 text-xs">No Logo</div>`;
+                }
+                
+                // Build contact info
+                const contactEmail = brand.contact_email || brand.primary_email || '';
+                const contactPhone = brand.contact_phone || brand.phone || '';
+                const contactInfo = [];
+                if (contactEmail) contactInfo.push(`Email: ${contactEmail}`);
+                if (contactPhone) contactInfo.push(`Phone: ${contactPhone}`);
+                
+                return `
+                <div class="py-4 border-b border-gray-200 last:border-b-0 hover:bg-gray-50 transition-colors">
                     <div class="flex items-start justify-between">
-                        <div class="flex-1">
-                            <div class="font-medium text-gray-900">${brand.name}</div>
-                            <div class="text-sm text-gray-600">${brand.description || 'No description'}</div>
-                            <div class="text-sm text-gray-500">Contact: ${brand.contact_email || 'No contact'}</div>
+                        <div class="flex items-start space-x-4 flex-1">
+                            ${logoHtml}
+                            <div class="flex-1">
+                                <a href="brand-client.html?brand_id=${brand.id}" class="font-medium text-blue-600 hover:text-blue-800 hover:underline text-lg">
+                                    ${escapeHtml(brand.name || 'Unnamed Brand')}
+                                </a>
+                                ${brand.description ? `<div class="text-sm text-gray-600 mt-1">${escapeHtml(brand.description)}</div>` : ''}
+                                ${brand.website ? `<div class="text-sm text-gray-500 mt-1">
+                                    <a href="${escapeHtml(brand.website)}" target="_blank" rel="noopener" class="text-blue-600 hover:underline">${escapeHtml(brand.website)}</a>
+                                </div>` : ''}
+                                ${contactInfo.length > 0 ? `<div class="text-sm text-gray-500 mt-1">${contactInfo.join(' · ')}</div>` : ''}
+                                ${brand.address ? `<div class="text-sm text-gray-500 mt-1">${escapeHtml(brand.address)}</div>` : ''}
+                                <div class="text-xs text-gray-400 mt-1">Created: ${brand.created_at ? new Date(brand.created_at).toLocaleDateString() : 'N/A'}</div>
+                            </div>
                         </div>
-                        <div class="text-right">
-                            <button class="btn-gray text-sm">View Details</button>
+                        <div class="flex items-center space-x-2 ml-4">
+                            <a href="brand-client.html?brand_id=${brand.id}" 
+                               class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium text-sm">
+                                View Dashboard
+                            </a>
                         </div>
                     </div>
                 </div>
-            `).join('');
+                `;
+            }).join('');
 
             container.innerHTML = brandsHtml;
         }
+
+        // Setup search functionality
+        function setupSearch() {
+            const searchInput = document.getElementById('brand-search');
+            if (!searchInput) {
+                console.warn('⚠️ Search input not found');
+                return;
+            }
+            
+            searchInput.addEventListener('input', function(e) {
+                const term = e.target.value.toLowerCase().trim();
+                console.log('🔍 Search term:', term);
+                
+                const filtered = term ? allBrandsList.filter(b => {
+                    const nameMatch = (b.name || '').toLowerCase().includes(term);
+                    const websiteMatch = (b.website || '').toLowerCase().includes(term);
+                    const descMatch = (b.description || '').toLowerCase().includes(term);
+                    const emailMatch = ((b.contact_email || '') + (b.primary_email || '')).toLowerCase().includes(term);
+                    return nameMatch || websiteMatch || descMatch || emailMatch;
+                }) : allBrandsList;
+                
+                console.log('✅ Filtered to', filtered.length, 'brands');
+                displayBrands(filtered);
+            });
+        }
+
+        // Helper function to escape HTML
+        function escapeHtml(text) {
+            if (!text) return '';
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+        
+        // Handle logo load errors
+        function handleLogoError(img) {
+            img.onerror = null;
+            console.error('❌ Logo failed to load for brand:', img.dataset.brandId);
+            img.style.display = 'none';
+            const placeholder = document.createElement('div');
+            placeholder.className = 'w-16 h-16 flex items-center justify-center bg-gray-100 rounded border border-gray-200 text-gray-400 text-xs';
+            placeholder.textContent = 'No Logo';
+            if (img.parentNode) {
+                img.parentNode.insertBefore(placeholder, img);
+            }
+        }
+        
+        // Make it globally accessible
+        window.handleLogoError = handleLogoError;
 
         // Handle sign out
         async function handleSignOut() {
@@ -149,12 +318,13 @@
         
         // Make it globally available
         window.goToPage = goToPage;
+        window.handleSignOut = handleSignOut;
     </script>
 
     <!-- Navigation -->
     <div class="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200">
         <div class="flex justify-around py-3">
-            <button onclick="goToPage('shelfer.html')" class="text-gray-500 hover:text-gray-700">Dashboard</button>
+            <button onclick="goToPage('brand-client.html')" class="text-gray-500 hover:text-gray-700">Dashboard</button>
             <button onclick="goToPage('jobs.html')" class="text-gray-500 hover:text-gray-700">Jobs</button>
             <button class="font-bold text-[#C62828]">Brands</button>
             <button onclick="goToPage('profile.html')" class="text-gray-500 hover:text-gray-700">Profile</button>
