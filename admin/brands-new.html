@@ -139,6 +139,30 @@
           <button class="btn ghost" id="addStore">+ Add Store</button>
         </div>
       </div>
+      
+      <!-- Smart Store Search -->
+      <div style="margin: 20px 0; padding: 15px; background: #f9fafb; border-radius: 8px;">
+        <label style="display: block; font-weight: 600; margin-bottom: 8px; color: #374151;">🔍 Search Existing Stores</label>
+        <div style="position: relative;">
+          <input 
+            type="text" 
+            id="store-search-input" 
+            placeholder="Type store number, name, city, or state (e.g., '12345', 'Whole Foods Austin TX', 'Houston TX')..."
+            style="width: 100%; padding: 10px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px;"
+          />
+          <div id="store-search-results" style="position: absolute; top: 100%; left: 0; right: 0; background: white; border: 1px solid #d1d5db; border-radius: 6px; margin-top: 4px; max-height: 400px; z-index: 1000; display: none; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+            <div id="search-results-header" style="display: flex; justify-content: space-between; align-items: center; padding: 8px 12px; border-bottom: 1px solid #e5e7eb; background: #f9fafb; position: sticky; top: 0; z-index: 10;">
+              <span id="result-count" style="font-size: 12px; color: #6b7280; font-weight: 500;">0 results</span>
+              <button id="scroll-to-bottom" class="scroll-btn" style="display: none; background: #3b82f6; color: white; border: none; padding: 4px 8px; border-radius: 4px; font-size: 11px; cursor: pointer; font-weight: 500;">↓ Scroll to Bottom</button>
+            </div>
+            <div id="search-results-list" style="max-height: 360px; overflow-y: auto; overflow-x: hidden;">
+              <!-- Search results will appear here -->
+            </div>
+          </div>
+        </div>
+        <p style="margin-top: 6px; font-size: 12px; color: #6b7280;">Search by any combination: store number, store name, city, or state</p>
+      </div>
+      
       <div id="stores" class="list"></div>
     </div>
 
@@ -267,6 +291,261 @@
 
       el('addProduct').onclick = (e)=>{ e.preventDefault(); addProductRow(); };
       el('addStore').onclick = (e)=>{ e.preventDefault(); addStoreRow(); };
+
+      // Smart Store Search functionality
+      let storeSearchTimeout;
+      const storeSearchInput = el('store-search-input');
+      const storeSearchResults = el('store-search-results');
+      let currentSearchResults = [];
+
+      // Parse search term to identify components (store number, name, city, state)
+      function parseStoreSearch(term) {
+        const trimmed = term.trim();
+        if (!trimmed) return { storeNumber: null, name: null, city: null, state: null, raw: '' };
+        
+        const parts = trimmed.split(/\s+/);
+        const result = { storeNumber: null, name: null, city: null, state: null, raw: trimmed };
+        
+        // State codes (2 letters)
+        const stateCodes = ['AL','AK','AZ','AR','CA','CO','CT','DE','DC','FL','GA','HI','ID','IL','IN','IA','KS','KY','LA','ME','MD','MA','MI','MN','MS','MO','MT','NE','NV','NH','NJ','NM','NY','NC','ND','OH','OK','OR','PA','RI','SC','SD','TN','TX','UT','VT','VA','WA','WV','WI','WY'];
+        const stateNames = ['alabama','alaska','arizona','arkansas','california','colorado','connecticut','delaware','district of columbia','florida','georgia','hawaii','idaho','illinois','indiana','iowa','kansas','kentucky','louisiana','maine','maryland','massachusetts','michigan','minnesota','mississippi','missouri','montana','nebraska','nevada','new hampshire','new jersey','new mexico','new york','north carolina','north dakota','ohio','oklahoma','oregon','pennsylvania','rhode island','south carolina','south dakota','tennessee','texas','utah','vermont','virginia','washington','west virginia','wisconsin','wyoming'];
+        
+        // Check for store number (all digits or starts with digits)
+        const storeNumMatch = trimmed.match(/^(\d+)/);
+        if (storeNumMatch) {
+          result.storeNumber = storeNumMatch[1];
+        }
+        
+        // Check for state (2-letter code or full name) - check from the end
+        let stateIndex = -1;
+        for (let i = parts.length - 1; i >= 0; i--) {
+          const part = parts[i].toUpperCase();
+          if (stateCodes.includes(part)) {
+            result.state = part;
+            stateIndex = i;
+            break;
+          }
+          const partLower = parts[i].toLowerCase();
+          const stateNameIndex = stateNames.indexOf(partLower);
+          if (stateNameIndex >= 0) {
+            result.state = stateCodes[stateNameIndex];
+            stateIndex = i;
+            break;
+          }
+        }
+        
+        // Remove state from parts if found
+        if (stateIndex >= 0) {
+          parts.splice(stateIndex, 1);
+        }
+        
+        // Now process remaining parts - simple rule: if state was found, remaining parts are store name
+        if (parts.length > 0) {
+          result.name = parts.join(' ');
+        }
+        
+        return result;
+      }
+
+      // Search stores in database
+      async function searchStores(searchTerm) {
+        if (!searchTerm || !searchTerm.trim()) {
+          storeSearchResults.style.display = 'none';
+          currentSearchResults = [];
+          return;
+        }
+
+        const parsed = parseStoreSearch(searchTerm);
+        console.log('🔍 Parsed search:', parsed);
+
+        try {
+          let query = supabase
+            .from('stores')
+            .select('id, name, STORE, address, city, state, zip_code, store_number, banner')
+            .eq('is_active', true)
+            .not('STORE', 'is', null)
+            .neq('STORE', '');
+
+          // Build query based on parsed components
+          if (parsed.storeNumber) {
+            query = query.ilike('store_number', `${parsed.storeNumber}%`);
+          }
+          
+          if (parsed.state) {
+            query = query.eq('state', parsed.state);
+          }
+          
+          if (parsed.city) {
+            query = query.ilike('city', `%${parsed.city}%`);
+          }
+          
+          if (parsed.name) {
+            // Normalize banner name variations (e.g., "HEB" matches "H-E-B", "HEB", "H E B")
+            // ILIKE with %term% should match substrings, but we'll also try normalized versions
+            const namePattern = `%${parsed.name}%`;
+            const normalizedName = parsed.name.replace(/[- ]/g, '').toUpperCase();
+            
+            // Search in STORE, name, and banner columns using OR
+            // The .or() here only applies to these three columns, and is ANDed with state/city filters above
+            // For banner column, also try normalized version (HEB matches H-E-B)
+            if (normalizedName !== parsed.name.toUpperCase() && normalizedName.length >= 2) {
+              // Add normalized pattern for banner (e.g., "HEB" also matches "H-E-B")
+              query = query.or(`STORE.ilike.${namePattern},name.ilike.${namePattern},banner.ilike.${namePattern},banner.ilike.%${normalizedName}%`);
+            } else {
+              query = query.or(`STORE.ilike.${namePattern},name.ilike.${namePattern},banner.ilike.${namePattern}`);
+            }
+          }
+          
+          // If no specific components found, do general search
+          if (!parsed.storeNumber && !parsed.state && !parsed.city && !parsed.name) {
+            const searchPattern = `%${searchTerm}%`;
+            query = query.or(`STORE.ilike.${searchPattern},name.ilike.${searchPattern},city.ilike.${searchPattern},state.ilike.${searchPattern},store_number.ilike.${searchPattern}`);
+          }
+
+          const { data, error } = await query;
+
+          if (error) {
+            console.error('Search error:', error);
+            console.error('Error details:', JSON.stringify(error, null, 2));
+            return;
+          }
+
+          console.log(`✅ Found ${data?.length || 0} stores matching search`);
+          currentSearchResults = data || [];
+          renderStoreSearchResults();
+        } catch (error) {
+          console.error('Search failed:', error);
+        }
+      }
+
+      // Render search results in dropdown
+      function renderStoreSearchResults() {
+        const resultsList = el('search-results-list');
+        const resultCount = el('result-count');
+        const scrollBtn = el('scroll-to-bottom');
+        
+        if (currentSearchResults.length === 0) {
+          storeSearchResults.style.display = 'none';
+          return;
+        }
+
+        // Update result count
+        const count = currentSearchResults.length;
+        resultCount.textContent = `${count} ${count === 1 ? 'result' : 'results'}`;
+
+        // Clear previous results
+        resultsList.innerHTML = '';
+        
+        // Render all results
+        currentSearchResults.forEach(store => {
+          const item = document.createElement('div');
+          item.style.cssText = 'padding: 12px; cursor: pointer; border-bottom: 1px solid #e5e7eb;';
+          item.onmouseenter = () => item.style.background = '#f3f4f6';
+          item.onmouseleave = () => item.style.background = 'white';
+          
+          const storeName = store.STORE || store.name || 'Unknown Store';
+          const location = [store.city, store.state].filter(Boolean).join(', ');
+          const storeNum = store.store_number ? `#${store.store_number}` : '';
+          
+          item.innerHTML = `
+            <div style="font-weight: 600; color: #111827;">${storeName}</div>
+            <div style="font-size: 12px; color: #6b7280; margin-top: 4px;">
+              ${location} ${storeNum ? '• ' + storeNum : ''}
+            </div>
+            ${store.address ? `<div style="font-size: 11px; color: #9ca3af; margin-top: 2px;">${store.address}</div>` : ''}
+          `;
+          
+          item.onclick = () => {
+            selectStoreFromSearch(store);
+          };
+          
+          resultsList.appendChild(item);
+        });
+
+        // Show dropdown
+        storeSearchResults.style.display = 'block';
+        
+        // Check if scroll button is needed
+        setTimeout(() => {
+          const listElement = resultsList;
+          const needsScroll = listElement.scrollHeight > listElement.clientHeight;
+          scrollBtn.style.display = needsScroll ? 'block' : 'none';
+        }, 100);
+      }
+
+      // Select store from search results and populate form
+      function selectStoreFromSearch(store) {
+        // Add a new store row
+        addStoreRow();
+        const lastRow = stores.lastElementChild;
+        
+        // Populate fields
+        const retailerInput = lastRow.querySelector('[data-k="retailer"]');
+        const nameInput = lastRow.querySelector('[data-k="name"]');
+        const addressInput = lastRow.querySelector('[data-k="address"]');
+        const cityInput = lastRow.querySelector('[data-k="city"]');
+        const stateZipInput = lastRow.querySelector('[data-k="state_zip"]');
+        
+        if (retailerInput) retailerInput.value = store.banner || '';
+        if (nameInput) nameInput.value = store.name || store.STORE || '';
+        if (addressInput) addressInput.value = store.address || '';
+        if (cityInput) cityInput.value = store.city || '';
+        if (stateZipInput) stateZipInput.value = [store.state, store.zip_code].filter(Boolean).join(' ');
+        
+        // Clear search
+        storeSearchInput.value = '';
+        storeSearchResults.style.display = 'none';
+        currentSearchResults = [];
+        
+        console.log('✅ Store added from search:', store.name || store.STORE);
+      }
+
+      // Setup search input with debouncing
+      if (storeSearchInput) {
+        storeSearchInput.addEventListener('input', (e) => {
+          clearTimeout(storeSearchTimeout);
+          const value = e.target.value.trim();
+          
+          storeSearchTimeout = setTimeout(() => {
+            if (value.length >= 2) {
+              searchStores(value);
+            } else {
+              storeSearchResults.style.display = 'none';
+              currentSearchResults = [];
+            }
+          }, 300);
+        });
+
+        // Setup scroll to bottom button
+        const scrollBtn = el('scroll-to-bottom');
+        if (scrollBtn) {
+          scrollBtn.addEventListener('click', () => {
+            const resultsList = el('search-results-list');
+            if (resultsList) {
+              resultsList.scrollTo({
+                top: resultsList.scrollHeight,
+                behavior: 'smooth'
+              });
+            }
+          });
+        }
+
+        // Hide dropdown when clicking outside
+        document.addEventListener('click', (e) => {
+          if (!storeSearchInput.contains(e.target) && !storeSearchResults.contains(e.target)) {
+            storeSearchResults.style.display = 'none';
+          }
+        });
+
+        // Handle Escape key
+        storeSearchInput.addEventListener('keydown', (e) => {
+          if (e.key === 'Escape') {
+            storeSearchInput.value = '';
+            storeSearchResults.style.display = 'none';
+            currentSearchResults = [];
+          }
+        });
+      }
 
       // CSV Upload functionality
       el('uploadProducts').onclick = (e)=>{ e.preventDefault(); el('productsCsv').click(); };
