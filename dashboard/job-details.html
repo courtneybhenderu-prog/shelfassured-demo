@@ -246,13 +246,65 @@
         };
         
         // Compose display strings
-        const storeHeader = first
-          ? `${first.store_chain} — ${first.store_name}`
-          : 'Unknown Store';
+        // Build store display: prefer store_name, fallback to address components
+        let storeHeader = 'Unknown Store';
+        if (first) {
+          const chain = first.store_chain || '';
+          const name = first.store_name || '';
+          
+          // If we have store_name, use it
+          if (name) {
+            storeHeader = chain ? `${chain} — ${name}` : name;
+          } else {
+            // Fallback to address components
+            const addressParts = [
+              first.store_address,
+              first.store_city,
+              first.store_state
+            ].filter(Boolean);
+            
+            if (addressParts.length > 0) {
+              storeHeader = chain 
+                ? `${chain} — ${addressParts.join(', ')}`
+                : addressParts.join(', ');
+            } else if (chain) {
+              storeHeader = chain;
+            }
+          }
+        }
 
-        const skuHeader = first
-          ? `${first.brand_name ? first.brand_name + ' — ' : ''}${first.sku_name}`
-          : 'Unknown SKU';
+        // Build SKU display with full details (name, size, flavor, UPC)
+        let skuHeader = 'Unknown SKU';
+        if (first) {
+          const parts = [];
+          
+          // Brand name (if available and different from SKU name)
+          if (first.brand_name) {
+            parts.push(first.brand_name);
+          }
+          
+          // SKU name
+          if (first.sku_name) {
+            parts.push(first.sku_name);
+          }
+          
+          // Size (e.g., "12 pack", "6 pack")
+          if (first.sku_size) {
+            parts.push(first.sku_size);
+          }
+          
+          // Flavor (if different from name)
+          if (first.sku_flavor && first.sku_flavor.toLowerCase() !== first.sku_name?.toLowerCase()) {
+            parts.push(first.sku_flavor);
+          }
+          
+          skuHeader = parts.length > 0 ? parts.join(' — ') : 'Unknown SKU';
+          
+          // Add UPC if available (in parentheses)
+          if (first.sku_code) {
+            skuHeader += ` (UPC: ${first.sku_code})`;
+          }
+        }
 
         // Update the DOM
         document.getElementById('jobId').textContent = first.job_title || 'Untitled Job';
@@ -273,10 +325,53 @@
             assignmentList.innerHTML = '';
             assignments.forEach(assignment => {
               const li = document.createElement('li');
-              li.textContent = 
-                `${assignment.store_chain} — ${assignment.store_name}: ` +
-                `${assignment.brand_name ? assignment.brand_name + ' — ' : ''}${assignment.sku_name}` +
-                `${assignment.sku_code ? ' (UPC ' + assignment.sku_code + ')' : ''}`;
+              
+              // Build store display with fallback
+              let storeDisplay = '';
+              const chain = assignment.store_chain || '';
+              const name = assignment.store_name || '';
+              
+              if (name) {
+                storeDisplay = chain ? `${chain} — ${name}` : name;
+              } else {
+                const addressParts = [
+                  assignment.store_address,
+                  assignment.store_city,
+                  assignment.store_state
+                ].filter(Boolean);
+                
+                if (addressParts.length > 0) {
+                  storeDisplay = chain 
+                    ? `${chain} — ${addressParts.join(', ')}`
+                    : addressParts.join(', ');
+                } else if (chain) {
+                  storeDisplay = chain;
+                } else {
+                  storeDisplay = 'Unknown Store';
+                }
+              }
+              
+              // Build SKU display with full details
+              const skuParts = [];
+              if (assignment.brand_name) {
+                skuParts.push(assignment.brand_name);
+              }
+              if (assignment.sku_name) {
+                skuParts.push(assignment.sku_name);
+              }
+              if (assignment.sku_size) {
+                skuParts.push(assignment.sku_size);
+              }
+              if (assignment.sku_flavor && assignment.sku_flavor.toLowerCase() !== assignment.sku_name?.toLowerCase()) {
+                skuParts.push(assignment.sku_flavor);
+              }
+              
+              let skuDisplay = skuParts.length > 0 ? skuParts.join(' — ') : 'Unknown SKU';
+              if (assignment.sku_code) {
+                skuDisplay += ` (UPC: ${assignment.sku_code})`;
+              }
+              
+              li.textContent = `${storeDisplay}: ${skuDisplay}`;
               assignmentList.appendChild(li);
             });
           }
