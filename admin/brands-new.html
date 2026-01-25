@@ -942,7 +942,27 @@
       async function saveAll(){
         err.textContent = ''; ok.textContent = ''; stat.textContent=''; viewBrand.style.display='none';
 
-        const name = document.getElementById('brand_name').value.trim();
+        let name = document.getElementById('brand_name').value.trim();
+        
+        // If name is empty but we have a brand ID, fetch the brand name from database
+        if(!name) {
+          const existingBrandId = document.getElementById('brand_id').value;
+          if (existingBrandId) {
+            const { data: brandData, error: brandErr } = await supabase
+              .from('brands')
+              .select('name')
+              .eq('id', existingBrandId)
+              .single();
+            
+            if (!brandErr && brandData && brandData.name) {
+              name = brandData.name.trim();
+              // Also update the input field
+              document.getElementById('brand_name').value = name;
+              console.log('✅ Fetched brand name from database:', name);
+            }
+          }
+        }
+        
         if(!name){ err.textContent='Brand name is required.'; return; }
         const site = document.getElementById('brand_site').value.trim() || null;
         const email = document.getElementById('brand_email').value.trim() || null;
@@ -1126,17 +1146,21 @@
           // Select fields
           const { data: existingProduct } = await supabase
             .from('products')
-            .select('id, name, upc, sku, suggested_retail_price')
+            .select('id, name, upc, sku, suggested_retail_price, size')
             .eq('sku', sku)
             .maybeSingle();
           
           let productId;
           
           if (existingProduct) {
-            // Product exists - update suggested_retail_price if provided and not already set
+            // Product exists - update missing fields if provided
             const updateData = {};
             if (p.suggested_retail_price && !existingProduct.suggested_retail_price) {
               updateData.suggested_retail_price = p.suggested_retail_price;
+            }
+            // Update size if provided and product doesn't have one
+            if (p.size && p.size.trim() && !existingProduct.size) {
+              updateData.size = p.size.trim();
             }
             
             if (Object.keys(updateData).length > 0) {
@@ -1173,14 +1197,20 @@
           } else {
             // Product doesn't exist - create product with all available fields
             // Note: barcode column is required (NOT NULL), so we use sku/upc value
-            const productData = {
-              sku: sku,
-              name: productName,
-              upc: productUPC,
-              barcode: barcodeValue, // Required field - MUST be provided
-              category: p.category || null, // Don't default to 'General' - it's not in the dropdown
-              suggested_retail_price: p.suggested_retail_price || null
-            };
+            // Note: brand column is required (NOT NULL) - use brand name from form
+            // Note: category column is required (NOT NULL) - provide default if missing
+            
+            // Validate brand name is available
+            if (!name || typeof name !== 'string' || name.trim() === '') {
+              err.textContent = `Product error: Brand name is required. Please enter a brand name in the form.`;
+              console.error('❌ Brand name validation failed:', { 
+                name, 
+                type: typeof name, 
+                trimmed: name?.trim(),
+                productName
+              });
+              return;
+            }
             
             // Final validation: Ensure barcode is not null, undefined, or empty
             if (!barcodeValue || typeof barcodeValue !== 'string' || barcodeValue.trim() === '') {
@@ -1195,9 +1225,98 @@
               return;
             }
             
-            // Debug: Log what we're inserting
+            // Ensure category has a value (required NOT NULL)
+            const categoryValue = p.category && p.category.trim() ? p.category.trim() : 'General';
+            
+            // Ensure we have a valid brand name - use the name variable from saveAll scope
+            let brandNameValue = (name && typeof name === 'string' && name.trim()) ? name.trim() : '';
+            
+            console.log('🔍 Brand name check - name variable:', name, 'type:', typeof name, 'trimmed:', name?.trim());
+            
+            if (!brandNameValue) {
+              // Last resort: try to get it from the input field again
+              const nameInput = document.getElementById('brand_name');
+              const nameFromInput = nameInput ? nameInput.value.trim() : '';
+              console.log('🔍 Brand name check - input field value:', nameFromInput);
+              if (nameFromInput) {
+                brandNameValue = nameFromInput;
+                console.log('⚠️ Using brand name from input field as fallback:', brandNameValue);
+              } else {
+                // Final fallback: fetch from database using brand ID
+                const existingBrandId = document.getElementById('brand_id').value;
+                if (existingBrandId) {
+                  console.log('🔍 Attempting to fetch brand name from database for ID:', existingBrandId);
+                  const { data: brandData, error: brandErr } = await supabase
+                    .from('brands')
+                    .select('name')
+                    .eq('id', existingBrandId)
+                    .single();
+                  
+                  if (!brandErr && brandData && brandData.name) {
+                    brandNameValue = brandData.name.trim();
+                    console.log('✅ Fetched brand name from database:', brandNameValue);
+                  } else {
+                    err.textContent = `Product error: Brand name is required but could not be determined for product "${productName}". Please ensure the brand name is set.`;
+                    console.error('❌ Brand name is completely missing:', { 
+                      name: name,
+                      nameType: typeof name,
+                      nameInput: nameInput,
+                      nameFromInput: nameFromInput,
+                      existingBrandId: existingBrandId,
+                      brandData: brandData,
+                      brandErr: brandErr,
+                      productName
+                    });
+                    return;
+                  }
+                } else {
+                  err.textContent = `Product error: Brand name is required but could not be determined for product "${productName}". Please ensure the brand name is set.`;
+                  console.error('❌ Brand name is completely missing:', { 
+                    name: name,
+                    nameType: typeof name,
+                    nameInput: nameInput,
+                    nameFromInput: nameFromInput,
+                    productName
+                  });
+                  return;
+                }
+              }
+            }
+            
+            console.log('✅ Final brandNameValue to use:', brandNameValue);
+            
+            const productData = {
+              sku: sku,
+              name: productName,
+              upc: productUPC,
+              barcode: barcodeValue, // Required field - MUST be provided
+              brand: brandNameValue, // Required field - brand name (NOT NULL constraint)
+              category: categoryValue, // Required field - provide default 'General' if missing (NOT NULL constraint)
+              size: p.size && p.size.trim() ? p.size.trim() : null, // Size field (optional)
+              suggested_retail_price: p.suggested_retail_price || null
+            };
+            
+            // Final validation: Ensure brand is in productData and not null/undefined
+            if (!productData.brand || productData.brand.trim() === '') {
+              err.textContent = `Product error: Brand name is missing for product "${productName}". This is a required field.`;
+              console.error('❌ Brand field validation failed in productData:', { 
+                productData,
+                brand: productData.brand,
+                brandNameValue: brandNameValue,
+                name: name,
+                productName
+              });
+              return;
+            }
+            
+            // Debug: Log what we're inserting - log the exact object being sent
             console.log('✅ Inserting product with data:', productData);
+            console.log('✅ Brand name variable (name):', name, 'Type:', typeof name);
+            console.log('✅ Brand in productData:', productData.brand, 'Type:', typeof productData.brand, 'Length:', productData.brand?.length);
             console.log('✅ Barcode value:', barcodeValue, 'Type:', typeof barcodeValue);
+            console.log('✅ Category value:', categoryValue);
+            console.log('✅ ProductData has brand field?', 'brand' in productData);
+            console.log('✅ ProductData brand value is truthy?', !!productData.brand);
             
             const { data: newProduct, error: insErr } = await supabase
               .from('products')
@@ -1473,6 +1592,7 @@
                 
                 // Load existing products and brand data (logo, website, address) for this brand
                 loadBrandProducts(brand.id);
+                loadBrandStores(brand.id);
                 loadBrandData(brand.id);
               });
               brandSuggestions.appendChild(div);
@@ -1516,7 +1636,7 @@
         // Try the JOIN query first (more efficient)
         let { data: brandProducts, error } = await supabase
           .from('brand_products')
-          .select('products(id, name, sku, upc), product_label')
+          .select('products(id, name, sku, upc, size, suggested_retail_price, category), product_label')
           .eq('brand_id', brandId);
         
         // If JOIN fails, try fetching separately (fallback)
@@ -1541,7 +1661,7 @@
             const productIds = bpData.map(bp => bp.product_id).filter(id => id);
             const { data: productsData, error: pError } = await supabase
               .from('products')
-              .select('id, name, sku, upc')
+              .select('id, name, sku, upc, size, suggested_retail_price, category')
               .in('id', productIds);
             
             if (pError) {
@@ -1591,11 +1711,24 @@
               return;
             }
             
+            // Debug: Log the product object to see what fields are available
+            console.log(`🔍 Loading product ${index}:`, {
+              id: product.id,
+              name: product.name,
+              size: product.size,
+              sizeType: typeof product.size,
+              hasSize: 'size' in product,
+              allKeys: Object.keys(product)
+            });
+            
             addProductRow();
             const lastRow = products.lastElementChild;
             if (lastRow) {
               const nameInput = lastRow.querySelector('[data-k="name"]');
               const barcodeInput = lastRow.querySelector('[data-k="barcode"]');
+              const sizeInput = lastRow.querySelector('[data-k="size"]');
+              const priceInput = lastRow.querySelector('[data-k="suggested_retail_price"]');
+              const categorySelect = lastRow.querySelector('[data-k="category"]');
               
               if (nameInput) {
                 nameInput.value = bp.product_label || product.name || '';
@@ -1603,9 +1736,31 @@
               if (barcodeInput) {
                 barcodeInput.value = product.sku || product.upc || '';
               }
+              if (sizeInput) {
+                // Set size value even if it's empty/null (to clear the field)
+                sizeInput.value = product.size || '';
+                if (product.size) {
+                  console.log(`  ✓ Set size for ${product.name}: "${product.size}"`);
+                } else {
+                  console.log(`  ⚠️ No size value for ${product.name} (product.size = ${product.size})`);
+                }
+              } else {
+                console.warn(`  ⚠️ Size input not found for product ${product.name}`);
+              }
+              if (priceInput && product.suggested_retail_price) {
+                priceInput.value = product.suggested_retail_price;
+              }
+              if (categorySelect && product.category) {
+                // Set the category select value (dropdown is already populated in addProductRow)
+                categorySelect.value = product.category;
+                // Verify the value was set correctly
+                if (categorySelect.value !== product.category) {
+                  console.warn(`⚠️ Category "${product.category}" not found in dropdown for product ${product.name}. Available options:`, Array.from(categorySelect.options).map(o => o.value));
+                }
+              }
               
               addedCount++;
-              console.log(`  ✓ Added product: ${bp.product_label || product.name || 'Unknown'}`);
+              console.log(`  ✓ Added product: ${bp.product_label || product.name || 'Unknown'} (size: ${product.size || 'N/A'}, price: ${product.suggested_retail_price || 'N/A'}, category: ${product.category || 'N/A'})`);
             } else {
               console.error(`❌ Failed to add product row for product ${index}`);
             }
@@ -1617,6 +1772,164 @@
           console.log('ℹ️ No products found for this brand');
           stat.textContent = 'No products found for this brand';
           setTimeout(() => { stat.textContent = ''; }, 3000);
+        }
+      }
+      
+      // Load stores for existing brand when selected
+      async function loadBrandStores(brandId) {
+        console.log('🏪 Loading stores for brand ID:', brandId);
+        
+        if (!stores) {
+          console.error('❌ Stores container element not found');
+          return;
+        }
+        
+        // Try the JOIN query first (more efficient)
+        let { data: brandStores, error } = await supabase
+          .from('brand_stores')
+          .select('stores(id, name, STORE, address, city, state, zip_code, metro, METRO, banner_id), source')
+          .eq('brand_id', brandId);
+        
+        // If JOIN fails, try fetching separately (fallback)
+        if (error) {
+          console.warn('⚠️ JOIN query failed, trying separate queries:', error.message);
+          
+          // Fetch brand_stores without JOIN
+          const { data: bsData, error: bsError } = await supabase
+            .from('brand_stores')
+            .select('store_id, source')
+            .eq('brand_id', brandId);
+          
+          if (bsError) {
+            console.error('❌ Error loading brand stores:', bsError);
+            return;
+          }
+          
+          if (bsData && bsData.length > 0) {
+            // Fetch stores separately
+            const storeIds = bsData.map(bs => bs.store_id).filter(id => id);
+            const { data: storesData, error: sError } = await supabase
+              .from('stores')
+              .select('id, name, STORE, address, city, state, zip_code, metro, METRO, banner_id')
+              .in('id', storeIds);
+            
+            if (sError) {
+              console.error('❌ Error loading stores:', sError);
+              return;
+            }
+            
+            // Combine the data
+            brandStores = bsData.map(bs => {
+              const store = storesData?.find(s => s.id === bs.store_id);
+              return {
+                stores: store,
+                source: bs.source
+              };
+            }).filter(bs => bs.stores); // Only include if store found
+            
+            error = null; // Clear error since we succeeded with fallback
+          } else {
+            brandStores = [];
+            error = null;
+          }
+        }
+        
+        if (error) {
+          console.error('❌ Error loading brand stores:', error);
+          return;
+        }
+        
+        console.log('📊 Brand stores query result:', { data: brandStores, count: brandStores?.length || 0 });
+        
+        if (brandStores && brandStores.length > 0) {
+          // Clear existing store rows
+          stores.innerHTML = '';
+          
+          console.log(`✅ Found ${brandStores.length} stores, adding to form...`);
+          
+          // Get banner names for retailer field
+          const bannerIds = [...new Set(brandStores
+            .map(bs => bs.stores?.banner_id)
+            .filter(Boolean))];
+          
+          let bannerMap = {};
+          if (bannerIds.length > 0) {
+            try {
+              const { data: banners } = await supabase
+                .from('retailer_banners')
+                .select('id, name')
+                .in('id', bannerIds);
+              
+              if (banners) {
+                banners.forEach(b => {
+                  bannerMap[b.id] = b.name;
+                });
+              }
+            } catch (e) {
+              console.warn('⚠️ Could not load banner names:', e);
+            }
+          }
+          
+          // Add existing stores to form
+          let addedCount = 0;
+          brandStores.forEach((bs, index) => {
+            const store = bs.stores;
+            if (!store) {
+              console.warn(`⚠️ Brand store ${index} has no associated store record`);
+              return;
+            }
+            
+            addStoreRow();
+            const lastRow = stores.lastElementChild;
+            if (lastRow) {
+              const retailerInput = lastRow.querySelector('[data-k="retailer"]');
+              const nameInput = lastRow.querySelector('[data-k="name"]');
+              const addressInput = lastRow.querySelector('[data-k="address"]');
+              const cityInput = lastRow.querySelector('[data-k="city"]');
+              const stateZipInput = lastRow.querySelector('[data-k="state_zip"]');
+              const metroInput = lastRow.querySelector('[data-k="metro"]');
+              
+              // Set retailer (banner name)
+              if (retailerInput && store.banner_id) {
+                retailerInput.value = bannerMap[store.banner_id] || '';
+              }
+              
+              // Set store name
+              if (nameInput) {
+                nameInput.value = store.STORE || store.name || '';
+              }
+              
+              // Set address
+              if (addressInput) {
+                addressInput.value = store.address || '';
+              }
+              
+              // Set city
+              if (cityInput) {
+                cityInput.value = store.city || '';
+              }
+              
+              // Set state & zip
+              if (stateZipInput) {
+                const stateZip = [store.state, store.zip_code].filter(Boolean).join(' ');
+                stateZipInput.value = stateZip;
+              }
+              
+              // Set metro
+              if (metroInput) {
+                metroInput.value = store.METRO || store.metro || '';
+              }
+              
+              addedCount++;
+              console.log(`  ✓ Added store: ${store.STORE || store.name || 'Unknown'}`);
+            } else {
+              console.error(`❌ Failed to add store row for store ${index}`);
+            }
+          });
+          
+          console.log(`✅ Loaded ${addedCount} store${addedCount !== 1 ? 's' : ''} for this brand`);
+        } else {
+          console.log('ℹ️ No stores found for this brand');
         }
       }
       
@@ -1751,6 +2064,9 @@
               
               // Load products
               loadBrandProducts(brandIdFromUrl);
+              
+              // Load stores
+              loadBrandStores(brandIdFromUrl);
             } else {
               console.error('❌ Error loading brand from URL:', error);
             }
