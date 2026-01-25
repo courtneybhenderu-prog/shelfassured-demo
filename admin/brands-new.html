@@ -723,22 +723,47 @@
         return Array.from(products.querySelectorAll('.pill')).map(card=>{
           const get = k => {
             const el = card.querySelector(`[data-k="${k}"]`);
-            if (!el) return '';
+            if (!el) {
+              console.warn(`Field not found: ${k}`);
+              return '';
+            }
             // Handle both input and select elements
-            return el.value ? el.value.trim() : '';
+            const value = el.value ? el.value.trim() : '';
+            if (k === 'barcode' && value) {
+              console.log(`✅ Found barcode value: "${value}" for product`);
+            }
+            return value;
           };
           const getNum = k => {
             const val = card.querySelector(`[data-k="${k}"]`)?.value;
             return val ? parseFloat(val) : null;
           };
-          return {
+          const productData = {
             name: get('name'),
-            barcode: get('barcode'),
+            barcode: get('barcode'), // This should get the UPC value from the form
             size: get('size')||null,
             category: get('category')||null,
             suggested_retail_price: getNum('suggested_retail_price'),
           };
-        }).filter(p=>p.name && p.barcode);
+          
+          // Debug: Log what we're reading from form
+          if (productData.name) {
+            console.log('📋 Read product from form:', productData);
+            if (!productData.barcode || productData.barcode === '') {
+              console.error('❌ WARNING: Product has name but no barcode!', productData);
+            }
+          }
+          
+          return productData;
+        }).filter(p=>{
+          // Filter out products without name or barcode
+          const hasName = p.name && p.name.trim() !== '';
+          const hasBarcode = p.barcode && p.barcode.trim() !== '';
+          if (!hasName || !hasBarcode) {
+            console.warn('Filtering out product missing name or barcode:', p);
+          }
+          return hasName && hasBarcode;
+        });
       }
       function readStores(){
         return Array.from(stores.querySelectorAll('.pill')).map(card=>{
@@ -1076,14 +1101,26 @@
         const duplicateSkus = []; // Track duplicates to warn user
         
         for(const p of prodList){
-          const sku = (p.barcode || p.sku || '').trim();
+          // Extract barcode/SKU - prioritize barcode field from form
+          const rawBarcode = (p.barcode || p.sku || '').trim();
           const productName = (p.name || '').trim();
-          const productUPC = sku; // UPC is same as SKU in our schema
           
-          if(!sku || !productName) {
-            console.warn('Skipping product with missing SKU or name');
+          // Debug logging
+          console.log('Processing product:', { 
+            name: productName, 
+            barcode: rawBarcode, 
+            p: p 
+          });
+          
+          if(!rawBarcode || !productName) {
+            console.warn('Skipping product with missing SKU/barcode or name:', { name: productName, barcode: rawBarcode });
             continue;
           }
+          
+          // Use barcode value for all fields (sku, upc, barcode)
+          const sku = rawBarcode;
+          const productUPC = rawBarcode;
+          const barcodeValue = rawBarcode; // Required field in products table
           
           // Step 1: Check if product exists by SKU (globally unique)
           // Select fields
@@ -1135,15 +1172,36 @@
             }
           } else {
             // Product doesn't exist - create product with all available fields
+            // Note: barcode column is required (NOT NULL), so we use sku/upc value
+            const productData = {
+              sku: sku,
+              name: productName,
+              upc: productUPC,
+              barcode: barcodeValue, // Required field - MUST be provided
+              category: p.category || null, // Don't default to 'General' - it's not in the dropdown
+              suggested_retail_price: p.suggested_retail_price || null
+            };
+            
+            // Final validation: Ensure barcode is not null, undefined, or empty
+            if (!barcodeValue || typeof barcodeValue !== 'string' || barcodeValue.trim() === '') {
+              err.textContent = `Product error: Barcode/UPC is required for product "${productName}". Please enter a UPC in the form.`;
+              console.error('❌ Barcode validation failed:', { 
+                barcodeValue, 
+                type: typeof barcodeValue, 
+                trimmed: barcodeValue?.trim(),
+                productName,
+                p: p
+              });
+              return;
+            }
+            
+            // Debug: Log what we're inserting
+            console.log('✅ Inserting product with data:', productData);
+            console.log('✅ Barcode value:', barcodeValue, 'Type:', typeof barcodeValue);
+            
             const { data: newProduct, error: insErr } = await supabase
               .from('products')
-              .insert({
-                sku: sku,
-                name: productName,
-                upc: productUPC,
-                category: p.category || null, // Don't default to 'General' - it's not in the dropdown
-                suggested_retail_price: p.suggested_retail_price || null
-              })
+              .insert(productData)
               .select('id')
               .single();
             
@@ -1373,6 +1431,17 @@
       const brandSuggestions = el('brand-suggestions');
       const brandNameInput = el('brand_name');
       const brandIdInput = el('brand_id');
+      const saveAllButton = el('saveAll');
+      
+      // Function to update button text based on whether editing or creating
+      function updateSaveButtonText() {
+        const existingBrandId = brandIdInput.value;
+        if (existingBrandId) {
+          saveAllButton.textContent = 'Save Brand Changes';
+        } else {
+          saveAllButton.textContent = 'Deploy ShelfAssured';
+        }
+      }
       
       if (brandSearch) {
         brandSearch.addEventListener('input', function(e) {
@@ -1399,6 +1468,9 @@
                 brandSearch.value = brand.name;
                 brandSuggestions.classList.add('hidden');
                 
+                // Update button text to indicate we're editing
+                updateSaveButtonText();
+                
                 // Load existing products and brand data (logo, website, address) for this brand
                 loadBrandProducts(brand.id);
                 loadBrandData(brand.id);
@@ -1413,6 +1485,22 @@
         
         brandSearch.addEventListener('blur', function() {
           setTimeout(() => brandSuggestions.classList.add('hidden'), 200);
+        });
+        
+        // Update button text when brand name is cleared
+        brandNameInput.addEventListener('input', function() {
+          // If brand name is cleared and doesn't match the selected brand, clear the brand ID
+          if (!this.value || this.value !== brandSearch.value) {
+            const currentBrandId = brandIdInput.value;
+            if (currentBrandId) {
+              // Check if the input still matches the selected brand
+              const selectedBrand = allBrands.find(b => b.id === currentBrandId);
+              if (!selectedBrand || selectedBrand.name !== this.value) {
+                brandIdInput.value = '';
+                updateSaveButtonText();
+              }
+            }
+          }
         });
       }
       
@@ -1532,32 +1620,54 @@
         }
       }
       
-      // Load brand data (logo, website, address) when existing brand is selected
+      // Load brand data (all fields) when existing brand is selected
       async function loadBrandData(brandId) {
         const { data, error } = await supabase
           .from('brands')
-          .select('logo_url, website, address')
+          .select('logo_url, website, address, primary_email, phone, name')
           .eq('id', brandId)
           .single();
         
         if (!error && data) {
+          console.log('📋 Loading brand data for editing:', data);
+          
           // Load logo
           if (data.logo_url) {
             document.getElementById('brand_logo_url').value = data.logo_url;
             showLogoPreview(data.logo_url);
           }
           
-          // Load website if not already filled
+          // Load website
           const websiteInput = document.getElementById('brand_site');
-          if (data.website && (!websiteInput.value || websiteInput.value === 'https://www.company.com')) {
+          if (data.website) {
             websiteInput.value = data.website;
           }
           
-          // Load address if not already filled
+          // Load email
+          const emailInput = document.getElementById('brand_email');
+          if (data.primary_email) {
+            emailInput.value = data.primary_email;
+          }
+          
+          // Load phone
+          const phoneInput = document.getElementById('brand_phone');
+          if (data.phone) {
+            phoneInput.value = data.phone;
+          }
+          
+          // Load address
           const addressInput = document.getElementById('brand_addr');
-          if (data.address && (!addressInput.value || addressInput.value === 'Street, City, State, ZIP')) {
+          if (data.address) {
             addressInput.value = data.address;
           }
+          
+          // Load name (if not already set)
+          const nameInput = document.getElementById('brand_name');
+          if (data.name && (!nameInput.value || nameInput.value.trim() === '')) {
+            nameInput.value = data.name;
+          }
+        } else {
+          console.error('❌ Error loading brand data:', error);
         }
       }
       
@@ -1615,12 +1725,52 @@
       
       // Initialize: load brands for search
       loadBrands();
+      
+      // Check if brand ID is in URL and load it automatically
+      const urlParams = new URLSearchParams(window.location.search);
+      const brandIdFromUrl = urlParams.get('id');
+      if (brandIdFromUrl) {
+        console.log('🔍 Brand ID found in URL, loading brand:', brandIdFromUrl);
+        // Set the brand ID in the hidden input
+        brandIdInput.value = brandIdFromUrl;
+        // Update button text to indicate we're editing
+        updateSaveButtonText();
+        // Load the brand data (all fields)
+        supabase.from('brands')
+          .select('name, website, primary_email, phone, address, logo_url')
+          .eq('id', brandIdFromUrl)
+          .single()
+          .then(({ data, error }) => {
+            if (!error && data) {
+              console.log('✅ Brand data loaded from URL:', data);
+              brandNameInput.value = data.name;
+              brandSearch.value = data.name;
+              
+              // Load all brand fields
+              loadBrandData(brandIdFromUrl);
+              
+              // Load products
+              loadBrandProducts(brandIdFromUrl);
+            } else {
+              console.error('❌ Error loading brand from URL:', error);
+            }
+          });
+      }
+      
+      // Initialize button text on page load
+      updateSaveButtonText();
 
       document.getElementById('saveAll').onclick = async (e)=>{
         e.preventDefault();
-        const btn = e.target; btn.disabled = true; btn.textContent = 'Saving…';
+        const btn = e.target; 
+        const originalText = btn.textContent;
+        btn.disabled = true; 
+        btn.textContent = 'Saving…';
         try { await saveAll(); }
-        finally { btn.disabled = false; btn.textContent = 'Deploy ShelfAssured'; }
+        finally { 
+          btn.disabled = false; 
+          updateSaveButtonText(); // Restore appropriate button text
+        }
       };
     })();
   </script>

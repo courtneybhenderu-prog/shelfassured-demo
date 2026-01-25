@@ -86,7 +86,7 @@
                         <a href="" id="create-job-link" class="px-4 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 font-medium text-center">
                             Create Job for This Brand
                         </a>
-                        <a href="brands-new.html" class="px-4 py-3 bg-gray-600 text-white rounded-lg hover:bg-gray-700 font-medium text-center">
+                        <a href="brands-new.html" id="edit-brand-link" class="px-4 py-3 bg-gray-600 text-white rounded-lg hover:bg-gray-700 font-medium text-center">
                             Edit Brand
                         </a>
                         <a href="brands.html" class="px-4 py-3 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 font-medium text-center">
@@ -283,6 +283,7 @@
                 // Update links
                 document.getElementById('view-dashboard-link').href = `../brand/dashboard.html?id=${brandId}`;
                 document.getElementById('create-job-link').href = `manage-jobs.html?brand_id=${brandId}`;
+                document.getElementById('edit-brand-link').href = `brands-new.html?id=${brandId}`;
                 
                 // Update statistics
                 document.getElementById('brand-stats').innerHTML = `
