@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -64,7 +64,7 @@
             <div class="bg-white rounded-lg shadow p-6 mb-8">
                 <h3 class="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h3>
                 <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
-                    <button onclick="goToPage('brands-new.html')" class="btn-red">
+                    <button onclick="goToPage('../brand-onboarding.html')" class="btn-red">
                         + Add Brand
                     </button>
                     <button onclick="goToPage('manage-jobs.html')" class="btn-red">
@@ -156,16 +156,16 @@
     <!-- Define goToPage function -->
     <script>
         function goToPage(page) {
-            console.log('🔍 Debug: goToPage called with:', page);
+            console.log('ðŸ” Debug: goToPage called with:', page);
             window.location.href = page;
         }
         
         // Scroll to brands section smoothly
         function scrollToBrands() {
-            console.log('🔍 scrollToBrands() called');
+            console.log('ðŸ” scrollToBrands() called');
             const brandsSection = document.getElementById('brands-section');
             if (brandsSection) {
-                console.log('✅ Found brands section, scrolling...');
+                console.log('âœ… Found brands section, scrolling...');
                 brandsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
                 // Small delay to ensure section is rendered, then highlight briefly
                 setTimeout(() => {
@@ -176,7 +176,7 @@
                     }, 1000);
                 }, 300);
             } else {
-                console.error('❌ Brands section (#brands-section) not found');
+                console.error('âŒ Brands section (#brands-section) not found');
                 // Try to find it by searching
                 const allSections = document.querySelectorAll('[id*="brand"]');
                 console.log('Found sections with "brand" in ID:', Array.from(allSections).map(s => s.id));
