@@ -186,12 +186,6 @@
         const urlParams = new URLSearchParams(window.location.search);
         const jobId = urlParams.get('job_id');
         
-        if (!jobId) {
-          console.error('❌ No job ID provided');
-          window.location.href = 'shelfer.html';
-          return;
-        }
-
         // Get current user
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) {
@@ -199,6 +193,23 @@
           return;
         }
         currentUser = user;
+        
+        if (!jobId) {
+          console.error('❌ No job ID provided');
+          // Redirect based on user role
+          const { data: profile } = await supabase
+            .from('users')
+            .select('role')
+            .eq('id', user.id)
+            .single();
+          
+          if (profile?.role === 'admin') {
+            window.location.href = '../admin/dashboard.html';
+          } else {
+            window.location.href = 'shelfer.html';
+          }
+          return;
+        }
 
         // Load job details
         await loadJobDetails(jobId);
@@ -246,13 +257,14 @@
         };
         
         // Compose display strings
-        // Build store display: prefer store_name, fallback to address components
+        // Build store display: prefer store_display_name (STORE column), then store_name, then address components
         let storeHeader = 'Unknown Store';
         if (first) {
           const chain = first.store_chain || '';
-          const name = first.store_name || '';
+          // Try store_display_name first (STORE column), then store_name
+          const name = first.store_display_name || first.store_name || '';
           
-          // If we have store_name, use it
+          // If we have a name, use it
           if (name) {
             storeHeader = chain ? `${chain} — ${name}` : name;
           } else {
@@ -293,11 +305,6 @@
             parts.push(first.sku_size);
           }
           
-          // Flavor (if different from name)
-          if (first.sku_flavor && first.sku_flavor.toLowerCase() !== first.sku_name?.toLowerCase()) {
-            parts.push(first.sku_flavor);
-          }
-          
           skuHeader = parts.length > 0 ? parts.join(' — ') : 'Unknown SKU';
           
           // Add UPC if available (in parentheses)
@@ -326,10 +333,10 @@
             assignments.forEach(assignment => {
               const li = document.createElement('li');
               
-              // Build store display with fallback
+              // Build store display with fallback (prefer store_display_name)
               let storeDisplay = '';
               const chain = assignment.store_chain || '';
-              const name = assignment.store_name || '';
+              const name = assignment.store_display_name || assignment.store_name || '';
               
               if (name) {
                 storeDisplay = chain ? `${chain} — ${name}` : name;
@@ -361,9 +368,6 @@
               }
               if (assignment.sku_size) {
                 skuParts.push(assignment.sku_size);
-              }
-              if (assignment.sku_flavor && assignment.sku_flavor.toLowerCase() !== assignment.sku_name?.toLowerCase()) {
-                skuParts.push(assignment.sku_flavor);
               }
               
               let skuDisplay = skuParts.length > 0 ? skuParts.join(' — ') : 'Unknown SKU';

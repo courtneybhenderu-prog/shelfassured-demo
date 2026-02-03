@@ -4,18 +4,25 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Brand Dashboard - ShelfAssured</title>
-    
-    <!-- Set page role BEFORE loading shared/api.js -->
     <script>
-        window.SA_PAGE_ROLE = 'admin'; // Admin can view brand dashboards
-        window.SA_DISABLE_GLOBAL_GUARD = true;
-        window.SA_ADMIN_READY = true;
+        // Redirect to updated brand dashboard
+        // This page uses ?id= parameter, new dashboard uses ?brand_id=
+        const urlParams = new URLSearchParams(window.location.search);
+        const brandId = urlParams.get('id');
+        if (brandId) {
+            window.location.href = `../dashboard/brand-client.html?brand_id=${brandId}`;
+        } else {
+            window.location.href = '../dashboard/brand-client.html';
+        }
     </script>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.47.5/dist/umd/supabase.min.js"></script>
-    <link rel="stylesheet" href="../shared/styles.css">
 </head>
 <body>
+    <div style="text-align: center; padding: 50px;">
+        <p>Redirecting to updated dashboard...</p>
+        <p><a href="../dashboard/brand-client.html">Click here if not redirected</a></p>
+    </div>
+</body>
+</html>
     <div class="min-h-screen bg-gray-100">
         <!-- Header -->
         <div class="bg-white shadow-sm border-b">

@@ -50,96 +50,121 @@
         </div>
 
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-            <!-- Welcome Section -->
-            <div class="mb-8">
-                <h2 class="text-3xl font-bold text-gray-900">Hello, Brand Client!</h2>
-            </div>
-
-            <!-- Brand Profile Card -->
-            <div id="brand-profile-card" class="bg-white rounded-lg shadow p-6 mb-8" style="display: none;">
-                <div class="flex flex-col md:flex-row gap-6">
-                    <div class="flex-1">
-                        <div id="brand-profile-content">
-                            <!-- Brand info will be populated here -->
-                        </div>
-                        <div class="mt-4">
-                            <button onclick="goToPage('create-job.html')" class="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded-lg font-medium">
-                                Create New Job
-                            </button>
-                        </div>
-                    </div>
-                    <div class="md:w-80 flex-shrink-0">
-                        <div id="brand-profile-image" class="w-full h-48 md:h-64 bg-gray-100 rounded-lg overflow-hidden flex items-center justify-center">
-                            <span class="text-gray-400">Loading image...</span>
-                        </div>
-                    </div>
+            <!-- Welcome Section - Logo and Welcome Message -->
+            <div class="mb-8 flex items-center gap-4">
+                <div id="brand-logo-container" class="flex-shrink-0">
+                    <!-- Logo will be populated here -->
+                </div>
+                <div>
+                    <h2 id="welcome-message" class="text-3xl font-bold text-gray-900">Hello!</h2>
                 </div>
             </div>
 
-            <!-- Performance Metrics -->
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-                <div class="bg-white rounded-lg shadow p-6">
-                    <h3 class="text-lg font-semibold text-gray-900 mb-2">Active Jobs</h3>
-                    <p class="text-2xl font-bold text-blue-600" id="active-jobs-count">0</p>
-                    <p class="text-sm text-gray-500 mt-1" id="active-jobs-subtext">No jobs yet</p>
-                    <div class="mt-4">
-                        <div class="w-full bg-gray-200 rounded-full h-2">
-                            <div id="active-jobs-progress" class="bg-green-600 h-2 rounded-full transition-all duration-300" style="width: 0%"></div>
-                        </div>
-                    </div>
+            <!-- Product Showcase and Retail Location Map - Side by Side -->
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+                <!-- Product Showcase -->
+                <div id="products-section" class="bg-white rounded-lg shadow" style="display: none;">
+                    <div class="px-6 py-4 border-b border-gray-200">
+                        <h3 class="text-lg font-semibold text-gray-900">Product Showcase</h3>
                 </div>
-                <div class="bg-white rounded-lg shadow p-6">
-                    <h3 class="text-lg font-semibold text-gray-900 mb-2">Jobs Completed</h3>
-                    <p class="text-2xl font-bold text-green-600 mt-2" id="completed-audits">0</p>
-                    <p class="text-sm text-gray-500 mt-1">Successful audits</p>
+                    <div id="products-grid" class="p-6 grid grid-cols-2 gap-4" style="min-height: 400px;">
+                        <!-- Products will be populated here -->
                 </div>
-                <div class="bg-white rounded-lg shadow p-6">
-                    <h3 class="text-lg font-semibold text-gray-900 mb-2">Success Rate</h3>
-                    <p class="text-2xl font-bold text-purple-600 mt-2" id="success-rate">No jobs yet</p>
-                    <p class="text-sm text-gray-500 mt-1">Completed jobs divided by total jobs created</p>
+                    <div id="products-empty" class="p-6 text-center text-gray-500" style="display: none; min-height: 400px; display: flex; align-items: center; justify-content: center;">
+                        <div>
+                            <p class="mb-2">No products yet</p>
+                            <button onclick="goToAddProduct()" class="text-blue-600 hover:underline text-sm">Add your first product</button>
+                </div>
+            </div>
+                    <div class="px-6 py-4 border-t border-gray-200">
+                        <button onclick="goToAddProduct()" class="w-full bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium">
+                            Add Product
+                    </button>
                 </div>
             </div>
 
-            <!-- Recent Photos from Audits -->
-            <div id="photos-section" class="bg-white rounded-lg shadow mb-8" style="display: none;">
-                <div class="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
+                <!-- Retail Location Map -->
+                <div class="bg-white rounded-lg shadow">
+                    <div class="px-6 py-4 border-b border-gray-200">
+                        <h3 class="text-lg font-semibold text-gray-900">Retail Location Map</h3>
+                        </div>
+                    <div id="store-map" class="rounded-lg" style="height: 400px; width: 100%;"></div>
+                    <div id="map-empty" class="bg-gray-100 rounded-lg flex items-center justify-center" style="display: none; height: 400px;">
+                        <div class="text-center text-gray-500">
+                            <p class="text-lg font-medium mb-2">No store locations available</p>
+                            <p class="text-sm">Add retail locations to see them on the map</p>
+                    </div>
+                    </div>
+                    <div class="px-6 py-4 border-t border-gray-200">
+                        <button onclick="goToAddRetailLocation()" class="w-full bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-medium">
+                            Add Retail Location
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Jobs Section -->
+            <div class="bg-white rounded-lg shadow mb-8">
+                <div class="px-6 py-4 border-b border-gray-200">
+                    <h3 class="text-lg font-semibold text-gray-900">Jobs</h3>
+                </div>
+                <div class="p-6 grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <!-- Left: Jobs Photo Gallery Placeholder -->
                     <div>
-                        <h3 class="text-lg font-semibold text-gray-900">Recent Photos from Audits</h3>
-                        <p class="text-sm text-gray-500">Latest shelf photos confirmed by our field team</p>
+                        <h4 class="text-md font-medium text-gray-700 mb-4">Jobs Photo Gallery</h4>
+                        <div class="bg-gray-50 rounded-lg border-2 border-dashed border-gray-300 p-12 text-center">
+                            <div class="text-gray-400 mb-2">
+                                <svg class="mx-auto h-12 w-12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                                </svg>
+                </div>
+                            <p class="text-gray-500 text-sm">Job photos will appear here</p>
+                            <p class="text-gray-400 text-xs mt-1">Coming soon</p>
+                        </div>
                     </div>
-                    <a href="#" class="text-sm text-blue-600 hover:underline">View All Photos</a>
-                </div>
-                <div id="photos-grid" class="p-6 grid grid-cols-2 md:grid-cols-3 gap-4">
-                    <!-- Photos will be populated here -->
-                </div>
-                <div id="photos-empty" class="p-6 text-center text-gray-500" style="display: none;">
-                    No audit photos yet
+                    
+                    <!-- Right: Job Metrics -->
+                    <div>
+                        <h4 class="text-md font-medium text-gray-700 mb-4">Job Statistics</h4>
+                        <div class="grid grid-cols-3 gap-4">
+                            <!-- Active Jobs -->
+                            <div class="bg-blue-50 rounded-lg p-4 border border-blue-200">
+                                <div class="text-sm text-blue-600 font-medium mb-1">Active Jobs</div>
+                                <div class="text-2xl font-bold text-blue-700" id="active-jobs-count">0</div>
+                            </div>
+                            
+                            <!-- Completed Jobs -->
+                            <div class="bg-green-50 rounded-lg p-4 border border-green-200">
+                                <div class="text-sm text-green-600 font-medium mb-1">Completed</div>
+                                <div class="text-2xl font-bold text-green-700" id="completed-jobs-count">0</div>
+                            </div>
+                            
+                            <!-- Success Rate -->
+                            <div class="bg-purple-50 rounded-lg p-4 border border-purple-200 relative group">
+                                <div class="text-sm text-purple-600 font-medium mb-1">Success Rate</div>
+                                <div class="text-2xl font-bold text-purple-700" id="success-rate-count">0%</div>
+                                <div class="absolute right-2 top-2">
+                                    <span class="text-purple-400 cursor-help text-xs">ℹ️</span>
+                                    <div class="absolute right-0 bottom-full mb-2 w-56 p-2 bg-gray-800 text-white text-xs rounded shadow-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10">
+                                        Success Rate: Completed jobs divided by total jobs created
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
 
-            <!-- Notable Shelfer Notes -->
-            <div id="notes-section" class="bg-white rounded-lg shadow mb-8" style="display: none;">
-                <div class="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
-                    <h3 class="text-lg font-semibold text-gray-900">Notable Shelfer Notes</h3>
-                    <a href="#" class="text-sm text-blue-600 hover:underline">View All Notes &gt;</a>
+            <!-- Contact Information - At Bottom -->
+            <div id="contact-section" class="bg-white rounded-lg shadow p-6 mb-8" style="display: none;">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-lg font-semibold text-gray-900">Contact Information</h3>
+                    <button onclick="goToEditContactInfo()" class="text-sm text-blue-600 hover:text-blue-800 font-medium">
+                        Edit Contact Info
+                    </button>
                 </div>
-                <div id="notes-content" class="p-6 space-y-4">
-                    <!-- Notes will be populated here -->
-                </div>
-                <div id="notes-empty" class="p-6 text-center text-gray-500" style="display: none;">
-                    No notes yet
-                </div>
-            </div>
-
-            <!-- Store Coverage Map -->
-            <div class="bg-white rounded-lg shadow p-6 mb-8">
-                <h3 class="text-lg font-semibold text-gray-900 mb-4">Store Coverage Map</h3>
-                <div id="store-map" class="rounded-lg" style="height: 400px; width: 100%;"></div>
-                <div id="map-empty" class="bg-gray-100 rounded-lg h-64 flex items-center justify-center" style="display: none;">
-                    <div class="text-center text-gray-500">
-                        <p class="text-lg font-medium mb-2">No store locations available</p>
-                        <p class="text-sm">Store locations will appear here once jobs are created</p>
-                    </div>
+                <div id="contact-content" class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <!-- Contact info will be populated here -->
                 </div>
             </div>
         </div>
@@ -174,12 +199,6 @@
         // Initialize dashboard
         document.addEventListener('DOMContentLoaded', async function() {
             console.log('🔧 Brand Client Dashboard initialized');
-            
-            // Immediately update greeting text to "Hello!" (remove default "Hello, Brand Client!")
-            const greetingText = document.getElementById('greeting-text');
-            if (greetingText) {
-                greetingText.textContent = 'Hello!';
-            }
             
             // Check if user is logged in and has correct role
             await checkClientAccess();
@@ -275,35 +294,21 @@
                     
                 }
                 
-                // Calculate stats
-                const totalJobs = clientJobs.length;
-                const activeStatuses = ['pending', 'assigned', 'pending_review'];
-                const activeJobs = clientJobs.filter(job => activeStatuses.includes(job.status)).length;
-                const completedJobs = clientJobs.filter(job => job.status === 'completed').length;
-                
-                // Update performance metrics
-                updatePerformanceMetrics(activeJobs, completedJobs, totalJobs);
-                
                 // Get brand_id - use URL param, or find from user's jobs/brands
                 const finalBrandId = brandId || (await getBrandIdFromUser());
                 console.log('🔍 Final brand_id:', finalBrandId);
                 
-                // Load brand profile and image (even if no jobs)
+                // Load brand logo and welcome message
                 if (finalBrandId) {
-                    await loadBrandProfile(finalBrandId, clientJobs);
+                    await loadBrandWelcome(finalBrandId);
+                    await loadProductsShowcase(finalBrandId);
+                    await loadContactInfo(finalBrandId);
                 } else {
-                    console.log('⚠️ No brand_id found - brand profile will not be shown');
+                    console.log('⚠️ No brand_id found');
                 }
                 
-                // Load photos and notes (only if there are jobs)
-                if (clientJobs.length > 0) {
-                    await loadPhotosGallery(clientJobs);
-                    await loadShelferNotes(clientJobs);
-                } else {
-                    // Hide sections if no jobs
-                    document.getElementById('photos-section').style.display = 'none';
-                    document.getElementById('notes-section').style.display = 'none';
-                }
+                // Load jobs content
+                await loadJobsContent(clientJobs);
                 
                 // Load map - shows all stores from brand_stores (even if no jobs)
                 await loadStoreMap(clientJobs);
@@ -357,11 +362,11 @@
             const activeSubtextEl = document.getElementById('active-jobs-subtext');
             const activeProgressEl = document.getElementById('active-jobs-progress');
             
-            if (totalJobs === 0) {
+                if (totalJobs === 0) {
                 activeCountEl.textContent = '0';
                 activeSubtextEl.textContent = 'No jobs yet';
                 activeProgressEl.style.width = '0%';
-            } else {
+                } else {
                 activeCountEl.textContent = activeJobs;
                 activeSubtextEl.textContent = `${activeJobs} active out of ${totalJobs} total`;
                 const completionPct = Math.round((completedJobs / Math.max(totalJobs, 1)) * 100);
@@ -381,7 +386,42 @@
             }
         }
 
-        // Load brand profile with image
+        // Load brand welcome (logo and message)
+        async function loadBrandWelcome(brandId) {
+            if (!brandId) return;
+            
+            try {
+                const { data: brand, error } = await supabase
+                    .from('brands')
+                    .select('id, name, logo_url')
+                    .eq('id', brandId)
+                    .single();
+                
+                if (error || !brand) {
+                    console.error('Error loading brand:', error);
+                    return;
+                }
+                
+                const logoContainer = document.getElementById('brand-logo-container');
+                const welcomeMessage = document.getElementById('welcome-message');
+                
+                if (logoContainer) {
+                    if (brand.logo_url) {
+                        logoContainer.innerHTML = `<img src="${brand.logo_url}" alt="${brand.name || 'Brand logo'}" class="h-16 w-auto object-contain" />`;
+                    } else {
+                        logoContainer.innerHTML = `<div class="h-16 w-16 bg-gray-200 rounded-lg flex items-center justify-center text-gray-400 text-xs">No Logo</div>`;
+                    }
+                }
+                
+                if (welcomeMessage) {
+                    welcomeMessage.textContent = `Hello, ${brand.name || 'Brand'}!`;
+                }
+            } catch (error) {
+                console.error('Error loading brand welcome:', error);
+            }
+        }
+
+        // Load brand profile with image (deprecated - keeping for compatibility)
         async function loadBrandProfile(brandId, jobs) {
             if (!brandId) return;
             
@@ -450,7 +490,7 @@
                 imageEl.innerHTML = '<div class="text-gray-400 text-center p-4"><p>No photos yet</p></div>';
                 return;
             }
-            
+
             try {
                 const jobIds = jobs.map(j => j.id);
                 const { data: submissions } = await supabase
@@ -478,7 +518,138 @@
             }
         }
 
-        // Load photos gallery
+        // Load jobs content - update metrics
+        async function loadJobsContent(jobs) {
+            if (!jobs) jobs = [];
+            
+            const totalJobs = jobs.length;
+            const activeStatuses = ['pending', 'assigned', 'pending_review'];
+            const activeJobs = jobs.filter(job => activeStatuses.includes(job.status)).length;
+            const completedJobs = jobs.filter(job => job.status === 'completed').length;
+            
+            // Update Active Jobs
+            const activeCountEl = document.getElementById('active-jobs-count');
+            if (activeCountEl) {
+                activeCountEl.textContent = activeJobs;
+            }
+            
+            // Update Completed Jobs
+            const completedCountEl = document.getElementById('completed-jobs-count');
+            if (completedCountEl) {
+                completedCountEl.textContent = completedJobs;
+            }
+            
+            // Update Success Rate
+            const successRateEl = document.getElementById('success-rate-count');
+            if (successRateEl) {
+            if (totalJobs === 0) {
+                    successRateEl.textContent = '0%';
+            } else {
+                    const successRate = Math.round((completedJobs / totalJobs) * 100);
+                    successRateEl.textContent = `${successRate}%`;
+                }
+            }
+        }
+        
+        // Load contact information
+        async function loadContactInfo(brandId) {
+            if (!brandId) return;
+            
+            const contactSection = document.getElementById('contact-section');
+            const contactContent = document.getElementById('contact-content');
+            
+            try {
+                const { data: brand, error } = await supabase
+                    .from('brands')
+                    .select('website, primary_email, contact_email, phone, contact_phone')
+                    .eq('id', brandId)
+                    .single();
+                
+                if (error || !brand) {
+                    contactSection.style.display = 'none';
+                return;
+            }
+
+                const email = brand.primary_email || brand.contact_email;
+                const phone = brand.phone || brand.contact_phone;
+                
+                if (!brand.website && !email && !phone) {
+                    contactSection.style.display = 'none';
+                    return;
+                }
+                
+                contactSection.style.display = 'block';
+                let html = '';
+                
+                if (brand.website) {
+                    html += `
+                        <div>
+                            <div class="text-sm text-gray-500 mb-1">Website</div>
+                            <a href="${brand.website}" target="_blank" class="text-blue-600 hover:underline">${escapeHtml(brand.website)}</a>
+                        </div>
+                    `;
+                }
+                
+                if (phone) {
+                    html += `
+                        <div>
+                            <div class="text-sm text-gray-500 mb-1">Phone</div>
+                            <a href="tel:${phone}" class="text-blue-600 hover:underline">${escapeHtml(phone)}</a>
+                        </div>
+                    `;
+                }
+                
+                if (email) {
+                    html += `
+                        <div>
+                            <div class="text-sm text-gray-500 mb-1">Email</div>
+                            <a href="mailto:${email}" class="text-blue-600 hover:underline">${escapeHtml(email)}</a>
+                        </div>
+                    `;
+                }
+                
+                contactContent.innerHTML = html;
+            } catch (error) {
+                console.error('Error loading contact info:', error);
+                contactSection.style.display = 'none';
+            }
+        }
+        
+        // Navigation functions
+        function goToAddProduct() {
+            // Navigate to product management or onboarding
+            const urlParams = new URLSearchParams(window.location.search);
+            const brandId = urlParams.get('brand_id');
+            if (brandId) {
+                window.location.href = `../admin/brands-detail.html?id=${brandId}`;
+            } else {
+                alert('Please contact admin to add products.');
+            }
+        }
+        
+        function goToAddRetailLocation() {
+            // Navigate to store management or onboarding
+            const urlParams = new URLSearchParams(window.location.search);
+            const brandId = urlParams.get('brand_id');
+            if (brandId) {
+                window.location.href = `../admin/brands-detail.html?id=${brandId}`;
+            } else {
+                alert('Please contact admin to add retail locations.');
+            }
+        }
+        
+        function goToEditContactInfo() {
+            // Navigate to brand edit page
+            const urlParams = new URLSearchParams(window.location.search);
+            const brandId = urlParams.get('brand_id');
+            if (brandId) {
+                window.location.href = `../admin/brands-detail.html?id=${brandId}`;
+            } else {
+                alert('Please contact admin to edit contact information.');
+            }
+        }
+
+        // Load photos gallery (deprecated - keeping for compatibility)
         async function loadPhotosGallery(jobs) {
             if (jobs.length === 0) return;
             
@@ -568,9 +739,9 @@
                         } else if (store.city && store.state) {
                             locationText = `${store.city}, ${store.state}`;
                         }
-                    }
-                    
-                    return `
+                }
+                
+                return `
                         <div class="relative aspect-square bg-gray-100 rounded-lg overflow-hidden group">
                             <img src="${photo.url}" alt="Audit photo" class="w-full h-full object-cover" onerror="this.style.display='none'" />
                             <div class="absolute bottom-0 left-0 right-0 bg-black bg-opacity-60 text-white text-xs p-2">
@@ -677,15 +848,15 @@
                                     ${initials}
                                 </div>
                             </div>
-                            <div class="flex-1">
+                        <div class="flex-1">
                                 <div class="flex items-center gap-2 mb-1">
                                     <span class="font-medium text-gray-900">${note.contractorName}</span>
                                     <span class="text-sm text-gray-500">•</span>
                                     <span class="text-sm text-gray-500">${date}</span>
-                                </div>
+                        </div>
                                 <div class="text-sm text-gray-600 mb-1">${note.jobTitle}</div>
                                 <div class="text-gray-900">${note.text}</div>
-                            </div>
+                        </div>
                         </div>
                     `;
                 }).join('');
@@ -694,6 +865,141 @@
                 notesEmpty.style.display = 'block';
                 notesContent.style.display = 'none';
             }
+        }
+
+        // Load products showcase with photos
+        async function loadProductsShowcase(brandId) {
+            if (!brandId) return;
+            
+            const productsSection = document.getElementById('products-section');
+            const productsGrid = document.getElementById('products-grid');
+            const productsEmpty = document.getElementById('products-empty');
+            
+            try {
+                // Query products from skus table
+                const { data: products, error } = await supabase
+                    .from('skus')
+                    .select('id, name, upc, size, description, image_url')
+                    .eq('brand_id', brandId)
+                    .eq('is_active', true)
+                    .order('name', { ascending: true });
+                
+                if (error) {
+                    console.error('Error loading products:', error);
+                    productsSection.style.display = 'none';
+                    return;
+                }
+                
+                if (!products || products.length === 0) {
+                    productsSection.style.display = 'block';
+                    productsEmpty.style.display = 'flex';
+                    productsGrid.style.display = 'none';
+                    return;
+                }
+                
+                const accentColor = '#2563eb'; // blue-600
+                
+                productsSection.style.display = 'block';
+                productsEmpty.style.display = 'none';
+                productsGrid.style.display = 'grid';
+                
+                productsGrid.innerHTML = products.map(product => {
+                    const productName = product.name || 'Unnamed Product';
+                    const upc = product.upc || 'No UPC';
+                    const size = product.size ? ` • ${product.size}` : '';
+                    const imageUrl = product.image_url || null;
+                    
+                    return `
+                        <div class="border border-gray-200 rounded-lg overflow-hidden hover:shadow-md transition-shadow flex flex-col">
+                            <div class="relative aspect-square bg-gray-100">
+                                ${imageUrl 
+                                    ? `<img src="${escapeHtml(imageUrl)}" alt="${escapeHtml(productName)}" class="w-full h-full object-cover" onerror="this.parentElement.innerHTML='<div class=\\'w-full h-full flex items-center justify-center text-gray-400 text-xs\\'>No Photo</div>'" />`
+                                    : `<div class="w-full h-full flex items-center justify-center text-gray-400 text-xs">No Photo</div>`
+                                }
+                                <button onclick="uploadProductPhoto('${product.id}', '${escapeHtml(productName)}')" 
+                                        class="absolute bottom-2 right-2 bg-white hover:bg-gray-50 text-gray-700 px-3 py-1 rounded text-xs font-medium shadow-sm border border-gray-300">
+                                    Upload Photo
+                                </button>
+                            </div>
+                            <div class="p-3 flex-1 flex flex-col">
+                                <div class="font-semibold text-gray-900 mb-1 text-sm">${escapeHtml(productName)}</div>
+                                <div class="text-xs text-gray-600 mb-1">
+                                    <span class="font-medium">UPC:</span> 
+                                    <span class="font-mono">${escapeHtml(upc)}</span>
+                                </div>
+                                ${size ? `<div class="text-xs text-gray-500">${escapeHtml(size)}</div>` : ''}
+                    </div>
+                </div>
+            `;
+            }).join('');
+
+                console.log(`✅ Loaded ${products.length} products for brand`);
+            } catch (error) {
+                console.error('Error loading products showcase:', error);
+                productsSection.style.display = 'none';
+            }
+        }
+        
+        // Upload product photo (global function)
+        window.uploadProductPhoto = async function(productId, productName) {
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = 'image/*';
+            input.onchange = async (e) => {
+                const file = e.target.files[0];
+                if (!file) return;
+                
+                try {
+                    // Upload to Supabase storage
+                    const fileExt = file.name.split('.').pop();
+                    const fileName = `${productId}/${Date.now()}.${fileExt}`;
+                    const filePath = `product-photos/${fileName}`;
+                    
+                    const { data: uploadData, error: uploadError } = await supabase.storage
+                        .from('product-photos')
+                        .upload(filePath, file);
+                    
+                    if (uploadError) {
+                        // Create bucket if it doesn't exist (admin would need to do this)
+                        console.error('Upload error:', uploadError);
+                        alert('Error uploading photo. Please contact admin to set up product photos storage.');
+                        return;
+                    }
+                    
+                    // Get public URL
+                    const { data: { publicUrl } } = supabase.storage
+                        .from('product-photos')
+                        .getPublicUrl(filePath);
+                    
+                    // Update product with image URL
+                    const { error: updateError } = await supabase
+                        .from('skus')
+                        .update({ image_url: publicUrl })
+                        .eq('id', productId);
+                    
+                    if (updateError) {
+                        console.error('Error updating product:', updateError);
+                        alert('Photo uploaded but failed to update product. Please refresh the page.');
+                    } else {
+                        // Reload products showcase
+                        const urlParams = new URLSearchParams(window.location.search);
+                        const brandId = urlParams.get('brand_id') || (await getBrandIdFromUser());
+                        await loadProductsShowcase(brandId);
+                    }
+                } catch (error) {
+                    console.error('Error uploading photo:', error);
+                    alert('Error uploading photo. Please try again.');
+                }
+            };
+            input.click();
+        }
+        
+        // Helper function to escape HTML
+        function escapeHtml(text) {
+            if (!text) return '';
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
         }
 
         // Geocode stores using OpenStreetMap Nominatim API (free, no API key required)

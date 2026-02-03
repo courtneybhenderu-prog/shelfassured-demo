@@ -139,8 +139,8 @@ async function loadDashboardData() {
         // Update metrics
         updateMetrics(jobs, users, auditRequests);
         
-        // Update recent activity
-        updateRecentActivity(jobs, users);
+        // Update recent activity (async - loads store/SKU details)
+        await updateRecentActivity(jobs, users);
         
         // Update user management
         updateUserManagement(users);
@@ -184,8 +184,8 @@ function updateMetrics(jobs, users, auditRequests) {
 }
 
 // Update recent activity
-function updateRecentActivity(jobs, users) {
-    // Update Recent Jobs section
+async function updateRecentActivity(jobs, users) {
+    // Update Recent Jobs section with store and SKU details
     const recentJobsContainer = document.getElementById('recent-jobs');
     if (recentJobsContainer) {
         const recentJobs = jobs
@@ -195,13 +195,84 @@ function updateRecentActivity(jobs, users) {
         if (recentJobs.length === 0) {
             recentJobsContainer.innerHTML = '<div class="text-center text-gray-500">No recent jobs</div>';
         } else {
-            const jobsHtml = recentJobs.map(job => `
+            // Load job assignments for each job to get store and SKU details
+            const jobsWithDetails = await Promise.all(recentJobs.map(async (job) => {
+                try {
+                    // Get first assignment for this job to show store/SKU
+                    const { data: assignments, error } = await supabase
+                        .from('v_job_assignments')
+                        .select('*')
+                        .eq('job_id', job.id)
+                        .limit(1);
+                    
+                    if (error || !assignments || assignments.length === 0) {
+                        return { ...job, storeInfo: null, skuInfo: null };
+                    }
+                    
+                    const first = assignments[0];
+                    
+                    // Build store display
+                    let storeDisplay = 'Unknown Store';
+                    const chain = first.store_chain || '';
+                    const storeName = first.store_display_name || first.store_name || '';
+                    
+                    if (storeName) {
+                        storeDisplay = chain ? `${chain} — ${storeName}` : storeName;
+                    } else {
+                        // Fallback to address
+                        const addressParts = [
+                            first.store_address,
+                            first.store_city,
+                            first.store_state
+                        ].filter(Boolean);
+                        
+                        if (addressParts.length > 0) {
+                            storeDisplay = chain 
+                                ? `${chain} — ${addressParts.join(', ')}`
+                                : addressParts.join(', ');
+                        } else if (chain) {
+                            storeDisplay = chain;
+                        }
+                    }
+                    
+                    // Build SKU display
+                    let skuDisplay = 'Unknown SKU';
+                    const skuParts = [];
+                    if (first.brand_name) {
+                        skuParts.push(first.brand_name);
+                    }
+                    if (first.sku_name) {
+                        skuParts.push(first.sku_name);
+                    }
+                    if (first.sku_size) {
+                        skuParts.push(first.sku_size);
+                    }
+                    
+                    skuDisplay = skuParts.length > 0 ? skuParts.join(' — ') : 'Unknown SKU';
+                    if (first.sku_code) {
+                        skuDisplay += ` (UPC: ${first.sku_code})`;
+                    }
+                    
+                    return {
+                        ...job,
+                        storeInfo: storeDisplay,
+                        skuInfo: skuDisplay
+                    };
+                } catch (error) {
+                    console.error(`Error loading details for job ${job.id}:`, error);
+                    return { ...job, storeInfo: null, skuInfo: null };
+                }
+            }));
+            
+            const jobsHtml = jobsWithDetails.map(job => `
                 <div class="py-3 border-b border-gray-200 last:border-b-0 cursor-pointer hover:bg-gray-50" onclick="viewJobDetails('${job.id}')">
                     <div class="flex items-start justify-between">
                         <div class="flex-1">
-                            <div class="font-medium text-gray-900">${job.title || 'Untitled Job'}</div>
-                            <div class="text-sm text-gray-600">Status: <span class="font-medium ${job.status === 'completed' ? 'text-green-600' : job.status === 'pending' ? 'text-blue-600' : 'text-gray-600'}">${job.status || 'unknown'}</span></div>
-                            <div class="text-sm text-gray-500">Created: ${new Date(job.created_at).toLocaleDateString()}</div>
+                            <div class="font-medium text-gray-900">${escapeHtml(job.title || 'Untitled Job')}</div>
+                            ${job.storeInfo ? `<div class="text-sm text-gray-700 mt-1">📍 ${escapeHtml(job.storeInfo)}</div>` : ''}
+                            ${job.skuInfo ? `<div class="text-sm text-gray-600 mt-1">📦 ${escapeHtml(job.skuInfo)}</div>` : ''}
+                            <div class="text-sm text-gray-600 mt-1">Status: <span class="font-medium ${job.status === 'completed' ? 'text-green-600' : job.status === 'pending' ? 'text-blue-600' : 'text-gray-600'}">${job.status || 'unknown'}</span></div>
+                            <div class="text-sm text-gray-500 mt-1">Created: ${new Date(job.created_at).toLocaleDateString()}</div>
                         </div>
                         <div class="text-right">
                             <div class="text-sm font-medium text-gray-900">$${job.total_payout || 0}</div>
