@@ -60,6 +60,17 @@
                 </div>
             </div>
 
+            <!-- Contact Information Section -->
+            <div id="contact-info-section" class="bg-white rounded-lg shadow mb-6" style="display: none;">
+                <div class="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
+                    <h3 class="text-lg font-semibold text-gray-900">Contact Information</h3>
+                    <button onclick="editContactInfo()" class="text-sm text-blue-600 hover:text-blue-700 font-medium">Edit</button>
+                </div>
+                <div id="contact-info-content" class="p-6">
+                    <!-- Contact info will be populated here -->
+                </div>
+            </div>
+
             <!-- Product Showcase and Retail Location Map - Side by Side -->
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
                 <!-- Product Showcase -->
@@ -313,6 +324,12 @@
                 // Load map - shows all stores from brand_stores (even if no jobs)
                 await loadStoreMap(clientJobs);
                 
+                // Calculate stats for logging
+                const totalJobs = clientJobs.length;
+                const activeStatuses = ['pending', 'assigned', 'pending_review'];
+                const activeJobs = clientJobs.filter(job => activeStatuses.includes(job.status)).length;
+                const completedJobs = clientJobs.filter(job => job.status === 'completed').length;
+                
                 console.log('📊 Dashboard stats:', {
                     total: totalJobs,
                     active: activeJobs,
@@ -428,7 +445,7 @@
             try {
                 const { data: brand, error } = await supabase
                     .from('brands')
-                    .select('id, name, logo_url, website, primary_email, contact_email, phone, contact_phone, address')
+                    .select('id, name, logo_url, website, primary_email, contact_email, phone, contact_phone, address, contact_name, contact_role, store_count_range, biggest_challenge, problem_areas')
                     .eq('id', brandId)
                     .single();
                 
@@ -437,40 +454,24 @@
                     return;
                 }
                 
-                const email = brand.primary_email || brand.contact_email || null;
-                const phone = brand.phone || brand.contact_phone || null;
-                // Show card if brand has name (required field) or any other data
-                const hasData = brand.name || brand.logo_url || brand.website || email || phone || brand.address;
+                // Update logo and welcome message
+                const logoContainer = document.getElementById('brand-logo-container');
+                const welcomeMessage = document.getElementById('welcome-message');
                 
-                if (!hasData) {
-                    console.log('⚠️ Brand has no data to display');
-                    return;
+                if (logoContainer) {
+                    if (brand.logo_url) {
+                        logoContainer.innerHTML = `<img src="${brand.logo_url}" alt="${brand.name || 'Brand logo'}" class="h-16 w-auto object-contain" />`;
+                    } else {
+                        logoContainer.innerHTML = `<div class="h-16 w-16 bg-gray-200 rounded-lg flex items-center justify-center text-gray-400 text-xs">No Logo</div>`;
+                    }
                 }
                 
-                console.log('✅ Loading brand profile for:', brand.name);
+                if (welcomeMessage) {
+                    welcomeMessage.textContent = `Hello, ${brand.name || 'Brand'}!`;
+                }
                 
-                const profileCard = document.getElementById('brand-profile-card');
-                const profileContent = document.getElementById('brand-profile-content');
-                
-                let html = '';
-                if (brand.logo_url) {
-                    html += `<div class="mb-4"><img src="${brand.logo_url}" alt="${brand.name || 'Brand logo'}" class="h-12 object-contain" /></div>`;
-                }
-                if (brand.name) {
-                    html += `<h3 class="text-2xl font-bold text-gray-900 mb-4">${brand.name}</h3>`;
-                }
-                if (brand.website) {
-                    html += `<div class="mb-2"><span class="text-gray-600">Website:</span> <a href="${brand.website}" target="_blank" class="text-blue-600 hover:underline">${brand.website}</a></div>`;
-                }
-                if (phone) {
-                    html += `<div class="mb-2"><span class="text-gray-600">Phone:</span> <a href="tel:${phone}" class="text-blue-600 hover:underline">${phone}</a></div>`;
-                }
-                if (email) {
-                    html += `<div class="mb-2"><span class="text-gray-600">Email:</span> <a href="mailto:${email}" class="text-blue-600 hover:underline">${email}</a></div>`;
-                }
-                if (brand.address) {
-                    html += `<div class="mb-2"><span class="text-gray-600">Address:</span> <span class="text-gray-900">${brand.address}</span></div>`;
-                }
+                // Load contact info section
+                displayContactInfo(brand);
                 
                 profileContent.innerHTML = html;
                 profileCard.style.display = 'block';
@@ -552,6 +553,90 @@
         }
         
         // Load contact information
+        function displayContactInfo(brand) {
+            if (!brand) return;
+            
+            const contactSection = document.getElementById('contact-info-section');
+            const contactContent = document.getElementById('contact-info-content');
+            
+            if (!contactSection || !contactContent) return;
+            
+            const email = brand.primary_email || brand.contact_email || null;
+            const phone = brand.phone || brand.contact_phone || null;
+            const contactName = brand.contact_name || null;
+            const contactRole = brand.contact_role || null;
+            const storeCountRange = brand.store_count_range || null;
+            const biggestChallenge = brand.biggest_challenge || null;
+            const problemAreas = brand.problem_areas || [];
+            
+            // Check if there's any contact info to display
+            const hasContactInfo = contactName || email || phone || contactRole || storeCountRange || biggestChallenge || (problemAreas && problemAreas.length > 0);
+            
+            if (!hasContactInfo) {
+                contactSection.style.display = 'none';
+                return;
+            }
+            
+            let html = '<div class="space-y-4">';
+            
+            // Contact person info
+            if (contactName || email || phone || contactRole) {
+                html += '<div><h4 class="text-sm font-semibold text-gray-700 mb-2">Contact Person</h4><div class="space-y-1">';
+                if (contactName) {
+                    html += `<div><span class="text-gray-600">Name:</span> <span class="text-gray-900">${escapeHtml(contactName)}</span></div>`;
+                }
+                if (contactRole) {
+                    html += `<div><span class="text-gray-600">Role:</span> <span class="text-gray-900">${escapeHtml(contactRole)}</span></div>`;
+                }
+                if (email) {
+                    html += `<div><span class="text-gray-600">Email:</span> <a href="mailto:${email}" class="text-blue-600 hover:underline">${escapeHtml(email)}</a></div>`;
+                }
+                if (phone) {
+                    html += `<div><span class="text-gray-600">Phone:</span> <a href="tel:${phone}" class="text-blue-600 hover:underline">${escapeHtml(phone)}</a></div>`;
+                }
+                html += '</div></div>';
+            }
+            
+            // Store count range
+            if (storeCountRange) {
+                html += `<div><h4 class="text-sm font-semibold text-gray-700 mb-1">Store Count</h4><p class="text-gray-900">${escapeHtml(storeCountRange)} stores</p></div>`;
+            }
+            
+            // Biggest challenge
+            if (biggestChallenge) {
+                html += `<div><h4 class="text-sm font-semibold text-gray-700 mb-1">Biggest Challenge</h4><p class="text-gray-900">${escapeHtml(biggestChallenge)}</p></div>`;
+            }
+            
+            // Problem areas
+            if (problemAreas && Array.isArray(problemAreas) && problemAreas.length > 0) {
+                html += '<div><h4 class="text-sm font-semibold text-gray-700 mb-2">Problem Areas</h4><div class="flex flex-wrap gap-2">';
+                problemAreas.forEach(area => {
+                    html += `<span class="px-2 py-1 bg-blue-100 text-blue-800 rounded text-xs">${escapeHtml(area)}</span>`;
+                });
+                html += '</div></div>';
+            }
+            
+            html += '</div>';
+            
+            contactContent.innerHTML = html;
+            contactSection.style.display = 'block';
+        }
+        
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+        
+        function editContactInfo() {
+            // Redirect to admin brand detail page for editing
+            const urlParams = new URLSearchParams(window.location.search);
+            const brandId = urlParams.get('brand_id');
+            if (brandId) {
+                window.location.href = `../admin/brands-detail.html?id=${brandId}`;
+            }
+        }
+        
         async function loadContactInfo(brandId) {
             if (!brandId) return;
             
@@ -561,17 +646,25 @@
             try {
                 const { data: brand, error } = await supabase
                     .from('brands')
-                    .select('website, primary_email, contact_email, phone, contact_phone')
+                    .select('website, primary_email, contact_email, phone, contact_phone, contact_name, contact_role, store_count_range, biggest_challenge, problem_areas')
                     .eq('id', brandId)
                     .single();
                 
                 if (error || !brand) {
-                    contactSection.style.display = 'none';
-                return;
-            }
+                    if (contactSection) contactSection.style.display = 'none';
+                    return;
+                }
 
                 const email = brand.primary_email || brand.contact_email;
                 const phone = brand.phone || brand.contact_phone;
+                const contactName = brand.contact_name || null;
+                const contactRole = brand.contact_role || null;
+                const storeCountRange = brand.store_count_range || null;
+                const biggestChallenge = brand.biggest_challenge || null;
+                const problemAreas = brand.problem_areas || [];
+                
+                // Use displayContactInfo to show the new contact section
+                displayContactInfo(brand);
                 
                 if (!brand.website && !email && !phone) {
                     contactSection.style.display = 'none';
@@ -952,17 +1045,40 @@
                 try {
                     // Upload to Supabase storage
                     const fileExt = file.name.split('.').pop();
-                    const fileName = `${productId}/${Date.now()}.${fileExt}`;
-                    const filePath = `product-photos/${fileName}`;
+                    const fileName = `${Date.now()}.${fileExt}`;
+                    // File path: {productId}/{timestamp}.{ext} (bucket name is already 'product-photos')
+                    const filePath = `${productId}/${fileName}`;
+                    
+                    console.log('Uploading to:', filePath);
                     
                     const { data: uploadData, error: uploadError } = await supabase.storage
                         .from('product-photos')
-                        .upload(filePath, file);
+                        .upload(filePath, file, {
+                            cacheControl: '3600',
+                            upsert: false
+                        });
                     
                     if (uploadError) {
-                        // Create bucket if it doesn't exist (admin would need to do this)
                         console.error('Upload error:', uploadError);
-                        alert('Error uploading photo. Please contact admin to set up product photos storage.');
+                        console.error('Error details:', {
+                            message: uploadError.message,
+                            statusCode: uploadError.statusCode,
+                            error: uploadError.error
+                        });
+                        
+                        // Provide more specific error messages
+                        let errorMsg = 'Error uploading photo. ';
+                        if (uploadError.message && uploadError.message.includes('Bucket not found')) {
+                            errorMsg += 'Storage bucket "product-photos" not found. Please create it in Supabase Dashboard.';
+                        } else if (uploadError.message && uploadError.message.includes('row-level security')) {
+                            errorMsg += 'Permission denied. Please check RLS policies for product-photos bucket.';
+                        } else if (uploadError.message && uploadError.message.includes('File size')) {
+                            errorMsg += 'File is too large. Maximum size is 5MB.';
+                        } else {
+                            errorMsg += `Details: ${uploadError.message || 'Unknown error'}`;
+                        }
+                        
+                        alert(errorMsg);
                         return;
                     }
                     

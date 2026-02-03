@@ -78,6 +78,7 @@
   <div class="wrap">
     <h1>Brand Onboarding</h1>
     <p class="hint">Fast setup for real-time shelf visibility. Takes ~5-10 minutes.</p>
+    <p class="hint" style="margin-top: 8px; color: #6b7280;">We'll reuse what you share here. You can update it anytime.</p>
 
     <div id="msg" class="hint"></div>
 
@@ -100,17 +101,85 @@
             <label>Website</label>
             <input id="brand_site" placeholder="https://www.company.com" />
           </div>
+          <div class="full">
+            <label>Brand Logo</label>
+            <div style="display: flex; gap: 12px; align-items: flex-start;">
+              <div style="flex: 1;">
+                <input type="file" id="brand_logo" accept="image/*" style="display: none;" />
+                <button type="button" class="btn ghost" id="upload_logo_btn" style="width: 100%;">Upload Logo</button>
+              </div>
+              <div id="logo_preview" style="width: 100px; height: 100px; border: 1px dashed #d1d5db; border-radius: 8px; display: none; overflow: hidden; background: #f9fafb; flex-shrink: 0;">
+                <img id="logo_preview_img" src="" alt="Logo preview" style="width: 100%; height: 100%; object-fit: contain;" />
+              </div>
+            </div>
+            <p class="hint" style="margin-top: 4px;">Optional. Upload your brand logo (PNG, JPG, or GIF)</p>
+          </div>
+        </div>
+        
+        <h2 style="margin-top: 24px;">Contact Information</h2>
+        <div class="grid">
           <div>
-            <label>Primary Email</label>
-            <input id="brand_email" type="email" placeholder="contact@company.com" />
+            <label>Contact Full Name <span class="req">*</span></label>
+            <input id="contact_name" placeholder="John Smith" required />
+            <div class="inline-error" data-err="contact_name"></div>
+          </div>
+          <div>
+            <label>Work Email <span class="req">*</span></label>
+            <input id="contact_email" type="email" placeholder="john@company.com" required />
+            <div class="inline-error" data-err="contact_email"></div>
+          </div>
+          <div>
+            <label>Role</label>
+            <input id="contact_role" placeholder="Marketing Manager, CEO, etc." />
           </div>
           <div>
             <label>Phone</label>
-            <input id="brand_phone" placeholder="(555) 123-4567" />
+            <input id="contact_phone" placeholder="(555) 123-4567" />
           </div>
           <div class="full">
-            <label>Address</label>
-            <input id="brand_addr" placeholder="Street, City, State, ZIP" />
+            <label>Store Count Range</label>
+            <select id="store_count_range">
+              <option value="">Select range...</option>
+              <option value="1-10">1–10 stores</option>
+              <option value="11-50">11–50 stores</option>
+              <option value="51-200">51–200 stores</option>
+              <option value="201-500">201–500 stores</option>
+              <option value="500+">500+ stores</option>
+            </select>
+          </div>
+          <div class="full">
+            <label>Biggest Retail Challenge</label>
+            <textarea id="biggest_challenge" placeholder="What's your biggest challenge in retail? (e.g., stockouts, pricing, compliance, etc.)" rows="3"></textarea>
+          </div>
+          <div class="full">
+            <label>Problem Areas</label>
+            <div style="display: flex; flex-wrap: wrap; gap: 12px; margin-top: 8px;">
+              <label style="display: flex; align-items: center; gap: 6px; font-weight: normal; cursor: pointer;">
+                <input type="checkbox" value="OOS / Stockouts" data-problem-area />
+                <span>OOS / Stockouts</span>
+              </label>
+              <label style="display: flex; align-items: center; gap: 6px; font-weight: normal; cursor: pointer;">
+                <input type="checkbox" value="Price Integrity" data-problem-area />
+                <span>Price Integrity</span>
+              </label>
+              <label style="display: flex; align-items: center; gap: 6px; font-weight: normal; cursor: pointer;">
+                <input type="checkbox" value="Promo Execution" data-problem-area />
+                <span>Promo Execution</span>
+              </label>
+              <label style="display: flex; align-items: center; gap: 6px; font-weight: normal; cursor: pointer;">
+                <input type="checkbox" value="Planogram Compliance" data-problem-area />
+                <span>Planogram Compliance</span>
+              </label>
+              <label style="display: flex; align-items: center; gap: 6px; font-weight: normal; cursor: pointer;">
+                <input type="checkbox" value="Competitive Monitoring" data-problem-area />
+                <span>Competitive Monitoring</span>
+              </label>
+              <label style="display: flex; align-items: center; gap: 6px; font-weight: normal; cursor: pointer;">
+                <input type="checkbox" value="Other" data-problem-area />
+                <span>Other</span>
+              </label>
+            </div>
+            <p class="hint" style="margin-top: 4px;">Select all that apply</p>
           </div>
         </div>
       </div>
@@ -300,6 +369,43 @@
       const err = el('error');
       const viewBrand = el('viewBrand');
       const lastSaved = el('lastSaved');
+      
+      // Logo upload handling
+      let logoFile = null;
+      const logoInput = el('brand_logo');
+      const logoPreview = el('logo_preview');
+      const logoPreviewImg = el('logo_preview_img');
+      const uploadLogoBtn = el('upload_logo_btn');
+      
+      uploadLogoBtn.onclick = (e) => {
+        e.preventDefault();
+        logoInput.click();
+      };
+      
+      logoInput.onchange = (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        
+        if (!file.type.startsWith('image/')) {
+          err.textContent = 'Please select an image file (PNG, JPG, or GIF)';
+          setTimeout(() => err.textContent = '', 3000);
+          return;
+        }
+        
+        if (file.size > 5 * 1024 * 1024) { // 5MB limit
+          err.textContent = 'Logo file is too large. Please use an image under 5MB.';
+          setTimeout(() => err.textContent = '', 3000);
+          return;
+        }
+        
+        logoFile = file;
+        const reader = new FileReader();
+        reader.onload = (event) => {
+          logoPreviewImg.src = event.target.result;
+          logoPreview.style.display = 'block';
+        };
+        reader.readAsDataURL(file);
+      };
 
       let currentStep = 1;
       const totalSteps = 3;
@@ -623,10 +729,18 @@
             site: el('brand_site').value,
             email: el('brand_email').value,
             phone: el('brand_phone').value,
-            addr: el('brand_addr').value
+            addr: el('brand_addr').value,
+            contactName: el('contact_name').value,
+            contactEmail: el('contact_email').value,
+            contactRole: el('contact_role').value,
+            contactPhone: el('contact_phone').value,
+            storeCountRange: el('store_count_range').value,
+            biggestChallenge: el('biggest_challenge').value,
+            problemAreas: Array.from(document.querySelectorAll('[data-problem-area]:checked')).map(cb => cb.value)
           },
           products: readProductsAll(),
           stores: readStoresAll(),
+          logoPreview: logoPreviewImg.src || null,
           savedAt: new Date().toISOString()
         };
         localStorage.setItem('brandDraft', JSON.stringify(draft));
@@ -651,6 +765,27 @@
         el('brand_email').value = data.brand.email || '';
         el('brand_phone').value = data.brand.phone || '';
         el('brand_addr').value = data.brand.addr || '';
+        
+        // Load new fields
+        if (data.brand.contactName) el('contact_name').value = data.brand.contactName;
+        if (data.brand.contactEmail) el('contact_email').value = data.brand.contactEmail;
+        if (data.brand.contactRole) el('contact_role').value = data.brand.contactRole;
+        if (data.brand.contactPhone) el('contact_phone').value = data.brand.contactPhone;
+        if (data.brand.storeCountRange) el('store_count_range').value = data.brand.storeCountRange;
+        if (data.brand.biggestChallenge) el('biggest_challenge').value = data.brand.biggestChallenge;
+        
+        // Load problem areas checkboxes
+        if (data.brand.problemAreas && Array.isArray(data.brand.problemAreas)) {
+          document.querySelectorAll('[data-problem-area]').forEach(cb => {
+            cb.checked = data.brand.problemAreas.includes(cb.value);
+          });
+        }
+        
+        // Load logo preview if available
+        if (data.logoPreview) {
+          logoPreviewImg.src = data.logoPreview;
+          logoPreview.style.display = 'block';
+        }
 
         products.innerHTML = '';
         stores.innerHTML = '';
@@ -744,14 +879,38 @@
 
       function validateBrand(){
         clearFieldErrors();
+        let isValid = true;
+        
         const name = el('brand_name').value.trim();
         if (!name) {
           const field = el('brand_name').closest('div');
           field.classList.add('field-error');
           document.querySelector('[data-err="brand_name"]').textContent = 'Brand name is required.';
-          return false;
+          isValid = false;
         }
-        return true;
+        
+        const contactName = el('contact_name').value.trim();
+        if (!contactName) {
+          const field = el('contact_name').closest('div');
+          field.classList.add('field-error');
+          document.querySelector('[data-err="contact_name"]').textContent = 'Contact name is required.';
+          isValid = false;
+        }
+        
+        const contactEmail = el('contact_email').value.trim();
+        if (!contactEmail) {
+          const field = el('contact_email').closest('div');
+          field.classList.add('field-error');
+          document.querySelector('[data-err="contact_email"]').textContent = 'Work email is required.';
+          isValid = false;
+        } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(contactEmail)) {
+          const field = el('contact_email').closest('div');
+          field.classList.add('field-error');
+          document.querySelector('[data-err="contact_email"]').textContent = 'Please enter a valid email address.';
+          isValid = false;
+        }
+        
+        return isValid;
       }
 
       function validateProducts(){
@@ -903,18 +1062,71 @@
         const email = document.getElementById('brand_email').value.trim() || null;
         const phone = document.getElementById('brand_phone').value.trim() || null;
         const addr = document.getElementById('brand_addr').value.trim() || null;
-
+        
+        // Collect new lead-capture fields
+        const contactName = document.getElementById('contact_name').value.trim() || null;
+        const contactEmail = document.getElementById('contact_email').value.trim() || null;
+        const contactRole = document.getElementById('contact_role').value.trim() || null;
+        const contactPhone = document.getElementById('contact_phone').value.trim() || null;
+        const storeCountRange = document.getElementById('store_count_range').value || null;
+        const biggestChallenge = document.getElementById('biggest_challenge').value.trim() || null;
+        
+        // Collect problem areas checkboxes
+        const problemAreasCheckboxes = document.querySelectorAll('[data-problem-area]:checked');
+        const problemAreas = Array.from(problemAreasCheckboxes).map(cb => cb.value);
+        
         const prodList = readProducts();
         const storeList = readStores();
+
+        // Upload logo if provided
+        let logoUrl = null;
+        if (logoFile) {
+          stat.textContent='Uploading logo...';
+          try {
+            const fileExt = logoFile.name.split('.').pop();
+            const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
+            const filePath = `brand-logos/${fileName}`;
+            
+            const { data: uploadData, error: uploadError } = await supabase.storage
+              .from('brand-logos')
+              .upload(filePath, logoFile, {
+                cacheControl: '3600',
+                upsert: false
+              });
+            
+            if (uploadError) {
+              // Try to create bucket if it doesn't exist (this will fail gracefully if bucket exists)
+              console.warn('Logo upload error:', uploadError);
+              err.textContent = 'Logo upload failed. Please try again or continue without logo.';
+              // Continue without logo - don't block the save
+            } else {
+              // Get public URL
+              const { data: { publicUrl } } = supabase.storage
+                .from('brand-logos')
+                .getPublicUrl(filePath);
+              logoUrl = publicUrl;
+            }
+          } catch (uploadErr) {
+            console.error('Logo upload exception:', uploadErr);
+            err.textContent = 'Logo upload failed. Please try again or continue without logo.';
+            // Continue without logo
+          }
+        }
 
         stat.textContent='Saving brand...';
         const { data: brandId, error: rpcErr } = await supabase.rpc('upsert_brand_public', {
           p_id: null,
           p_name: name,
           p_website: site,
-          p_primary_email: email,
-          p_phone: phone,
+          p_primary_email: contactEmail || email, // Use contact email as primary if provided
+          p_phone: contactPhone || phone,
           p_address: addr,
+          p_contact_name: contactName,
+          p_contact_role: contactRole,
+          p_store_count_range: storeCountRange,
+          p_biggest_challenge: biggestChallenge,
+          p_problem_areas: problemAreas.length > 0 ? problemAreas : null,
+          p_logo_url: logoUrl
         });
         if(rpcErr){ err.textContent=rpcErr.message; return; }
 
@@ -962,7 +1174,7 @@
 
         ok.textContent='Saved! Brand, products, and stores created.';
         stat.textContent='';
-        viewBrand.href = './brand-detail.html?id=' + brandId;
+        viewBrand.href = './dashboard/brand-client.html?brand_id=' + brandId;
         viewBrand.style.display = 'inline';
       }
 
