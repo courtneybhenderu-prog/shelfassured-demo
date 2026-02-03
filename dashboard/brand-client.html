@@ -292,17 +292,31 @@
                         }
                     }
                     
-                    // Filter jobs by brand_id
+                    // Filter jobs by brand_id - ONLY show completed jobs
                     const jobs = await saGet('jobs', []);
-                    clientJobs = jobs.filter(job => job.brand_id === brandId);
+                    clientJobs = jobs.filter(job => 
+                        job.brand_id === brandId && 
+                        job.status === 'completed'
+                    );
                     
-                    console.log(`✅ Loaded ${clientJobs.length} jobs for brand ${brandId}`);
+                    console.log(`✅ Loaded ${clientJobs.length} completed jobs for brand ${brandId}`);
                 } else {
-                    // Normal brand client view - filter by client_id
+                    // Normal brand client view - get brand_id first, then filter by brand_id and status
                     const { data: { user } } = await supabase.auth.getUser();
-                    const jobs = await saGet('jobs', []);
-                    clientJobs = jobs.filter(job => job.client_id === user.id);
+                    const finalBrandId = await getBrandIdFromUser();
                     
+                    if (finalBrandId) {
+                        // Filter jobs by brand_id - ONLY show completed jobs
+                        const jobs = await saGet('jobs', []);
+                        clientJobs = jobs.filter(job => 
+                            job.brand_id === finalBrandId && 
+                            job.status === 'completed'
+                        );
+                        console.log(`✅ Loaded ${clientJobs.length} completed jobs for brand ${finalBrandId}`);
+                    } else {
+                        console.warn('⚠️ No brand_id found for user');
+                        clientJobs = [];
+                    }
                 }
                 
                 // Get brand_id - use URL param, or find from user's jobs/brands
@@ -494,13 +508,24 @@
 
             try {
                 const jobIds = jobs.map(j => j.id);
-                const { data: submissions } = await supabase
+                // Get approved submissions for brand profile image
+                const { data: allSubmissions, error: allError } = await supabase
                     .from('job_submissions')
-                    .select('files, created_at')
+                    .select('files, created_at, review_outcome, is_validated')
                     .in('job_id', jobIds)
-                    .or('review_outcome.eq.approved,is_validated.eq.true')
-                    .order('created_at', { ascending: false })
-                    .limit(1);
+                    .order('created_at', { ascending: false });
+                
+                if (allError) {
+                    console.error('Error loading submissions for profile image:', allError);
+                    const imageEl = document.getElementById('brand-profile-image');
+                    imageEl.innerHTML = '<div class="text-gray-400 text-center p-4"><p>No photos yet</p></div>';
+                    return;
+                }
+                
+                // Filter for approved submissions and get the first one
+                const submissions = (allSubmissions || []).filter(sub => 
+                    sub.review_outcome === 'approved' || sub.is_validated === true
+                ).slice(0, 1);
                 
                 const imageEl = document.getElementById('brand-profile-image');
                 
@@ -519,37 +544,154 @@
             }
         }
 
-        // Load jobs content - update metrics
+        // Load jobs content - update metrics and display completed jobs
         async function loadJobsContent(jobs) {
             if (!jobs) jobs = [];
             
-            const totalJobs = jobs.length;
-            const activeStatuses = ['pending', 'assigned', 'pending_review'];
-            const activeJobs = jobs.filter(job => activeStatuses.includes(job.status)).length;
-            const completedJobs = jobs.filter(job => job.status === 'completed').length;
+            // Since we only show completed jobs, all jobs in the array are completed
+            const completedJobs = jobs.length;
             
-            // Update Active Jobs
-            const activeCountEl = document.getElementById('active-jobs-count');
-            if (activeCountEl) {
-                activeCountEl.textContent = activeJobs;
-            }
-            
-            // Update Completed Jobs
+            // Update Completed Jobs count
             const completedCountEl = document.getElementById('completed-jobs-count');
             if (completedCountEl) {
                 completedCountEl.textContent = completedJobs;
             }
             
-            // Update Success Rate
+            // Hide Active Jobs (brands don't see in-progress jobs)
+            const activeCountEl = document.getElementById('active-jobs-count');
+            if (activeCountEl) {
+                activeCountEl.textContent = '0';
+            }
+            
+            // Update Success Rate (100% since we only show completed)
             const successRateEl = document.getElementById('success-rate-count');
             if (successRateEl) {
-            if (totalJobs === 0) {
+                if (completedJobs === 0) {
                     successRateEl.textContent = '0%';
-            } else {
-                    const successRate = Math.round((completedJobs / totalJobs) * 100);
-                    successRateEl.textContent = `${successRate}%`;
+                } else {
+                    successRateEl.textContent = '100%';
                 }
             }
+            
+            // Display completed jobs list
+            await displayCompletedJobs(jobs);
+        }
+        
+        // Display completed jobs with details
+        async function displayCompletedJobs(jobs) {
+            // Find or create completed jobs section
+            let completedJobsSection = document.getElementById('completed-jobs-list');
+            if (!completedJobsSection) {
+                // Find the Jobs section and add completed jobs list below it
+                const jobsSection = document.querySelector('.bg-white.rounded-lg.shadow.mb-8');
+                if (jobsSection) {
+                    const completedDiv = document.createElement('div');
+                    completedDiv.className = 'px-6 py-4 border-t border-gray-200';
+                    completedDiv.id = 'completed-jobs-list';
+                    jobsSection.appendChild(completedDiv);
+                    completedJobsSection = completedDiv;
+                }
+            }
+            
+            if (!completedJobsSection) return;
+            
+            const escapeHtml = (text) => {
+                if (!text) return '';
+                const div = document.createElement('div');
+                div.textContent = text;
+                return div.innerHTML;
+            };
+            
+            if (jobs.length === 0) {
+                completedJobsSection.innerHTML = `
+                    <h4 class="text-md font-medium text-gray-700 mb-4">Completed Jobs</h4>
+                    <div class="text-center text-gray-500 py-8">
+                        <p>No completed jobs yet.</p>
+                        <p class="text-sm mt-2">Completed jobs will appear here once they are approved.</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            // Sort by completed_at (most recent first)
+            const sortedJobs = [...jobs].sort((a, b) => {
+                const dateA = a.completed_at ? new Date(a.completed_at) : new Date(a.updated_at || a.created_at);
+                const dateB = b.completed_at ? new Date(b.completed_at) : new Date(b.updated_at || b.created_at);
+                return dateB - dateA;
+            });
+            
+            // Get submission summaries for each job
+            const jobIds = sortedJobs.map(j => j.id);
+            let submissionMap = {};
+            if (jobIds.length > 0) {
+                const { data: submissions } = await supabase
+                    .from('job_submissions')
+                    .select('job_id, data, files, created_at, is_validated')
+                    .in('job_id', jobIds)
+                    .eq('is_validated', true)
+                    .order('created_at', { ascending: false });
+                
+                if (submissions) {
+                    submissions.forEach(sub => {
+                        if (!submissionMap[sub.job_id]) {
+                            submissionMap[sub.job_id] = [];
+                        }
+                        submissionMap[sub.job_id].push(sub);
+                    });
+                }
+            }
+            
+            completedJobsSection.innerHTML = `
+                <h4 class="text-md font-medium text-gray-700 mb-4">Completed Jobs</h4>
+                <div class="space-y-4">
+                    ${sortedJobs.map(job => {
+                        const submissions = submissionMap[job.id] || [];
+                        const firstSubmission = submissions[0];
+                        const completedDate = job.completed_at 
+                            ? new Date(job.completed_at).toLocaleDateString('en-US', { 
+                                year: 'numeric', 
+                                month: 'short', 
+                                day: 'numeric' 
+                            })
+                            : (job.updated_at 
+                                ? new Date(job.updated_at).toLocaleDateString('en-US', { 
+                                    year: 'numeric', 
+                                    month: 'short', 
+                                    day: 'numeric' 
+                                })
+                                : 'N/A');
+                        
+                        // Build summary from submission data
+                        let summary = 'Job completed successfully.';
+                        if (firstSubmission) {
+                            const data = firstSubmission.data || {};
+                            const parts = [];
+                            if (data.price) parts.push(`Price: $${parseFloat(data.price).toFixed(2)}`);
+                            if (data.stock_level) parts.push(`Stock: ${data.stock_level}`);
+                            if (submissions.length > 0) {
+                                const photoCount = submissions.reduce((sum, s) => {
+                                    const files = s.files || [];
+                                    return sum + (Array.isArray(files) ? files.length : 0);
+                                }, 0);
+                                if (photoCount > 0) parts.push(`${photoCount} photo${photoCount !== 1 ? 's' : ''}`);
+                            }
+                            if (parts.length > 0) {
+                                summary = parts.join(' • ');
+                            }
+                        }
+                        
+                        return `
+                            <div class="bg-gray-50 rounded-lg p-4 border border-gray-200">
+                                <div class="flex justify-between items-start mb-2">
+                                    <h5 class="font-semibold text-gray-900">${escapeHtml(job.title || 'Untitled Job')}</h5>
+                                    <span class="text-sm text-gray-600">${completedDate}</span>
+                                </div>
+                                <p class="text-sm text-gray-600 mt-2">${escapeHtml(summary)}</p>
+                            </div>
+                        `;
+                    }).join('')}
+                </div>
+            `;
         }
         
         // Load contact information
@@ -756,12 +898,26 @@
                 const jobIds = jobs.map(j => j.id);
                 
                 // Get approved submissions
-                const { data: submissions, error } = await supabase
+                // Query for submissions that are approved (either review_outcome='approved' OR is_validated=true)
+                const { data: allSubmissions, error: allError } = await supabase
                     .from('job_submissions')
-                    .select('id, job_id, files, created_at, store_id')
+                    .select('id, job_id, files, created_at, store_id, review_outcome, is_validated')
                     .in('job_id', jobIds)
-                    .or('review_outcome.eq.approved,is_validated.eq.true')
                     .order('created_at', { ascending: false });
+                
+                if (allError) {
+                    console.error('Error loading submissions:', allError);
+                    photosEmpty.style.display = 'block';
+                    photosGrid.style.display = 'none';
+                    return;
+                }
+                
+                // Filter for approved submissions client-side (more reliable than .or() query)
+                const submissions = (allSubmissions || []).filter(sub => 
+                    sub.review_outcome === 'approved' || sub.is_validated === true
+                );
+                
+                const error = null; // No error if we got here
                 
                 // Get job titles separately
                 const jobMap = {};
@@ -864,12 +1020,26 @@
             try {
                 const jobIds = jobs.map(j => j.id);
                 
-                const { data: submissions, error } = await supabase
+                // Get approved submissions for notes
+                const { data: allSubmissions, error: allError } = await supabase
                     .from('job_submissions')
-                    .select('id, job_id, data, created_at, contractor_id')
+                    .select('id, job_id, data, created_at, contractor_id, review_outcome, is_validated')
                     .in('job_id', jobIds)
-                    .or('review_outcome.eq.approved,is_validated.eq.true')
                     .order('created_at', { ascending: false });
+                
+                if (allError) {
+                    console.error('Error loading submissions for notes:', allError);
+                    notesEmpty.style.display = 'block';
+                    notesContent.style.display = 'none';
+                    return;
+                }
+                
+                // Filter for approved submissions client-side (more reliable than .or() query)
+                const submissions = (allSubmissions || []).filter(sub => 
+                    sub.review_outcome === 'approved' || sub.is_validated === true
+                );
+                
+                const error = null; // No error if we got here
                 
                 // Create job lookup map
                 const jobMap = {};

@@ -447,6 +447,16 @@
                     window.location.href = '../dashboard/brand-client.html';
                     return;
                 }
+                
+                // Check if submission_id is in URL and open that submission
+                const urlParams = new URLSearchParams(window.location.search);
+                const submissionId = urlParams.get('submission_id');
+                if (submissionId) {
+                    // Wait for submissions to load, then open the modal
+                    setTimeout(() => {
+                        openSubmissionDetail(submissionId);
+                    }, 1000);
+                }
 
                 console.log('✅ Admin access confirmed');
             } catch (error) {
@@ -870,9 +880,9 @@
                                         Review
                                     </button>
                                 ` : ''}
-                                <a href="manage-jobs.html?edit_job_id=${job.id}" target="_blank" class="px-3 py-1 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 text-sm text-center">
-                                    View Job →
-                                </a>
+                                <button onclick="openSubmissionDetail('${sub.id}')" class="px-3 py-1 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 text-sm text-center">
+                                    View Submission →
+                                </button>
                                 ${sub.validation_notes ? `
                                     <div class="mt-2 p-2 bg-gray-50 rounded text-xs text-gray-600 max-w-xs">
                                         <strong>Review Notes:</strong><br>
