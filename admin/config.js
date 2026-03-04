@@ -1,4 +1,8 @@
+// ShelfAssured Admin Configuration
+// SECURITY: Credentials are injected at build/deploy time via environment variables.
+// NEVER hardcode API keys or URLs in this file.
+// See .env.example for required variables.
 window.SA_CONFIG = {
-  SUPABASE_URL: "https://mlmhmzhvwtsswigfvkwx.supabase.co",
-  SUPABASE_ANON_KEY: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1sbWhtemh2d3Rzc3dpZ2Z2a3d4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTg3NTYwNDQsImV4cCI6MjA3NDMzMjA0NH0.sr3x6TkgXlK4Nc8SHPwoS6q5TDGXeExfFK2vPoOTPYk"
+  SUPABASE_URL: typeof __VITE_SUPABASE_URL__ !== 'undefined' ? __VITE_SUPABASE_URL__ : '',
+  SUPABASE_ANON_KEY: typeof __VITE_SUPABASE_ANON_KEY__ !== 'undefined' ? __VITE_SUPABASE_ANON_KEY__ : ''
 };
