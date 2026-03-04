@@ -11,3 +11,12 @@ node_modules/
 # OS generated files
 .DS_Store
 Thumbs.db
+
+# Environment variables - NEVER commit these
+.env.local
+.env.production
+.env.development
+
+# Local config files containing credentials - NEVER commit these
+config.js
+admin/config.js
