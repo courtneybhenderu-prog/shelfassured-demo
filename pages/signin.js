@@ -67,11 +67,8 @@ window.handleForgotPassword = async function() {
 // Handle form submission
 // Scripts load after DOM is ready, so attach listener immediately
 // Use a safe wrapper in case DOMContentLoaded hasn't fired yet
-function attachSigninListener() {
-    const form = document.getElementById('signin-form');
-    if (!form) { document.addEventListener('DOMContentLoaded', attachSigninListener); return; }
-    form.addEventListener('submit', async function(e) {
-    e.preventDefault();
+// Expose as global for onclick handler
+window.handleSignIn = async function() {
     
     const email = document.getElementById('login-email').value;
     const password = document.getElementById('login-password').value;
@@ -144,6 +141,4 @@ function attachSigninListener() {
         showMessage(messageEl, 'Error: ' + error.message, 'error');
     }
     });
-    });
-}
-attachSigninListener();
+};
