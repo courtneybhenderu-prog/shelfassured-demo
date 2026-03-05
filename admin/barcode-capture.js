@@ -509,6 +509,8 @@ async function ensureBrandExists(brandName) {
         .insert({
             name: brandName,
             is_shadow: true,
+            created_source: 'scan_capture',   // Tracks origin: scan_capture | manual_admin | import | brand_onboarding
+            data_source: 'scan_capture',       // Existing column — mirrors created_source for compatibility
             created_by: currentUser.id,
             created_at: new Date().toISOString()
         })
