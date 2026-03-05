@@ -15,21 +15,22 @@ const MAX_RETRIES = 5;
 // Function to initialize Supabase when ready
 function initializeSupabase() {
   try {
-    // Check if Supabase is available globally
-    if (typeof window.supabase !== 'undefined' && window.supabase.createClient) {
-      supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+    // The Supabase UMD build sets window.supabase = the LIBRARY (with createClient).
+    // We must NOT overwrite window.supabase with the client instance, because the
+    // library uses window.supabase internally for auth state listeners.
+    // Instead: keep the library at window.supabase, expose the client at window.saClient.
+    const lib = window.supabase;
+    if (typeof lib !== 'undefined' && lib.createClient) {
+      supabase = lib.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
         auth: {
-          // Always persist session in localStorage so mobile browsers
-          // don't lose the session when navigating between pages.
-          // sessionStorage is wiped on every page load on iOS Safari/Chrome.
           storage: window.localStorage,
           persistSession: true,
           autoRefreshToken: true,
           detectSessionInUrl: true,
         }
       });
-      // Make sure supabase is available globally
-      window.supabase = supabase;
+      // Expose client as window.saClient — do NOT overwrite window.supabase (the library)
+      window.saClient = supabase;
       console.log('✅ Supabase client initialized (localStorage session)');
       return true;
     } else {

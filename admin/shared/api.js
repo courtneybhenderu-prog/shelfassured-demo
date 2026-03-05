@@ -28,8 +28,8 @@ function initializeSupabase() {
           detectSessionInUrl: true,
         }
       });
-      // Make sure supabase is available globally
-      window.supabase = supabase;
+      // Expose client as window.saClient — do NOT overwrite window.supabase (the library)
+      window.saClient = supabase;
       console.log('✅ Supabase client initialized (localStorage session)');
       return true;
     } else {
