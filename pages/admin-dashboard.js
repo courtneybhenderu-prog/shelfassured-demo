@@ -31,7 +31,7 @@ async function initializeDashboard() {
         console.log('🚀 Starting initializeDashboard...');
         
         // Get current user (should already be set by inline guard)
-        const { data: { user } } = await supabase.auth.getUser();
+        const { data: { user } } = await (window.saClient || supabase).auth.getUser();
         if (!user) {
             console.log('❌ No user found, redirecting to signin');
             window.location.href = '../auth/signin.html';
@@ -41,7 +41,7 @@ async function initializeDashboard() {
         
         // Get user profile — use ensureProfile as fallback so a missing row doesn't boot the user
         let profile = null;
-        const { data: profileData, error: profileError } = await supabase
+        const { data: profileData, error: profileError } = await (window.saClient || supabase)
             .from('users')
             .select('role, full_name, approval_status')
             .eq('id', user.id)
@@ -100,7 +100,7 @@ async function loadDashboardData() {
         let brands = [];
         console.log('🔄 Starting brands query...');
         try {
-            const brandsResult = await supabase
+            const brandsResult = await (window.saClient || supabase)
                 .from('brands')
                 .select('id, name, website, created_at, logo_url')
                 .order('created_at', { ascending: false })
@@ -211,7 +211,7 @@ async function updateRecentActivity(jobs, users) {
             const jobsWithDetails = await Promise.all(recentJobs.map(async (job) => {
                 try {
                     // Get first assignment for this job to show store/SKU
-                    const { data: assignments, error } = await supabase
+                    const { data: assignments, error } = await (window.saClient || supabase)
                         .from('v_job_assignments')
                         .select('*')
                         .eq('job_id', job.id)
@@ -500,7 +500,7 @@ function escapeHtml(text) {
 // Handle sign out
 async function handleSignOut() {
     try {
-        await supabase.auth.signOut();
+        await (window.saClient || supabase).auth.signOut();
         window.location.href = '../auth/signin.html';
     } catch (error) {
         console.error('Error signing out:', error);
