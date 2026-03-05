@@ -10,6 +10,27 @@
         window.SA_PAGE_ROLE = 'admin';
         window.SA_DISABLE_GLOBAL_GUARD = true;
         window.SA_ADMIN_READY = true;
+        
+        // DIAGNOSTIC: Intercept all redirects to find the source
+        (function() {
+          var _logs = [];
+          function logIt(msg) { _logs.push(msg); console.error('[SA-DIAG]', msg); }
+          // Intercept location.replace and assign
+          try {
+            var origReplace = window.location.replace.bind(window.location);
+            window.location.replace = function(url) {
+              logIt('location.replace -> ' + url + ' | stack: ' + new Error().stack);
+              document.title = 'REPLACE:' + url;
+              // origReplace(url); // commented out to STOP the redirect for diagnosis
+            };
+            window.location.assign = function(url) {
+              logIt('location.assign -> ' + url + ' | stack: ' + new Error().stack);
+              document.title = 'ASSIGN:' + url;
+            };
+          } catch(e) { logIt('intercept error: ' + e); }
+          window.__SA_DIAG_LOGS__ = _logs;
+          logIt('DASHBOARD HEAD LOADED - SA_DISABLE_GLOBAL_GUARD=' + window.SA_DISABLE_GLOBAL_GUARD);
+        })();
     </script>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.47.5/dist/umd/supabase.min.js"></script>
