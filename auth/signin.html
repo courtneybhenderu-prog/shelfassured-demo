@@ -49,6 +49,139 @@
 
     <script src="../config.js?v=20260305"></script>
     <script src="../shared/api.js?v=20260305"></script>
-    <script src="../pages/signin.js?v=20260305"></script>
+
+    <!-- Sign-in logic inlined to avoid external script caching issues -->
+    <script>
+    // ── Restore remembered credentials ──────────────────────────────────────
+    (function() {
+        const email = localStorage.getItem('rememberedEmail');
+        const pw    = localStorage.getItem('rememberedPassword');
+        const on    = localStorage.getItem('rememberMe') === 'true';
+        if (email && on) {
+            document.getElementById('login-email').value = email;
+            document.getElementById('remember-me').checked = true;
+            if (pw) {
+                try { document.getElementById('login-password').value = atob(pw); } catch(e) {}
+            }
+        }
+        document.getElementById('remember-me').addEventListener('change', function(e) {
+            if (!e.target.checked) localStorage.removeItem('rememberedPassword');
+        });
+    })();
+
+    // ── Utility: show message ────────────────────────────────────────────────
+    function showMsg(el, msg, type) {
+        if (!el) return;
+        el.textContent = msg;
+        el.className = 'mt-3 text-sm ' + (type === 'error' ? 'text-red-600' : type === 'success' ? 'text-green-600' : 'text-blue-600');
+        el.classList.remove('hidden');
+    }
+
+    // ── Sign In ──────────────────────────────────────────────────────────────
+    window.handleSignIn = async function() {
+        const email     = document.getElementById('login-email').value.trim().toLowerCase();
+        const password  = document.getElementById('login-password').value;
+        const rememberMe = document.getElementById('remember-me').checked;
+        const msgEl     = document.getElementById('signin-message');
+
+        if (!email || !password) {
+            showMsg(msgEl, 'Please enter both email and password', 'error');
+            return;
+        }
+
+        showMsg(msgEl, 'Signing in...', 'info');
+
+        try {
+            // Use saClient (set by api.js) or fall back to window.supabase.createClient
+            const client = window.saClient;
+            if (!client) {
+                showMsg(msgEl, 'App not ready yet — please wait a moment and try again', 'error');
+                return;
+            }
+
+            const { data, error } = await client.auth.signInWithPassword({ email, password });
+
+            if (error) {
+                console.error('❌ Sign in failed:', error);
+                showMsg(msgEl, 'Sign in failed: ' + error.message, 'error');
+                return;
+            }
+
+            showMsg(msgEl, 'Signed in successfully!', 'success');
+            console.log('✅ Signed in:', data.user.email);
+
+            // Save remember-me prefs
+            if (rememberMe) {
+                localStorage.setItem('rememberedEmail', email);
+                localStorage.setItem('rememberMe', 'true');
+                localStorage.setItem('rememberedPassword', btoa(password));
+            } else {
+                localStorage.removeItem('rememberedEmail');
+                localStorage.removeItem('rememberMe');
+                localStorage.removeItem('rememberedPassword');
+            }
+
+            // Get role from users table
+            let role = 'shelfer';
+            try {
+                const { data: profile } = await client
+                    .from('users')
+                    .select('role, approval_status, full_name')
+                    .eq('id', data.user.id)
+                    .single();
+                if (profile && profile.role) role = profile.role;
+            } catch(e) {
+                console.warn('Could not fetch profile, defaulting to shelfer role');
+            }
+
+            console.log('🎯 Role:', role);
+
+            // Role-based redirect
+            let dest;
+            if (role === 'admin')        dest = '../admin/dashboard.html';
+            else if (role === 'brand_client') dest = '../dashboard/brand-client.html';
+            else                          dest = '../dashboard/shelfer.html';
+
+            console.log('➡️ Redirecting to:', dest);
+            setTimeout(() => { window.location.href = dest; }, 800);
+
+        } catch(err) {
+            console.error('❌ Sign in error:', err);
+            showMsg(msgEl, 'Error: ' + err.message, 'error');
+        }
+    };
+
+    // ── Forgot Password ──────────────────────────────────────────────────────
+    window.handleForgotPassword = async function() {
+        const email = document.getElementById('login-email').value.trim().toLowerCase();
+        const msgEl = document.getElementById('signin-message');
+
+        if (!email) {
+            showMsg(msgEl, 'Please enter your email address first', 'error');
+            return;
+        }
+
+        showMsg(msgEl, 'Sending password reset email...', 'info');
+
+        try {
+            const client = window.saClient;
+            if (!client) { showMsg(msgEl, 'App not ready — try again in a moment', 'error'); return; }
+
+            const base = location.origin.includes('localhost')
+                ? 'http://localhost:8000'
+                : 'https://courtneybhenderu-prog.github.io/shelfassured-demo';
+
+            const { error } = await client.auth.resetPasswordForEmail(email, {
+                redirectTo: base + '/auth/confirmed.html'
+            });
+
+            if (error) showMsg(msgEl, 'Error: ' + error.message, 'error');
+            else        showMsg(msgEl, 'Password reset email sent! Check your inbox.', 'success');
+
+        } catch(err) {
+            showMsg(msgEl, 'Error: ' + err.message, 'error');
+        }
+    };
+    </script>
 </body>
 </html>
