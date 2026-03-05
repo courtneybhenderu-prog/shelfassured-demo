@@ -1,0 +1,1077 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Scan Intelligence — ShelfAssured Admin</title>
+
+    <!-- Role guard must be set before any shared scripts -->
+    <script>
+        window.SA_PAGE_ROLE = 'admin';
+        window.SA_DISABLE_GLOBAL_GUARD = true;
+        window.SA_ADMIN_READY = true;
+    </script>
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.47.5/dist/umd/supabase.min.js"></script>
+    <!-- SheetJS for Excel export -->
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
+    <link rel="stylesheet" href="../shared/styles.css">
+
+    <style>
+        /* ── Layout ── */
+        .page-wrapper { padding-bottom: 80px; }
+
+        /* ── KPI Cards ── */
+        .kpi-card {
+            background: white;
+            border-radius: 0.75rem;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+            padding: 1.25rem 1.5rem;
+            border-left: 4px solid transparent;
+        }
+        .kpi-card.blue  { border-left-color: #3b82f6; }
+        .kpi-card.green { border-left-color: #10b981; }
+        .kpi-card.amber { border-left-color: #f59e0b; }
+        .kpi-card.red   { border-left-color: #ef4444; }
+
+        /* ── Filter bar ── */
+        .filter-bar {
+            background: white;
+            border-radius: 0.75rem;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+            padding: 1.25rem 1.5rem;
+        }
+        .filter-bar select,
+        .filter-bar input[type="text"],
+        .filter-bar input[type="date"] {
+            padding: 0.45rem 0.75rem;
+            border: 1px solid #d1d5db;
+            border-radius: 0.5rem;
+            font-size: 0.875rem;
+            background: white;
+            color: #374151;
+            transition: border-color 0.15s;
+        }
+        .filter-bar select:focus,
+        .filter-bar input:focus {
+            outline: none;
+            border-color: #C62828;
+            box-shadow: 0 0 0 3px rgba(198,40,40,0.1);
+        }
+
+        /* ── View toggle ── */
+        .view-toggle button {
+            padding: 0.45rem 1rem;
+            font-size: 0.875rem;
+            font-weight: 500;
+            border: 1px solid #d1d5db;
+            background: white;
+            color: #6b7280;
+            cursor: pointer;
+            transition: all 0.15s;
+        }
+        .view-toggle button:first-child { border-radius: 0.5rem 0 0 0.5rem; }
+        .view-toggle button:last-child  { border-radius: 0 0.5rem 0.5rem 0; border-left: none; }
+        .view-toggle button.active {
+            background: #C62828;
+            color: white;
+            border-color: #C62828;
+        }
+
+        /* ── Sortable table ── */
+        #scan-table { width: 100%; border-collapse: collapse; }
+        #scan-table thead th {
+            background: #f9fafb;
+            padding: 0.75rem 1rem;
+            text-align: left;
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: #6b7280;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            border-bottom: 1px solid #e5e7eb;
+            white-space: nowrap;
+            cursor: pointer;
+            user-select: none;
+        }
+        #scan-table thead th:hover { background: #f3f4f6; color: #374151; }
+        #scan-table thead th .sort-icon { margin-left: 4px; opacity: 0.4; font-size: 0.7rem; }
+        #scan-table thead th.sort-asc .sort-icon::after  { content: " ▲"; opacity: 1; }
+        #scan-table thead th.sort-desc .sort-icon::after { content: " ▼"; opacity: 1; }
+        #scan-table thead th .sort-icon::after { content: " ⇅"; }
+        #scan-table tbody tr {
+            border-bottom: 1px solid #f3f4f6;
+            transition: background 0.1s;
+        }
+        #scan-table tbody tr:hover { background: #fef9f9; }
+        #scan-table tbody td {
+            padding: 0.75rem 1rem;
+            font-size: 0.875rem;
+            color: #374151;
+            vertical-align: middle;
+        }
+        .thumb-mini {
+            width: 44px;
+            height: 44px;
+            object-fit: cover;
+            border-radius: 6px;
+            cursor: pointer;
+            border: 1px solid #e5e7eb;
+        }
+        .thumb-mini:hover { opacity: 0.85; }
+
+        /* ── Status badges ── */
+        .badge {
+            display: inline-block;
+            padding: 0.2rem 0.6rem;
+            border-radius: 9999px;
+            font-size: 0.7rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+        }
+        .badge-approved       { background: #d1fae5; color: #065f46; }
+        .badge-pending_review { background: #fef3c7; color: #92400e; }
+        .badge-rejected       { background: #fee2e2; color: #991b1b; }
+
+        /* ── Compliance score bar ── */
+        .score-bar-wrap { width: 80px; }
+        .score-bar-bg {
+            height: 6px;
+            background: #e5e7eb;
+            border-radius: 3px;
+            overflow: hidden;
+        }
+        .score-bar-fill {
+            height: 100%;
+            border-radius: 3px;
+            transition: width 0.3s;
+        }
+
+        /* ── Photo gallery ── */
+        #gallery-view {
+            display: none;
+            grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+            gap: 1rem;
+        }
+        #gallery-view.active { display: grid; }
+        .gallery-card {
+            background: white;
+            border-radius: 0.75rem;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+            overflow: hidden;
+            border: 1px solid #e5e7eb;
+            transition: box-shadow 0.2s, transform 0.2s;
+        }
+        .gallery-card:hover {
+            box-shadow: 0 4px 12px rgba(0,0,0,0.12);
+            transform: translateY(-2px);
+        }
+        .gallery-thumb-wrap {
+            position: relative;
+            height: 180px;
+            background: #f3f4f6;
+            overflow: hidden;
+            cursor: pointer;
+        }
+        .gallery-thumb-wrap img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transition: transform 0.3s;
+        }
+        .gallery-thumb-wrap:hover img { transform: scale(1.04); }
+        .gallery-photo-count {
+            position: absolute;
+            bottom: 8px;
+            right: 8px;
+            background: rgba(0,0,0,0.6);
+            color: white;
+            font-size: 0.7rem;
+            font-weight: 600;
+            padding: 2px 7px;
+            border-radius: 9999px;
+        }
+        .gallery-body { padding: 0.875rem 1rem; }
+        .gallery-body .store-name {
+            font-weight: 600;
+            font-size: 0.9rem;
+            color: #111827;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .gallery-body .sku-name {
+            font-size: 0.8rem;
+            color: #6b7280;
+            margin-top: 2px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .gallery-meta {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-top: 0.6rem;
+        }
+
+        /* ── Lightbox ── */
+        #lightbox {
+            display: none;
+            position: fixed;
+            inset: 0;
+            z-index: 9999;
+            background: rgba(0,0,0,0.88);
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+        }
+        #lightbox.open { display: flex; }
+        #lightbox-img {
+            max-width: 90vw;
+            max-height: 80vh;
+            object-fit: contain;
+            border-radius: 8px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+        }
+        #lightbox-caption {
+            margin-top: 0.75rem;
+            color: #d1d5db;
+            font-size: 0.875rem;
+            text-align: center;
+        }
+        #lightbox-close {
+            position: absolute;
+            top: 1.25rem;
+            right: 1.5rem;
+            color: white;
+            font-size: 2rem;
+            cursor: pointer;
+            line-height: 1;
+            opacity: 0.8;
+        }
+        #lightbox-close:hover { opacity: 1; }
+        #lightbox-prev, #lightbox-next {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            background: rgba(255,255,255,0.15);
+            color: white;
+            border: none;
+            font-size: 1.75rem;
+            padding: 0.5rem 0.9rem;
+            border-radius: 0.5rem;
+            cursor: pointer;
+            transition: background 0.15s;
+        }
+        #lightbox-prev:hover, #lightbox-next:hover { background: rgba(255,255,255,0.3); }
+        #lightbox-prev { left: 1.5rem; }
+        #lightbox-next { right: 1.5rem; }
+
+        /* ── Empty state ── */
+        .empty-state {
+            text-align: center;
+            padding: 3rem 1rem;
+            color: #9ca3af;
+        }
+        .empty-state svg { margin: 0 auto 1rem; display: block; }
+
+        /* ── Bottom nav ── */
+        .bottom-nav {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: white;
+            border-top: 1px solid #e5e7eb;
+            z-index: 100;
+        }
+        .bottom-nav .inner {
+            display: flex;
+            justify-content: space-around;
+            padding: 0.75rem 0;
+        }
+        .bottom-nav button {
+            background: none;
+            border: none;
+            font-size: 0.875rem;
+            font-weight: 500;
+            color: #6b7280;
+            cursor: pointer;
+            padding: 0.25rem 0.5rem;
+        }
+        .bottom-nav button:hover { color: #C62828; }
+        .bottom-nav button.active { color: #C62828; font-weight: 700; }
+
+        /* ── Export buttons ── */
+        .btn-export {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+            padding: 0.45rem 0.9rem;
+            border-radius: 0.5rem;
+            font-size: 0.8rem;
+            font-weight: 600;
+            cursor: pointer;
+            border: 1px solid;
+            transition: all 0.15s;
+        }
+        .btn-export-csv {
+            background: #f0fdf4;
+            color: #166534;
+            border-color: #bbf7d0;
+        }
+        .btn-export-csv:hover { background: #dcfce7; }
+        .btn-export-excel {
+            background: #eff6ff;
+            color: #1d4ed8;
+            border-color: #bfdbfe;
+        }
+        .btn-export-excel:hover { background: #dbeafe; }
+
+        /* ── Responsive ── */
+        @media (max-width: 768px) {
+            .filter-grid { grid-template-columns: 1fr 1fr !important; }
+            .kpi-grid    { grid-template-columns: 1fr 1fr !important; }
+            #scan-table  { font-size: 0.78rem; }
+            #scan-table thead th,
+            #scan-table tbody td { padding: 0.5rem 0.6rem; }
+            .hide-mobile { display: none !important; }
+        }
+    </style>
+</head>
+<body>
+<div class="page-wrapper min-h-screen bg-gray-100">
+
+    <!-- ═══════════════════════════════════════════════════
+         HEADER
+    ═══════════════════════════════════════════════════ -->
+    <div class="bg-white shadow-sm border-b sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center py-4">
+                <div class="flex items-center gap-3">
+                    <a href="dashboard.html" class="text-gray-400 hover:text-gray-600 text-sm">← Dashboard</a>
+                    <span class="text-gray-300">|</span>
+                    <h1 class="text-xl font-bold text-gray-900">Scan Intelligence</h1>
+                    <span class="px-2 py-0.5 bg-red-100 text-red-800 text-xs font-semibold rounded-full">ADMIN</span>
+                </div>
+                <div class="flex items-center gap-3">
+                    <button onclick="exportCSV()" class="btn-export btn-export-csv">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+                        CSV
+                    </button>
+                    <button onclick="exportExcel()" class="btn-export btn-export-excel">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                        Excel
+                    </button>
+                    <button onclick="handleSignOut()" class="text-sm text-gray-500 hover:text-gray-700">Sign Out</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+
+        <!-- ═══════════════════════════════════════════════════
+             KPI SUMMARY ROW
+        ═══════════════════════════════════════════════════ -->
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6 kpi-grid">
+            <div class="kpi-card blue">
+                <p class="text-xs font-semibold text-gray-500 uppercase tracking-wide">Total Scans</p>
+                <p class="text-3xl font-bold text-blue-600 mt-1" id="kpi-total">—</p>
+                <p class="text-xs text-gray-400 mt-0.5">Matching filters</p>
+            </div>
+            <div class="kpi-card green">
+                <p class="text-xs font-semibold text-gray-500 uppercase tracking-wide">Approved</p>
+                <p class="text-3xl font-bold text-emerald-600 mt-1" id="kpi-approved">—</p>
+                <p class="text-xs text-gray-400 mt-0.5" id="kpi-approved-pct">—% of total</p>
+            </div>
+            <div class="kpi-card amber">
+                <p class="text-xs font-semibold text-gray-500 uppercase tracking-wide">Pending Review</p>
+                <p class="text-3xl font-bold text-amber-500 mt-1" id="kpi-pending">—</p>
+                <p class="text-xs text-gray-400 mt-0.5">Awaiting decision</p>
+            </div>
+            <div class="kpi-card red">
+                <p class="text-xs font-semibold text-gray-500 uppercase tracking-wide">Avg Compliance</p>
+                <p class="text-3xl font-bold text-red-600 mt-1" id="kpi-compliance">—</p>
+                <p class="text-xs text-gray-400 mt-0.5">Score / 100</p>
+            </div>
+        </div>
+
+        <!-- ═══════════════════════════════════════════════════
+             FILTER BAR
+        ═══════════════════════════════════════════════════ -->
+        <div class="filter-bar mb-6">
+            <div class="flex flex-wrap items-end gap-3 filter-grid" style="grid-template-columns: repeat(auto-fill, minmax(160px,1fr));">
+
+                <!-- Search -->
+                <div class="flex-1 min-w-[180px]">
+                    <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Search</label>
+                    <input type="text" id="f-search" placeholder="Store, SKU, shelfer…"
+                           class="w-full" oninput="applyFilters()">
+                </div>
+
+                <!-- Banner -->
+                <div>
+                    <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Banner</label>
+                    <select id="f-banner" onchange="applyFilters()">
+                        <option value="">All Banners</option>
+                    </select>
+                </div>
+
+                <!-- Brand -->
+                <div>
+                    <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Brand</label>
+                    <select id="f-brand" onchange="applyFilters()">
+                        <option value="">All Brands</option>
+                    </select>
+                </div>
+
+                <!-- Category -->
+                <div>
+                    <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Category</label>
+                    <select id="f-category" onchange="applyFilters()">
+                        <option value="">All Categories</option>
+                    </select>
+                </div>
+
+                <!-- Status -->
+                <div>
+                    <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Status</label>
+                    <select id="f-status" onchange="applyFilters()">
+                        <option value="">All Statuses</option>
+                        <option value="approved">Approved</option>
+                        <option value="pending_review">Pending Review</option>
+                        <option value="rejected">Rejected</option>
+                    </select>
+                </div>
+
+                <!-- Shelfer -->
+                <div>
+                    <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Shelfer</label>
+                    <select id="f-shelfer" onchange="applyFilters()">
+                        <option value="">All Shelfers</option>
+                    </select>
+                </div>
+
+                <!-- Date from -->
+                <div>
+                    <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">From</label>
+                    <input type="date" id="f-date-from" onchange="applyFilters()">
+                </div>
+
+                <!-- Date to -->
+                <div>
+                    <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">To</label>
+                    <input type="date" id="f-date-to" onchange="applyFilters()">
+                </div>
+
+                <!-- Clear -->
+                <div class="flex items-end">
+                    <button onclick="clearFilters()"
+                            class="px-4 py-[0.45rem] text-sm font-medium bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 border border-gray-200 whitespace-nowrap">
+                        Clear Filters
+                    </button>
+                </div>
+            </div>
+
+            <!-- Row 2: result count + view toggle -->
+            <div class="flex items-center justify-between mt-4 pt-3 border-t border-gray-100">
+                <p class="text-sm text-gray-500">
+                    Showing <span id="result-count" class="font-semibold text-gray-800">0</span> scan<span id="result-plural">s</span>
+                </p>
+                <div class="view-toggle flex">
+                    <button id="btn-table" class="active" onclick="switchView('table')">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="inline h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M3 6h18M3 14h18M3 18h18"/></svg>
+                        Table
+                    </button>
+                    <button id="btn-gallery" onclick="switchView('gallery')">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="inline h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"/></svg>
+                        Gallery
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ═══════════════════════════════════════════════════
+             TABLE VIEW
+        ═══════════════════════════════════════════════════ -->
+        <div id="table-view" class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+            <div class="overflow-x-auto">
+                <table id="scan-table">
+                    <thead>
+                        <tr>
+                            <th data-col="photos" class="hide-mobile" style="cursor:default;">Photo</th>
+                            <th data-col="submitted_at" onclick="sortBy('submitted_at')">Date <span class="sort-icon"></span></th>
+                            <th data-col="store_name" onclick="sortBy('store_name')">Store <span class="sort-icon"></span></th>
+                            <th data-col="banner" onclick="sortBy('banner')" class="hide-mobile">Banner <span class="sort-icon"></span></th>
+                            <th data-col="sku_name" onclick="sortBy('sku_name')">SKU <span class="sort-icon"></span></th>
+                            <th data-col="brand_name" onclick="sortBy('brand_name')" class="hide-mobile">Brand <span class="sort-icon"></span></th>
+                            <th data-col="category" onclick="sortBy('category')" class="hide-mobile">Category <span class="sort-icon"></span></th>
+                            <th data-col="contractor_name" onclick="sortBy('contractor_name')">Shelfer <span class="sort-icon"></span></th>
+                            <th data-col="compliance_score" onclick="sortBy('compliance_score')">Score <span class="sort-icon"></span></th>
+                            <th data-col="status" onclick="sortBy('status')">Status <span class="sort-icon"></span></th>
+                            <th data-col="facing_count" onclick="sortBy('facing_count')" class="hide-mobile">Facings <span class="sort-icon"></span></th>
+                            <th data-col="out_of_stock" onclick="sortBy('out_of_stock')" class="hide-mobile">OOS <span class="sort-icon"></span></th>
+                        </tr>
+                    </thead>
+                    <tbody id="table-body">
+                        <!-- Populated by JS -->
+                    </tbody>
+                </table>
+                <div id="table-empty" class="empty-state hidden">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
+                    <p class="text-lg font-medium text-gray-400">No scans match your filters</p>
+                    <p class="text-sm text-gray-400 mt-1">Try adjusting or clearing the filters above.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- ═══════════════════════════════════════════════════
+             GALLERY VIEW
+        ═══════════════════════════════════════════════════ -->
+        <div id="gallery-view"></div>
+        <div id="gallery-empty" class="empty-state hidden">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+            <p class="text-lg font-medium text-gray-400">No photos match your filters</p>
+            <p class="text-sm text-gray-400 mt-1">Try adjusting or clearing the filters above.</p>
+        </div>
+
+    </div><!-- /max-w-7xl -->
+</div><!-- /page-wrapper -->
+
+<!-- ═══════════════════════════════════════════════════
+     LIGHTBOX
+═══════════════════════════════════════════════════ -->
+<div id="lightbox" onclick="closeLightbox(event)">
+    <span id="lightbox-close" onclick="closeLightbox()">&times;</span>
+    <button id="lightbox-prev" onclick="lightboxNav(-1); event.stopPropagation();">&#8249;</button>
+    <img id="lightbox-img" src="" alt="Scan photo">
+    <div id="lightbox-caption"></div>
+    <button id="lightbox-next" onclick="lightboxNav(1); event.stopPropagation();">&#8250;</button>
+</div>
+
+<!-- ═══════════════════════════════════════════════════
+     BOTTOM NAV
+═══════════════════════════════════════════════════ -->
+<div class="bottom-nav">
+    <div class="inner max-w-7xl mx-auto">
+        <button onclick="location.href='dashboard.html'" class="active">Admin</button>
+        <button onclick="location.href='../dashboard/shelfer.html'">Shelfer</button>
+        <button onclick="location.href='../dashboard/brand-client.html'">Brand</button>
+        <button onclick="location.href='../dashboard/profile.html'">Profile</button>
+    </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════
+     SCRIPTS
+═══════════════════════════════════════════════════ -->
+<script src="config.js" onerror="console.warn('config.js not found — using demo mode')"></script>
+<script src="../shared/api.js?v=20250305-1" onerror="console.warn('api.js not found — using demo mode')"></script>
+
+<script>
+// ────────────────────────────────────────────────────────────
+// MOCK DATA (embedded for demo; replace with Supabase query)
+// ────────────────────────────────────────────────────────────
+const MOCK_SCANS = [
+  { id:"sub-001", job_id:"job-001", job_title:"HEB Spring Reset — Snack Aisle", submitted_at:"2025-03-01T09:14:00Z", contractor_name:"Maria Reyes", store_name:"HEB - ALVIN", store_city:"Alvin", store_state:"TX", banner:"HEB", sku_name:"ShelfSnack Granola Bar 6pk", upc:"012345678901", category:"Snacks", brand_name:"NatureBite", status:"approved", compliance_score:97, shelf_tag_present:true, facing_count:4, out_of_stock:false, notes:"All facings clean, price tag correct.", photos:["https://images.unsplash.com/photo-1604719312566-8912e9227c6a?w=400","https://images.unsplash.com/photo-1601924994987-69e26d50dc26?w=400"] },
+  { id:"sub-002", job_id:"job-001", job_title:"HEB Spring Reset — Snack Aisle", submitted_at:"2025-03-01T10:45:00Z", contractor_name:"James Okafor", store_name:"HEB - PEARLAND", store_city:"Pearland", store_state:"TX", banner:"HEB", sku_name:"ShelfSnack Granola Bar 6pk", upc:"012345678901", category:"Snacks", brand_name:"NatureBite", status:"approved", compliance_score:88, shelf_tag_present:true, facing_count:3, out_of_stock:false, notes:"One facing slightly misaligned.", photos:["https://images.unsplash.com/photo-1509440159596-0249088772ff?w=400"] },
+  { id:"sub-003", job_id:"job-002", job_title:"Kroger Beverage Audit Q1", submitted_at:"2025-03-02T08:30:00Z", contractor_name:"Sofia Hernandez", store_name:"KROGER - HOUSTON HEIGHTS", store_city:"Houston", store_state:"TX", banner:"Kroger", sku_name:"HydroBoost Electrolyte 12oz", upc:"098765432109", category:"Beverages", brand_name:"HydroBoost", status:"pending_review", compliance_score:72, shelf_tag_present:false, facing_count:2, out_of_stock:false, notes:"Missing shelf tag. Reported to store manager.", photos:["https://images.unsplash.com/photo-1548839140-29a749e1cf4d?w=400","https://images.unsplash.com/photo-1602143407151-7111542de6e8?w=400"] },
+  { id:"sub-004", job_id:"job-002", job_title:"Kroger Beverage Audit Q1", submitted_at:"2025-03-02T11:00:00Z", contractor_name:"Maria Reyes", store_name:"KROGER - SUGAR LAND", store_city:"Sugar Land", store_state:"TX", banner:"Kroger", sku_name:"HydroBoost Electrolyte 12oz", upc:"098765432109", category:"Beverages", brand_name:"HydroBoost", status:"approved", compliance_score:95, shelf_tag_present:true, facing_count:5, out_of_stock:false, notes:"Perfect placement, 5 full facings.", photos:["https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?w=400"] },
+  { id:"sub-005", job_id:"job-003", job_title:"Walmart Organic Dairy Check", submitted_at:"2025-03-03T14:20:00Z", contractor_name:"DeShawn Williams", store_name:"WALMART - PASADENA", store_city:"Pasadena", store_state:"TX", banner:"Walmart", sku_name:"GreenMeadow Organic Milk 1gal", upc:"011110987654", category:"Dairy", brand_name:"GreenMeadow", status:"rejected", compliance_score:41, shelf_tag_present:false, facing_count:1, out_of_stock:true, notes:"Product out of stock. No shelf tag. Needs restock.", photos:["https://images.unsplash.com/photo-1563636619-e9143da7973b?w=400"] },
+  { id:"sub-006", job_id:"job-003", job_title:"Walmart Organic Dairy Check", submitted_at:"2025-03-03T15:55:00Z", contractor_name:"James Okafor", store_name:"WALMART - LEAGUE CITY", store_city:"League City", store_state:"TX", banner:"Walmart", sku_name:"GreenMeadow Organic Milk 1gal", upc:"011110987654", category:"Dairy", brand_name:"GreenMeadow", status:"approved", compliance_score:91, shelf_tag_present:true, facing_count:4, out_of_stock:false, notes:"Good stock levels, tag present.", photos:["https://images.unsplash.com/photo-1550583724-b2692b85b150?w=400","https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=400"] },
+  { id:"sub-007", job_id:"job-004", job_title:"Whole Foods Premium Snack Audit", submitted_at:"2025-03-04T09:00:00Z", contractor_name:"Sofia Hernandez", store_name:"WHOLE FOODS - RIVER OAKS", store_city:"Houston", store_state:"TX", banner:"Whole Foods", sku_name:"CrunchCraft Almond Clusters 8oz", upc:"074312456789", category:"Snacks", brand_name:"CrunchCraft", status:"approved", compliance_score:99, shelf_tag_present:true, facing_count:6, out_of_stock:false, notes:"Excellent placement. End-cap display active.", photos:["https://images.unsplash.com/photo-1599599810769-bcde5a160d32?w=400","https://images.unsplash.com/photo-1590080875515-8a3a8dc5735e?w=400"] },
+  { id:"sub-008", job_id:"job-004", job_title:"Whole Foods Premium Snack Audit", submitted_at:"2025-03-04T11:30:00Z", contractor_name:"DeShawn Williams", store_name:"WHOLE FOODS - MIDTOWN", store_city:"Houston", store_state:"TX", banner:"Whole Foods", sku_name:"CrunchCraft Almond Clusters 8oz", upc:"074312456789", category:"Snacks", brand_name:"CrunchCraft", status:"pending_review", compliance_score:80, shelf_tag_present:true, facing_count:3, out_of_stock:false, notes:"Shelf slightly crowded, facings reduced.", photos:["https://images.unsplash.com/photo-1606787366850-de6330128bfc?w=400"] },
+  { id:"sub-009", job_id:"job-005", job_title:"Target Frozen Foods Compliance", submitted_at:"2025-03-05T08:15:00Z", contractor_name:"Maria Reyes", store_name:"TARGET - FRIENDSWOOD", store_city:"Friendswood", store_state:"TX", banner:"Target", sku_name:"FrostBite Veggie Burgers 4pk", upc:"036800123456", category:"Frozen", brand_name:"FrostBite", status:"approved", compliance_score:94, shelf_tag_present:true, facing_count:4, out_of_stock:false, notes:"Freezer section well-organized.", photos:["https://images.unsplash.com/photo-1551782450-a2132b4ba21d?w=400","https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?w=400"] },
+  { id:"sub-010", job_id:"job-005", job_title:"Target Frozen Foods Compliance", submitted_at:"2025-03-05T10:00:00Z", contractor_name:"James Okafor", store_name:"TARGET - PEARLAND", store_city:"Pearland", store_state:"TX", banner:"Target", sku_name:"FrostBite Veggie Burgers 4pk", upc:"036800123456", category:"Frozen", brand_name:"FrostBite", status:"pending_review", compliance_score:65, shelf_tag_present:false, facing_count:2, out_of_stock:false, notes:"Tag missing, only 2 facings visible.", photos:["https://images.unsplash.com/photo-1567620905732-2d1ec7ab7445?w=400"] },
+  { id:"sub-011", job_id:"job-006", job_title:"Sprouts Natural Beauty Audit", submitted_at:"2025-03-05T13:45:00Z", contractor_name:"Sofia Hernandez", store_name:"SPROUTS - KATY", store_city:"Katy", store_state:"TX", banner:"Sprouts", sku_name:"PureGlow Face Serum 2oz", upc:"055000112233", category:"Beauty", brand_name:"PureGlow", status:"approved", compliance_score:100, shelf_tag_present:true, facing_count:3, out_of_stock:false, notes:"Perfect. Featured in new arrivals section.", photos:["https://images.unsplash.com/photo-1556228578-8c89e6adf883?w=400","https://images.unsplash.com/photo-1571781926291-c477ebfd024b?w=400"] },
+  { id:"sub-012", job_id:"job-006", job_title:"Sprouts Natural Beauty Audit", submitted_at:"2025-03-05T15:00:00Z", contractor_name:"DeShawn Williams", store_name:"SPROUTS - THE WOODLANDS", store_city:"The Woodlands", store_state:"TX", banner:"Sprouts", sku_name:"PureGlow Face Serum 2oz", upc:"055000112233", category:"Beauty", brand_name:"PureGlow", status:"rejected", compliance_score:35, shelf_tag_present:false, facing_count:1, out_of_stock:true, notes:"Out of stock. Wrong shelf location. Needs correction.", photos:["https://images.unsplash.com/photo-1512290923902-8a9f81dc236c?w=400"] }
+];
+
+// ────────────────────────────────────────────────────────────
+// STATE
+// ────────────────────────────────────────────────────────────
+let allScans = [];
+let filteredScans = [];
+let currentView = 'table';
+let sortCol = 'submitted_at';
+let sortDir = 'desc';
+
+// Lightbox state
+let lbPhotos = [];
+let lbIndex  = 0;
+
+// ────────────────────────────────────────────────────────────
+// INIT
+// ────────────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', async () => {
+    allScans = await loadScans();
+    populateFilterDropdowns(allScans);
+    applyFilters();
+});
+
+async function loadScans() {
+    // Try Supabase first; fall back to mock data for demo
+    try {
+        if (typeof supabase !== 'undefined' && supabase) {
+            const { data, error } = await supabase
+                .from('job_submissions')
+                .select(`
+                    id, job_id, submitted_at, status, compliance_score,
+                    shelf_tag_present, facing_count, out_of_stock, notes,
+                    jobs ( title, brands ( name ) ),
+                    stores ( STORE, city, state, retailer_banners ( name ) ),
+                    skus ( name, upc, category ),
+                    users ( full_name )
+                `)
+                .order('submitted_at', { ascending: false });
+
+            if (!error && data && data.length > 0) {
+                return data.map(r => ({
+                    id: r.id,
+                    job_id: r.job_id,
+                    job_title: r.jobs?.title || 'Unknown Job',
+                    submitted_at: r.submitted_at,
+                    contractor_name: r.users?.full_name || 'Unknown',
+                    store_name: r.stores?.STORE || r.stores?.name || 'Unknown Store',
+                    store_city: r.stores?.city || '',
+                    store_state: r.stores?.state || '',
+                    banner: r.stores?.retailer_banners?.name || '',
+                    sku_name: r.skus?.name || 'Unknown SKU',
+                    upc: r.skus?.upc || '',
+                    category: r.skus?.category || '',
+                    brand_name: r.jobs?.brands?.name || '',
+                    status: r.status,
+                    compliance_score: r.compliance_score || 0,
+                    shelf_tag_present: r.shelf_tag_present,
+                    facing_count: r.facing_count || 0,
+                    out_of_stock: r.out_of_stock || false,
+                    notes: r.notes || '',
+                    photos: [] // photos loaded separately from storage
+                }));
+            }
+        }
+    } catch (e) {
+        console.warn('Supabase unavailable, using mock data:', e.message);
+    }
+    return MOCK_SCANS;
+}
+
+// ────────────────────────────────────────────────────────────
+// FILTER DROPDOWNS — populate unique values
+// ────────────────────────────────────────────────────────────
+function populateFilterDropdowns(scans) {
+    const unique = (arr) => [...new Set(arr.filter(Boolean))].sort();
+
+    const banners    = unique(scans.map(s => s.banner));
+    const brands     = unique(scans.map(s => s.brand_name));
+    const categories = unique(scans.map(s => s.category));
+    const shelfers   = unique(scans.map(s => s.contractor_name));
+
+    fillSelect('f-banner',   banners);
+    fillSelect('f-brand',    brands);
+    fillSelect('f-category', categories);
+    fillSelect('f-shelfer',  shelfers);
+}
+
+function fillSelect(id, values) {
+    const el = document.getElementById(id);
+    const current = el.value;
+    // Keep first option (All …)
+    while (el.options.length > 1) el.remove(1);
+    values.forEach(v => {
+        const opt = document.createElement('option');
+        opt.value = v;
+        opt.textContent = v;
+        el.appendChild(opt);
+    });
+    if (current) el.value = current;
+}
+
+// ────────────────────────────────────────────────────────────
+// FILTERING
+// ────────────────────────────────────────────────────────────
+function applyFilters() {
+    const search   = document.getElementById('f-search').value.trim().toLowerCase();
+    const banner   = document.getElementById('f-banner').value;
+    const brand    = document.getElementById('f-brand').value;
+    const category = document.getElementById('f-category').value;
+    const status   = document.getElementById('f-status').value;
+    const shelfer  = document.getElementById('f-shelfer').value;
+    const dateFrom = document.getElementById('f-date-from').value;
+    const dateTo   = document.getElementById('f-date-to').value;
+
+    filteredScans = allScans.filter(s => {
+        if (search && ![s.store_name, s.sku_name, s.contractor_name, s.brand_name, s.upc, s.notes]
+            .join(' ').toLowerCase().includes(search)) return false;
+        if (banner   && s.banner        !== banner)   return false;
+        if (brand    && s.brand_name    !== brand)    return false;
+        if (category && s.category      !== category) return false;
+        if (status   && s.status        !== status)   return false;
+        if (shelfer  && s.contractor_name !== shelfer) return false;
+        if (dateFrom && s.submitted_at < dateFrom)    return false;
+        if (dateTo   && s.submitted_at > dateTo + 'T23:59:59Z') return false;
+        return true;
+    });
+
+    sortData();
+    updateKPIs(filteredScans);
+    updateResultCount(filteredScans.length);
+
+    if (currentView === 'table') renderTable(filteredScans);
+    else renderGallery(filteredScans);
+}
+
+function clearFilters() {
+    ['f-search','f-banner','f-brand','f-category','f-status','f-shelfer','f-date-from','f-date-to']
+        .forEach(id => { document.getElementById(id).value = ''; });
+    applyFilters();
+}
+
+// ────────────────────────────────────────────────────────────
+// SORTING
+// ────────────────────────────────────────────────────────────
+function sortBy(col) {
+    if (sortCol === col) {
+        sortDir = sortDir === 'asc' ? 'desc' : 'asc';
+    } else {
+        sortCol = col;
+        sortDir = 'asc';
+    }
+    // Update header icons
+    document.querySelectorAll('#scan-table thead th').forEach(th => {
+        th.classList.remove('sort-asc','sort-desc');
+        if (th.dataset.col === col) th.classList.add(sortDir === 'asc' ? 'sort-asc' : 'sort-desc');
+    });
+    sortData();
+    renderTable(filteredScans);
+}
+
+function sortData() {
+    filteredScans.sort((a, b) => {
+        let va = a[sortCol], vb = b[sortCol];
+        if (typeof va === 'string') va = va.toLowerCase();
+        if (typeof vb === 'string') vb = vb.toLowerCase();
+        if (va < vb) return sortDir === 'asc' ? -1 :  1;
+        if (va > vb) return sortDir === 'asc' ?  1 : -1;
+        return 0;
+    });
+}
+
+// ────────────────────────────────────────────────────────────
+// KPI UPDATE
+// ────────────────────────────────────────────────────────────
+function updateKPIs(scans) {
+    const total    = scans.length;
+    const approved = scans.filter(s => s.status === 'approved').length;
+    const pending  = scans.filter(s => s.status === 'pending_review').length;
+    const avgScore = total > 0
+        ? Math.round(scans.reduce((sum, s) => sum + (s.compliance_score || 0), 0) / total)
+        : 0;
+
+    document.getElementById('kpi-total').textContent     = total;
+    document.getElementById('kpi-approved').textContent  = approved;
+    document.getElementById('kpi-pending').textContent   = pending;
+    document.getElementById('kpi-compliance').textContent = avgScore;
+    document.getElementById('kpi-approved-pct').textContent =
+        total > 0 ? `${Math.round(approved/total*100)}% of total` : '—% of total';
+}
+
+function updateResultCount(n) {
+    document.getElementById('result-count').textContent = n;
+    document.getElementById('result-plural').textContent = n === 1 ? '' : 's';
+}
+
+// ────────────────────────────────────────────────────────────
+// TABLE RENDER
+// ────────────────────────────────────────────────────────────
+function renderTable(scans) {
+    const tbody = document.getElementById('table-body');
+    const empty = document.getElementById('table-empty');
+
+    if (scans.length === 0) {
+        tbody.innerHTML = '';
+        empty.classList.remove('hidden');
+        return;
+    }
+    empty.classList.add('hidden');
+
+    tbody.innerHTML = scans.map(s => {
+        const date  = new Date(s.submitted_at).toLocaleDateString('en-US', { month:'short', day:'numeric', year:'2-digit' });
+        const badge = badgeHTML(s.status);
+        const score = scoreBarHTML(s.compliance_score);
+        const thumb = s.photos && s.photos.length
+            ? `<img src="${s.photos[0]}" class="thumb-mini" alt="scan photo"
+                    onclick="openLightbox(${JSON.stringify(s.photos).replace(/"/g,'&quot;')}, 0, '${esc(s.store_name)}')">`
+            : `<div class="w-11 h-11 bg-gray-100 rounded-md flex items-center justify-center text-gray-300 text-xs">—</div>`;
+        const oos = s.out_of_stock
+            ? '<span class="text-red-500 font-semibold text-xs">Yes</span>'
+            : '<span class="text-gray-400 text-xs">No</span>';
+
+        return `<tr>
+            <td class="hide-mobile">${thumb}</td>
+            <td class="whitespace-nowrap text-gray-500">${date}</td>
+            <td class="font-medium">${esc(s.store_name)}</td>
+            <td class="hide-mobile text-gray-500">${esc(s.banner)}</td>
+            <td>${esc(s.sku_name)}</td>
+            <td class="hide-mobile text-gray-500">${esc(s.brand_name)}</td>
+            <td class="hide-mobile"><span class="px-2 py-0.5 bg-gray-100 text-gray-600 rounded text-xs">${esc(s.category)}</span></td>
+            <td>${esc(s.contractor_name)}</td>
+            <td>${score}</td>
+            <td>${badge}</td>
+            <td class="hide-mobile text-center">${s.facing_count}</td>
+            <td class="hide-mobile">${oos}</td>
+        </tr>`;
+    }).join('');
+}
+
+function badgeHTML(status) {
+    const labels = { approved:'Approved', pending_review:'Pending', rejected:'Rejected' };
+    return `<span class="badge badge-${status}">${labels[status] || status}</span>`;
+}
+
+function scoreBarHTML(score) {
+    const color = score >= 90 ? '#10b981' : score >= 70 ? '#f59e0b' : '#ef4444';
+    return `<div class="score-bar-wrap">
+        <div class="flex items-center gap-1.5">
+            <span class="text-xs font-semibold" style="color:${color};min-width:28px">${score}</span>
+            <div class="score-bar-bg flex-1">
+                <div class="score-bar-fill" style="width:${score}%;background:${color}"></div>
+            </div>
+        </div>
+    </div>`;
+}
+
+// ────────────────────────────────────────────────────────────
+// GALLERY RENDER
+// ────────────────────────────────────────────────────────────
+function renderGallery(scans) {
+    const grid  = document.getElementById('gallery-view');
+    const empty = document.getElementById('gallery-empty');
+
+    if (scans.length === 0) {
+        grid.innerHTML = '';
+        grid.classList.remove('active');
+        empty.classList.remove('hidden');
+        return;
+    }
+    empty.classList.add('hidden');
+    grid.classList.add('active');
+
+    grid.innerHTML = scans.map(s => {
+        const thumb = s.photos && s.photos.length ? s.photos[0] : 'https://via.placeholder.com/400x200?text=No+Photo';
+        const count = s.photos ? s.photos.length : 0;
+        const badge = badgeHTML(s.status);
+        const date  = new Date(s.submitted_at).toLocaleDateString('en-US', { month:'short', day:'numeric' });
+        const photosJSON = JSON.stringify(s.photos || []).replace(/"/g,'&quot;');
+
+        return `<div class="gallery-card">
+            <div class="gallery-thumb-wrap"
+                 onclick="openLightbox(${photosJSON}, 0, '${esc(s.store_name)}')">
+                <img src="${thumb}" alt="${esc(s.store_name)}" loading="lazy">
+                ${count > 1 ? `<span class="gallery-photo-count">${count} photos</span>` : ''}
+            </div>
+            <div class="gallery-body">
+                <div class="store-name" title="${esc(s.store_name)}">${esc(s.store_name)}</div>
+                <div class="sku-name" title="${esc(s.sku_name)}">${esc(s.sku_name)}</div>
+                <div class="gallery-meta">
+                    ${badge}
+                    <span class="text-xs text-gray-400">${date} · ${esc(s.contractor_name.split(' ')[0])}</span>
+                </div>
+                <div class="mt-2">${scoreBarHTML(s.compliance_score)}</div>
+                ${s.notes ? `<p class="text-xs text-gray-500 mt-2 line-clamp-2">${esc(s.notes)}</p>` : ''}
+            </div>
+        </div>`;
+    }).join('');
+}
+
+// ────────────────────────────────────────────────────────────
+// VIEW SWITCH
+// ────────────────────────────────────────────────────────────
+function switchView(view) {
+    currentView = view;
+    document.getElementById('btn-table').classList.toggle('active', view === 'table');
+    document.getElementById('btn-gallery').classList.toggle('active', view === 'gallery');
+
+    const tableEl   = document.getElementById('table-view');
+    const galleryEl = document.getElementById('gallery-view');
+    const tEmpty    = document.getElementById('table-empty');
+    const gEmpty    = document.getElementById('gallery-empty');
+
+    if (view === 'table') {
+        tableEl.style.display = '';
+        galleryEl.classList.remove('active');
+        gEmpty.classList.add('hidden');
+        renderTable(filteredScans);
+    } else {
+        tableEl.style.display = 'none';
+        tEmpty.classList.add('hidden');
+        renderGallery(filteredScans);
+    }
+}
+
+// ────────────────────────────────────────────────────────────
+// LIGHTBOX
+// ────────────────────────────────────────────────────────────
+function openLightbox(photos, index, caption) {
+    if (!photos || photos.length === 0) return;
+    lbPhotos  = photos;
+    lbIndex   = index;
+    document.getElementById('lightbox-img').src       = photos[index];
+    document.getElementById('lightbox-caption').textContent =
+        `${caption} — Photo ${index + 1} of ${photos.length}`;
+    document.getElementById('lightbox-prev').style.display = photos.length > 1 ? '' : 'none';
+    document.getElementById('lightbox-next').style.display = photos.length > 1 ? '' : 'none';
+    document.getElementById('lightbox').classList.add('open');
+    document.body.style.overflow = 'hidden';
+}
+
+function lightboxNav(dir) {
+    lbIndex = (lbIndex + dir + lbPhotos.length) % lbPhotos.length;
+    document.getElementById('lightbox-img').src = lbPhotos[lbIndex];
+    const cap = document.getElementById('lightbox-caption').textContent;
+    document.getElementById('lightbox-caption').textContent =
+        cap.replace(/Photo \d+ of \d+/, `Photo ${lbIndex + 1} of ${lbPhotos.length}`);
+}
+
+function closeLightbox(e) {
+    if (e && e.target !== document.getElementById('lightbox') &&
+        e.target !== document.getElementById('lightbox-close')) return;
+    document.getElementById('lightbox').classList.remove('open');
+    document.body.style.overflow = '';
+}
+
+// Keyboard navigation for lightbox
+document.addEventListener('keydown', e => {
+    if (!document.getElementById('lightbox').classList.contains('open')) return;
+    if (e.key === 'ArrowLeft')  lightboxNav(-1);
+    if (e.key === 'ArrowRight') lightboxNav(1);
+    if (e.key === 'Escape')     { document.getElementById('lightbox').classList.remove('open'); document.body.style.overflow = ''; }
+});
+
+// ────────────────────────────────────────────────────────────
+// EXPORT — CSV
+// ────────────────────────────────────────────────────────────
+function exportCSV() {
+    const headers = ['ID','Date','Store','Banner','SKU','UPC','Category','Brand','Shelfer','Status','Compliance Score','Shelf Tag','Facings','Out of Stock','Notes'];
+    const rows = filteredScans.map(s => [
+        s.id,
+        new Date(s.submitted_at).toISOString().split('T')[0],
+        s.store_name,
+        s.banner,
+        s.sku_name,
+        s.upc,
+        s.category,
+        s.brand_name,
+        s.contractor_name,
+        s.status,
+        s.compliance_score,
+        s.shelf_tag_present ? 'Yes' : 'No',
+        s.facing_count,
+        s.out_of_stock ? 'Yes' : 'No',
+        `"${(s.notes || '').replace(/"/g,'""')}"`
+    ]);
+
+    const csvContent = [headers, ...rows]
+        .map(r => r.join(','))
+        .join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement('a');
+    a.href     = url;
+    a.download = `scan-intelligence-${today()}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+}
+
+// ────────────────────────────────────────────────────────────
+// EXPORT — Excel (SheetJS)
+// ────────────────────────────────────────────────────────────
+function exportExcel() {
+    if (typeof XLSX === 'undefined') {
+        alert('Excel export library not loaded. Please check your internet connection.');
+        return;
+    }
+
+    const wsData = [
+        ['ID','Date','Store','Banner','SKU','UPC','Category','Brand','Shelfer','Status','Compliance Score','Shelf Tag','Facings','Out of Stock','Notes'],
+        ...filteredScans.map(s => [
+            s.id,
+            new Date(s.submitted_at).toISOString().split('T')[0],
+            s.store_name,
+            s.banner,
+            s.sku_name,
+            s.upc,
+            s.category,
+            s.brand_name,
+            s.contractor_name,
+            s.status,
+            s.compliance_score,
+            s.shelf_tag_present ? 'Yes' : 'No',
+            s.facing_count,
+            s.out_of_stock ? 'Yes' : 'No',
+            s.notes || ''
+        ])
+    ];
+
+    const wb = XLSX.utils.book_new();
+    const ws = XLSX.utils.aoa_to_sheet(wsData);
+
+    // Column widths
+    ws['!cols'] = [
+        {wch:12},{wch:12},{wch:28},{wch:14},{wch:28},{wch:14},{wch:12},{wch:16},
+        {wch:18},{wch:14},{wch:16},{wch:10},{wch:8},{wch:12},{wch:40}
+    ];
+
+    XLSX.utils.book_append_sheet(wb, ws, 'Scan Intelligence');
+
+    // Summary sheet
+    const summary = [
+        ['ShelfAssured — Scan Intelligence Export'],
+        ['Generated:', new Date().toLocaleString()],
+        ['Total Scans:', filteredScans.length],
+        ['Approved:', filteredScans.filter(s=>s.status==='approved').length],
+        ['Pending Review:', filteredScans.filter(s=>s.status==='pending_review').length],
+        ['Rejected:', filteredScans.filter(s=>s.status==='rejected').length],
+        ['Avg Compliance Score:', filteredScans.length > 0
+            ? Math.round(filteredScans.reduce((a,s)=>a+s.compliance_score,0)/filteredScans.length)
+            : 0]
+    ];
+    const wsSummary = XLSX.utils.aoa_to_sheet(summary);
+    wsSummary['!cols'] = [{wch:28},{wch:20}];
+    XLSX.utils.book_append_sheet(wb, wsSummary, 'Summary');
+
+    XLSX.writeFile(wb, `scan-intelligence-${today()}.xlsx`);
+}
+
+// ────────────────────────────────────────────────────────────
+// HELPERS
+// ────────────────────────────────────────────────────────────
+function esc(str) {
+    if (!str) return '';
+    return String(str)
+        .replace(/&/g,'&amp;')
+        .replace(/</g,'&lt;')
+        .replace(/>/g,'&gt;')
+        .replace(/"/g,'&quot;');
+}
+
+function today() {
+    return new Date().toISOString().split('T')[0];
+}
+
+// Sign out (delegates to shared api.js if available)
+function handleSignOut() {
+    if (typeof signOut === 'function') { signOut(); return; }
+    if (typeof supabase !== 'undefined' && supabase) {
+        supabase.auth.signOut().then(() => { window.location.href = '../auth/signin.html'; });
+    } else {
+        window.location.href = '../auth/signin.html';
+    }
+}
+</script>
+</body>
+</html>
