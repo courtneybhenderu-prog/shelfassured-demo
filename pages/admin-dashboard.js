@@ -7,16 +7,16 @@ let userProfile = null;
 document.addEventListener('DOMContentLoaded', async function() {
     console.log('🔧 Admin Dashboard initialized');
     
-    // Wait for Supabase to be available
+    // Wait for Supabase CLIENT to be available (window.saClient, not the library)
     let attempts = 0;
-    while (!window.supabase && attempts < 10) {
-        console.log('⏳ Waiting for Supabase to load...', attempts);
+    while (!window.saClient && attempts < 20) {
+        console.log('⏳ Waiting for Supabase client...', attempts);
         await new Promise(resolve => setTimeout(resolve, 100));
         attempts++;
     }
     
-    if (!window.supabase) {
-        console.error('❌ Supabase failed to load');
+    if (!window.saClient) {
+        console.error('❌ Supabase client failed to initialize');
         window.location.href = '../auth/signin.html';
         return;
     }
