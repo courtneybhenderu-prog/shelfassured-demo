@@ -21,7 +21,7 @@ function initializeSupabase() {
     // Instead: keep the library at window.supabase, expose the client at window.saClient.
     const lib = window.supabase;
     if (typeof lib !== 'undefined' && lib.createClient) {
-      supabase = lib.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+      const client = lib.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
         auth: {
           storage: window.localStorage,
           persistSession: true,
@@ -29,8 +29,10 @@ function initializeSupabase() {
           detectSessionInUrl: true,
         }
       });
-      // Expose client as window.saClient — do NOT overwrite window.supabase (the library)
-      window.saClient = supabase;
+      // Set BOTH the local variable AND window.saClient
+      // Do NOT overwrite window.supabase — that's the library, not the client
+      supabase = client;
+      window.saClient = client;
       console.log('✅ Supabase client initialized (localStorage session)');
       return true;
     } else {

@@ -15,9 +15,9 @@ const MAX_RETRIES = 5;
 // Function to initialize Supabase when ready
 function initializeSupabase() {
   try {
-    // Check if Supabase is available globally
-    if (typeof window.supabase !== 'undefined' && window.supabase.createClient) {
-      supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+    const lib = window.supabase;
+    if (typeof lib !== 'undefined' && lib.createClient) {
+      const client = lib.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
         auth: {
           // Always persist session in localStorage so mobile browsers
           // don't lose the session token when navigating between pages.
@@ -28,8 +28,10 @@ function initializeSupabase() {
           detectSessionInUrl: true,
         }
       });
-      // Expose client as window.saClient — do NOT overwrite window.supabase (the library)
-      window.saClient = supabase;
+      // Set both local variable and window.saClient
+      // Do NOT overwrite window.supabase — that's the library
+      supabase = client;
+      window.saClient = client;
       console.log('✅ Supabase client initialized (localStorage session)');
       return true;
     } else {
