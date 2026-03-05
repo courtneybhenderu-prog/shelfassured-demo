@@ -662,6 +662,7 @@ async function saveProduct() {
             barcode: upc,
             upc: upc,
             brand: brandName,
+            brand_id: brandId || null,   // UUID FK — required for RLS tenant isolation
             name: productName,
             size: size || null,
             category: category || null,
