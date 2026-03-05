@@ -10,7 +10,10 @@
 'use strict';
 
 // ─── State ────────────────────────────────────────────────────────────────────
-let supabase = null;
+// NOTE: supabase client is NOT declared here — shared/api.js already declares
+// SUPABASE_URL, SUPABASE_ANON_KEY, and creates the `supabase` variable as a
+// module-level let. We access it via window.saSupabase (set during init below).
+let _supabase = null;   // local alias — avoids collision with api.js's `supabase`
 let currentUser = null;
 let html5QrCode = null;
 let scannerRunning = false;
@@ -23,14 +26,20 @@ let storeValue = '';           // Persists across scans
 // ─── Initialise ───────────────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', async () => {
     try {
-        if (typeof SUPABASE_URL === 'undefined' || typeof SUPABASE_ANON_KEY === 'undefined') {
-            throw new Error('Supabase config not loaded. Check config.js.');
+        // Build a fresh Supabase client from SA_CONFIG (injected by config.js at deploy).
+        // We use a local alias (_supabase) to avoid colliding with the `supabase` let
+        // declared in shared/api.js which loads before this file.
+        const cfg = window.SA_CONFIG || {};
+        const url = cfg.SUPABASE_URL || '';
+        const key = cfg.SUPABASE_ANON_KEY || '';
+        if (!url || !key) {
+            throw new Error('Supabase config not loaded. Check config.js / GitHub Secrets.');
         }
-        supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        _supabase = window.supabase.createClient(url, key);
 
-        const { data: { session } } = await supabase.auth.getSession();
+        const { data: { session } } = await _supabase.auth.getSession();
         if (!session) {
-            window.location.href = '../index.html';
+            window.location.href = '../auth/signin.html';
             return;
         }
         currentUser = session.user;
@@ -44,15 +53,21 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     } catch (err) {
         console.error('Init error:', err);
-        showToast('Initialisation error: ' + err.message, 'error');
+        // Surface the error visibly so it is not silent
+        const statusText = document.getElementById('scanner-status-text');
+        if (statusText) {
+            statusText.textContent = 'Init error: ' + err.message;
+            statusText.className = 'text-xs text-red-500';
+        }
+        showToast('Init error: ' + err.message, 'error');
     }
 });
 
 // ─── Auth ──────────────────────────────────────────────────────────────────────
 async function handleSignOut() {
     await stopScanner();
-    await supabase.auth.signOut();
-    window.location.href = '../index.html';
+    await _supabase.auth.signOut();
+    window.location.href = '../auth/signin.html';
 }
 
 // ─── Scanner ───────────────────────────────────────────────────────────────────
@@ -192,13 +207,13 @@ async function processUPC(upc) {
 
     try {
         const [productsResult, skusResult] = await Promise.all([
-            supabase
+            _supabase
                 .from('products')
                 .select('*')
                 .or(`barcode.eq.${upc},upc.eq.${upc}`)
                 .limit(1)
                 .maybeSingle(),
-            supabase
+            _supabase
                 .from('skus')
                 .select('*, brands(id, name, is_shadow)')
                 .eq('upc', upc)
@@ -276,7 +291,7 @@ function showProductForm() {
 // ─── Brand Autocomplete & Shadow Brand Logic ───────────────────────────────────
 async function loadKnownBrands() {
     try {
-        const { data } = await supabase
+        const { data } = await _supabase
             .from('brands')
             .select('id, name, is_shadow')
             .order('name');
@@ -469,11 +484,11 @@ async function uploadPhotos(productId) {
         try {
             const ext = (file.name.split('.').pop() || 'jpg').toLowerCase();
             const path = `products/${productId}/${type}-${Date.now()}.${ext}`;
-            const { error } = await supabase.storage
+            const { error } = await _supabase.storage
                 .from('product-photos')
                 .upload(path, file, { upsert: true });
             if (!error) {
-                const { data: { publicUrl } } = supabase.storage
+                const { data: { publicUrl } } = _supabase.storage
                     .from('product-photos')
                     .getPublicUrl(path);
                 urls[type] = publicUrl;
@@ -493,7 +508,7 @@ async function ensureBrandExists(brandName) {
     if (existingId) return existingId;
 
     // Check DB (case-insensitive)
-    const { data: existing } = await supabase
+    const { data: existing } = await _supabase
         .from('brands')
         .select('id, is_shadow')
         .ilike('name', brandName)
@@ -504,7 +519,7 @@ async function ensureBrandExists(brandName) {
     }
 
     // Create new Shadow Brand
-    const { data: newBrand, error } = await supabase
+    const { data: newBrand, error } = await _supabase
         .from('brands')
         .insert({
             name: brandName,
@@ -576,14 +591,14 @@ async function saveProduct() {
         let savedId = existingId;
 
         if (existingId) {
-            const { error } = await supabase
+            const { error } = await _supabase
                 .from('products')
                 .update(productData)
                 .eq('id', existingId);
             if (error) throw error;
         } else {
             productData.created_at = new Date().toISOString();
-            const { data, error } = await supabase
+            const { data, error } = await _supabase
                 .from('products')
                 .insert(productData)
                 .select('id')
@@ -598,7 +613,7 @@ async function saveProduct() {
 
         // Also upsert into skus for the SKU catalog
         if (brandId && upc) {
-            await supabase.from('skus').upsert({
+            await _supabase.from('skus').upsert({
                 upc: upc,
                 name: productName,
                 brand_id: brandId,
@@ -664,7 +679,7 @@ function resetForm(keepStore) {
 async function loadRecentScans() {
     const container = document.getElementById('recent-scans');
     try {
-        const { data, error } = await supabase
+        const { data, error } = await _supabase
             .from('products')
             .select('id, name, brand, upc, barcode, store, scan_date, created_at')
             .order('created_at', { ascending: false })
@@ -695,7 +710,7 @@ async function loadRecentScans() {
 async function loadTodayScanCount() {
     try {
         const today = new Date().toISOString().split('T')[0];
-        const { count } = await supabase
+        const { count } = await _supabase
             .from('products')
             .select('id', { count: 'exact', head: true })
             .eq('scan_date', today)
@@ -751,3 +766,21 @@ function escapeAttr(str) {
     if (!str) return '';
     return String(str).replace(/'/g, "\\'").replace(/"/g, '\\"');
 }
+
+// ─── Window Exports ───────────────────────────────────────────────────────────
+// Required: 'use strict' prevents inline onclick="fn()" from finding functions
+// unless they are explicitly attached to window.
+window.startScanner       = startScanner;
+window.stopScanner        = stopScanner;
+window.toggleManualEntry  = toggleManualEntry;
+window.lookupManualUPC    = lookupManualUPC;
+window.captureGPSLocation = captureGPSLocation;
+window.triggerPhoto       = triggerPhoto;
+window.handlePhotoSelected= handlePhotoSelected;
+window.resetForm          = resetForm;
+window.loadRecentScans    = loadRecentScans;
+window.selectBrand        = selectBrand;
+window.clearBrandSelection= clearBrandSelection;
+window.removePhoto        = removePhoto;
+window.handleSignOut      = handleSignOut;
+window.goToPage           = goToPage;
