@@ -193,6 +193,51 @@ function lookupManualUPC() {
     processUPC(val);
 }
 
+// ─── Open Food Facts Lookup ───────────────────────────────────────────────────
+async function lookupOpenFoodFacts(upc) {
+    try {
+        const fields = 'product_name,brands,quantity,categories_tags,image_front_url';
+        const res = await fetch(
+            `https://world.openfoodfacts.org/api/v2/product/${encodeURIComponent(upc)}.json?fields=${fields}`,
+            { headers: { 'User-Agent': 'ShelfAssured/1.0 (shelfassured.com)' } }
+        );
+        if (!res.ok) return null;
+        const data = await res.json();
+        if (data.status !== 1) return null;
+        const p = data.product;
+
+        // Map OFF categories to our category options
+        const catTags = (p.categories_tags || []).map(t => t.replace(/^en:/, ''));
+        const catMap = {
+            'beverages': 'Beverages', 'drinks': 'Beverages', 'waters': 'Beverages',
+            'snacks': 'Snacks', 'bars': 'Snacks', 'chips': 'Snacks', 'crackers': 'Snacks',
+            'dairy': 'Dairy', 'cheeses': 'Dairy', 'yogurts': 'Dairy', 'milks': 'Dairy',
+            'frozen': 'Frozen', 'frozen-foods': 'Frozen',
+            'fresh-produce': 'Produce', 'fruits': 'Produce', 'vegetables': 'Produce',
+            'meats': 'Meat & Seafood', 'seafood': 'Meat & Seafood', 'fish': 'Meat & Seafood',
+            'breads': 'Bakery', 'pastries': 'Bakery', 'baked-goods': 'Bakery',
+            'condiments': 'Pantry', 'sauces': 'Pantry', 'cereals': 'Pantry',
+            'beauty': 'Health & Beauty', 'supplements': 'Health & Beauty',
+            'baby-foods': 'Baby', 'pet-foods': 'Pet',
+        };
+        let category = '';
+        for (const tag of catTags) {
+            if (catMap[tag]) { category = catMap[tag]; break; }
+        }
+
+        return {
+            name:     (p.product_name || '').trim(),
+            brand:    (p.brands || '').split(',')[0].trim(),  // first brand only
+            size:     (p.quantity || '').trim(),
+            category: category,
+            imageUrl: p.image_front_url || '',
+        };
+    } catch (e) {
+        console.warn('Open Food Facts lookup failed:', e);
+        return null;
+    }
+}
+
 // ─── UPC Processing & Lookup ───────────────────────────────────────────────────
 async function processUPC(upc) {
     document.getElementById('upc-value').value = upc;
@@ -206,6 +251,7 @@ async function processUPC(upc) {
     showProductForm();
 
     try {
+        // Step 1: Check our own Supabase database first
         const [productsResult, skusResult] = await Promise.all([
             _supabase
                 .from('products')
@@ -225,18 +271,33 @@ async function processUPC(upc) {
             const p = productsResult.data;
             populateFormFromProduct(p);
             lookupEl.className = 'mb-3 p-2.5 rounded-lg text-sm font-medium bg-green-50 text-green-700';
-            lookupEl.textContent = '\u2713 Found in products database \u2014 review and update if needed';
+            lookupEl.textContent = '\u2713 Found in your database \u2014 review and update if needed';
             document.getElementById('existing-product-id').value = p.id;
-        } else if (skusResult.data) {
+            return;
+        }
+
+        if (skusResult.data) {
             const s = skusResult.data;
             populateFormFromSKU(s);
             lookupEl.className = 'mb-3 p-2.5 rounded-lg text-sm font-medium bg-green-50 text-green-700';
             lookupEl.textContent = '\u2713 Found in SKU catalog \u2014 saving new scan record';
+            return;
+        }
+
+        // Step 2: Not in our DB — try Open Food Facts
+        lookupEl.textContent = 'Not in database \u2014 checking Open Food Facts...';
+        const off = await lookupOpenFoodFacts(upc);
+
+        if (off && off.name) {
+            populateFormFromOFF(off);
+            lookupEl.className = 'mb-3 p-2.5 rounded-lg text-sm font-medium bg-purple-50 text-purple-700';
+            lookupEl.textContent = '\u2728 Auto-filled from Open Food Facts \u2014 verify and save';
         } else {
             lookupEl.className = 'mb-3 p-2.5 rounded-lg text-sm font-medium bg-amber-50 text-amber-700';
             lookupEl.textContent = '\u2295 New product \u2014 fill in details below';
             document.getElementById('product-name').focus();
         }
+
     } catch (err) {
         console.error('Lookup error:', err);
         lookupEl.className = 'mb-3 p-2.5 rounded-lg text-sm font-medium bg-red-50 text-red-700';
@@ -269,6 +330,29 @@ function populateFormFromSKU(s) {
     if (isShadow) {
         document.getElementById('shadow-brand-notice').classList.remove('hidden');
     }
+}
+
+function populateFormFromOFF(off) {
+    // Populate brand — try to match against known brands first
+    document.getElementById('brand-input').value = off.brand;
+    document.getElementById('brand-id-value').value = '';
+    document.getElementById('brand-is-shadow').value = 'new';
+    // Check if brand already exists in our cache
+    const existing = knownBrands.find(b => b.name.toLowerCase() === off.brand.toLowerCase());
+    if (existing) {
+        document.getElementById('brand-id-value').value = existing.id;
+        document.getElementById('brand-is-shadow').value = existing.is_shadow ? 'true' : 'false';
+        if (existing.is_shadow) {
+            document.getElementById('shadow-brand-notice').classList.remove('hidden');
+        }
+    } else if (off.brand) {
+        document.getElementById('shadow-brand-notice').classList.remove('hidden');
+    }
+
+    document.getElementById('product-name').value = off.name;
+    document.getElementById('product-size').value = off.size;
+    document.getElementById('product-notes').value = '';
+    setCategory(off.category);
 }
 
 function setCategory(cat) {
