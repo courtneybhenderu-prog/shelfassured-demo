@@ -2,225 +2,297 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Admin Barcode Capture - ShelfAssured</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Scan &amp; Go - ShelfAssured</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.47.5/dist/umd/supabase.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/quagga/0.12.1/quagga.min.js"></script>
+    <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
     <link rel="stylesheet" href="../shared/styles.css">
+    <style>
+        #qr-reader video { width: 100% !important; border-radius: 0.5rem; }
+        #qr-reader { border: none !important; padding: 0 !important; }
+        #qr-reader__scan_region { border-radius: 0.5rem; overflow: hidden; }
+        #qr-reader__dashboard { display: none !important; }
+        @keyframes scan {
+            0% { top: 8%; }
+            50% { top: 88%; }
+            100% { top: 8%; }
+        }
+        .scan-line {
+            position: absolute;
+            left: 5%;
+            width: 90%;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, #C62828, transparent);
+            animation: scan 2s linear infinite;
+            box-shadow: 0 0 6px #C62828;
+        }
+        .scan-overlay { position: absolute; inset: 0; pointer-events: none; }
+        @keyframes pulse-green {
+            0% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.7); }
+            70% { box-shadow: 0 0 0 12px rgba(34, 197, 94, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0); }
+        }
+        .scan-success { animation: pulse-green 0.5s ease-out; }
+        @keyframes slideUp {
+            from { transform: translateY(20px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+        .slide-up { animation: slideUp 0.3s ease-out; }
+    </style>
 </head>
-<body>
-    <div class="min-h-screen bg-gray-100">
-        <!-- Header -->
-        <div class="bg-white shadow-sm border-b">
-            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                <div class="flex justify-between items-center py-4">
-                    <div class="flex items-center">
-                        <h1 class="text-2xl font-bold text-gray-900">Admin Barcode Capture</h1>
-                        <span class="ml-3 px-2 py-1 text-xs font-semibold text-red-600 bg-red-100 rounded-full">ADMIN ONLY</span>
-                    </div>
-                    <div class="flex items-center space-x-4">
-                        <span id="admin-user" class="text-sm text-gray-600">Loading...</span>
-                        <button onclick="handleSignOut()" class="text-sm text-gray-500 hover:text-gray-700">Sign Out</button>
-                    </div>
-                </div>
+<body class="bg-gray-100 min-h-screen pb-20">
+
+    <!-- Header -->
+    <div class="bg-white shadow-sm border-b sticky top-0 z-10">
+        <div class="max-w-lg mx-auto px-4 py-3 flex justify-between items-center">
+            <div class="flex items-center gap-2">
+                <h1 class="text-lg font-bold text-gray-900">Scan &amp; Go</h1>
+                <span class="px-2 py-0.5 text-xs font-semibold text-red-600 bg-red-100 rounded-full">ADMIN</span>
             </div>
-        </div>
-
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                <!-- Barcode Scanner Section -->
-                <div class="bg-white rounded-lg shadow p-6">
-                    <h2 class="text-lg font-semibold text-gray-900 mb-4">Barcode Scanner</h2>
-                    
-                    <!-- Scanner Controls -->
-                    <div class="mb-4">
-                        <button id="start-scanner" class="btn-red mr-2">Start Scanner</button>
-                        <button id="stop-scanner" class="btn-gray mr-2" disabled>Stop Scanner</button>
-                        <button id="manual-entry" class="btn-gray">Manual Entry</button>
-                    </div>
-
-                    <!-- Scanner View -->
-                    <div id="scanner-container" class="hidden">
-                        <div id="scanner" class="w-full h-64 bg-gray-900 rounded-lg mb-4 relative">
-                            <div class="absolute inset-0 flex items-center justify-center">
-                                <div class="text-white text-center">
-                                    <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-white mx-auto mb-2"></div>
-                                    <p>Initializing camera...</p>
-                                </div>
-                            </div>
-                        </div>
-                        <div id="scanner-status" class="text-sm text-gray-600 mb-2"></div>
-                    </div>
-
-                    <!-- Manual Entry Form -->
-                    <div id="manual-form" class="hidden">
-                        <div class="space-y-4">
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700">Barcode/UPC</label>
-                                <input type="text" id="manual-barcode" class="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2" placeholder="Enter barcode manually">
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Detected Barcode Display -->
-                    <div id="detected-barcode" class="hidden mt-4 p-4 bg-green-50 border border-green-200 rounded-lg">
-                        <div class="flex items-center">
-                            <div class="flex-shrink-0">
-                                <svg class="h-5 w-5 text-green-400" viewBox="0 0 20 20" fill="currentColor">
-                                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
-                                </svg>
-                            </div>
-                            <div class="ml-3">
-                                <p class="text-sm font-medium text-green-800">Barcode Detected:</p>
-                                <p class="text-sm text-green-700" id="detected-code"></p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Product Information Form -->
-                <div class="bg-white rounded-lg shadow p-6">
-                    <h2 class="text-lg font-semibold text-gray-900 mb-4">Product Information</h2>
-                    
-                    <form id="product-form" class="space-y-4">
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700">Barcode/UPC *</label>
-                            <input type="text" id="barcode" name="barcode" required class="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2" placeholder="Scanned or manually entered">
-                        </div>
-
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700">Brand Name *</label>
-                            <input type="text" id="brand" name="brand" required class="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2" placeholder="e.g., Coca-Cola, PepsiCo">
-                        </div>
-
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700">Product Name *</label>
-                            <input type="text" id="name" name="name" required class="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2" placeholder="e.g., Coca-Cola Classic">
-                        </div>
-
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700">Product Description *</label>
-                            <textarea id="description" name="description" required rows="2" class="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2" placeholder="Detailed product description"></textarea>
-                        </div>
-
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700">Package Size *</label>
-                            <input type="text" id="size" name="size" required class="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2" placeholder="e.g., 12oz, 500ml, 1lb, 16.9 fl oz">
-                        </div>
-
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700">Category *</label>
-                            <select id="category" name="category" required class="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2">
-                                <option value="">Select category</option>
-                                <option value="beverages">Beverages</option>
-                                <option value="snacks">Snacks</option>
-                                <option value="dairy">Dairy</option>
-                                <option value="frozen">Frozen</option>
-                                <option value="produce">Produce</option>
-                                <option value="bakery">Bakery</option>
-                                <option value="meat">Meat</option>
-                                <option value="pantry">Pantry</option>
-                                <option value="health">Health & Beauty</option>
-                                <option value="household">Household</option>
-                                <option value="other">Other</option>
-                            </select>
-                        </div>
-
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700">Store Location *</label>
-                            <div class="mt-1 flex rounded-md shadow-sm">
-                                <input type="text" id="store" name="store" required class="flex-1 block w-full border border-gray-300 rounded-l-md px-3 py-2" placeholder="e.g., Whole Foods Market Houston, H-E-B Austin">
-                                <button type="button" id="gps-location" class="inline-flex items-center px-3 py-2 border border-l-0 border-gray-300 rounded-r-md bg-gray-50 text-gray-500 hover:bg-gray-100 focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500">
-                                    <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path>
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path>
-                                    </svg>
-                                    <span class="ml-1 text-xs">GPS</span>
-                                </button>
-                            </div>
-                            <div id="location-status" class="mt-1 text-xs text-gray-500 hidden"></div>
-                        </div>
-
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700">Scan Date</label>
-                            <input type="date" id="scan_date" name="scan_date" class="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2">
-                        </div>
-
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700">Product Photo (Optional)</label>
-                            <div class="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-gray-300 border-dashed rounded-md">
-                                <div class="space-y-1 text-center">
-                                    <svg class="mx-auto h-12 w-12 text-gray-400" stroke="currentColor" fill="none" viewBox="0 0 48 48">
-                                        <path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
-                                    </svg>
-                                    <div class="flex text-sm text-gray-600">
-                                        <label for="product-photo" class="relative cursor-pointer bg-white rounded-md font-medium text-indigo-600 hover:text-indigo-500 focus-within:outline-none focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-indigo-500">
-                                            <span>Upload a photo</span>
-                                            <input id="product-photo" name="product-photo" type="file" class="sr-only" accept="image/*">
-                                        </label>
-                                        <p class="pl-1">or drag and drop</p>
-                                    </div>
-                                    <p class="text-xs text-gray-500">PNG, JPG, GIF up to 10MB</p>
-                                </div>
-                            </div>
-                            <div id="photo-preview" class="mt-2 hidden">
-                                <img id="preview-image" class="h-32 w-32 object-cover rounded-lg" alt="Product preview">
-                                <button type="button" id="remove-photo" class="mt-2 text-sm text-red-600 hover:text-red-500">Remove photo</button>
-                            </div>
-                            <button type="button" id="extract-text" class="mt-2 btn-gray text-sm" disabled>Extract Text from Photo</button>
-                            <button type="button" id="test-populate" class="mt-2 btn-gray text-sm ml-2" onclick="testFormPopulation()">Test Form Population</button>
-                            <div id="extracted-text-display" class="mt-2 hidden">
-                                <label class="block text-sm font-medium text-gray-700">Extracted Text:</label>
-                                <div id="extracted-text-content" class="mt-1 p-3 bg-gray-50 border rounded-md text-sm text-gray-600 max-h-32 overflow-y-auto"></div>
-                            </div>
-                        </div>
-
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700">Notes (Optional)</label>
-                            <textarea id="notes" name="notes" rows="3" class="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2" placeholder="Any additional notes about this product"></textarea>
-                        </div>
-
-                        <div class="flex space-x-4">
-                            <button type="submit" class="btn-red flex-1">Save to Database</button>
-                            <button type="button" id="clear-form" class="btn-gray flex-1">Clear Form</button>
-                        </div>
-                    </form>
-
-                    <!-- Success/Error Messages -->
-                    <div id="message" class="mt-4 hidden"></div>
-                </div>
-            </div>
-
-            <!-- Recent Products -->
-            <div class="mt-8 bg-white rounded-lg shadow">
-                <div class="px-6 py-4 border-b border-gray-200">
-                    <h3 class="text-lg font-medium text-gray-900">Recent Products Added</h3>
-                </div>
-                <div id="recent-products" class="p-6">
-                    <div class="text-center text-gray-500">Loading recent products...</div>
-                </div>
+            <div class="flex items-center gap-3">
+                <span id="scan-count-badge" class="text-sm text-gray-500 font-medium">0 today</span>
+                <button onclick="handleSignOut()" class="text-sm text-gray-400 hover:text-gray-600">Sign Out</button>
             </div>
         </div>
     </div>
 
-    <!-- Admin Navigation -->
-    <div class="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200">
-        <div class="flex justify-around py-3">
-            <button onclick="goToPage('barcode-capture.html')" class="font-bold text-[#C62828]">Admin Tools</button>
-            <button onclick="goToPage('../dashboard/shelfer.html')" class="text-gray-500 hover:text-gray-700">Shelfer View</button>
-            <button onclick="goToPage('../dashboard/brand-client.html')" class="text-gray-500 hover:text-gray-700">Brand View</button>
-            <button onclick="goToPage('../dashboard/jobs.html')" class="text-gray-500 hover:text-gray-700">Jobs</button>
-            <button onclick="goToPage('../dashboard/brands.html')" class="text-gray-500 hover:text-gray-700">Brands</button>
-            <button onclick="goToPage('../dashboard/profile.html')" class="text-gray-500 hover:text-gray-700">Profile</button>
+    <div class="max-w-lg mx-auto px-4 py-4 space-y-4">
+
+        <!-- Store Selector — persists across scans -->
+        <div class="bg-white rounded-xl shadow-sm p-4">
+            <div class="flex items-center justify-between mb-2">
+                <label class="text-sm font-semibold text-gray-700">Current Store</label>
+                <span id="store-locked-badge" class="hidden text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-medium">&#10003; Locked In</span>
+            </div>
+            <div class="flex gap-2">
+                <div class="relative flex-1">
+                    <input type="text" id="store-input"
+                        class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-red-500 focus:border-transparent"
+                        placeholder="Type store name or tap GPS..."
+                        autocomplete="off">
+                    <div id="store-suggestions" class="absolute z-20 w-full bg-white border border-gray-200 rounded-lg shadow-lg mt-1 hidden max-h-48 overflow-y-auto"></div>
+                </div>
+                <button id="gps-btn" onclick="captureGPSLocation()"
+                    class="flex items-center gap-1 px-3 py-2.5 bg-gray-100 hover:bg-gray-200 active:bg-gray-300 rounded-lg text-sm font-medium text-gray-700 transition-colors">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
+                    </svg>
+                    GPS
+                </button>
+            </div>
+            <div id="gps-status" class="mt-1.5 text-xs text-gray-500 hidden"></div>
+            <input type="hidden" id="store-lat">
+            <input type="hidden" id="store-lng">
+            <input type="hidden" id="store-id">
+        </div>
+
+        <!-- Scanner -->
+        <div class="bg-white rounded-xl shadow-sm p-4">
+            <div class="flex items-center justify-between mb-3">
+                <h2 class="text-sm font-semibold text-gray-700">Barcode Scanner</h2>
+                <div id="scanner-status-text" class="text-xs text-gray-400">Ready</div>
+            </div>
+
+            <div id="scanner-viewport" class="relative rounded-lg overflow-hidden bg-gray-900" style="min-height:220px;">
+                <div id="qr-reader" class="w-full"></div>
+                <div class="scan-overlay">
+                    <div id="scan-line" class="scan-line hidden"></div>
+                </div>
+                <div id="scanner-placeholder" class="absolute inset-0 flex flex-col items-center justify-center text-white">
+                    <svg class="w-14 h-14 mb-2 opacity-40" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8H3a2 2 0 00-2 2v10a2 2 0 002 2h3m3-14v1M9 3H5a2 2 0 00-2 2v3m14-5h-4m4 0v4"/>
+                    </svg>
+                    <p class="text-sm opacity-60">Tap Start Scanner</p>
+                </div>
+            </div>
+
+            <div class="flex gap-2 mt-3">
+                <button id="start-scan-btn" onclick="startScanner()"
+                    class="flex-1 bg-red-600 hover:bg-red-700 active:bg-red-800 text-white font-semibold py-2.5 rounded-lg text-sm transition-colors">
+                    Start Scanner
+                </button>
+                <button id="stop-scan-btn" onclick="stopScanner()" disabled
+                    class="flex-1 bg-gray-200 text-gray-400 font-semibold py-2.5 rounded-lg text-sm cursor-not-allowed">
+                    Stop
+                </button>
+                <button onclick="toggleManualEntry()"
+                    class="px-4 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium rounded-lg text-sm transition-colors">
+                    Manual
+                </button>
+            </div>
+
+            <div id="manual-entry-row" class="hidden mt-3">
+                <div class="flex gap-2">
+                    <input type="text" id="manual-upc" placeholder="Enter UPC manually..."
+                        class="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-red-500 focus:border-transparent"
+                        inputmode="numeric" pattern="[0-9]*">
+                    <button onclick="lookupManualUPC()"
+                        class="px-4 py-2 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 active:bg-red-800 transition-colors">
+                        Look Up
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Product Form — shown after scan -->
+        <div id="product-form-section" class="bg-white rounded-xl shadow-sm p-4 hidden slide-up">
+            <div class="flex items-center justify-between mb-3">
+                <h2 class="text-sm font-semibold text-gray-700">Product Details</h2>
+                <div id="upc-badge" class="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded font-mono"></div>
+            </div>
+
+            <div id="lookup-result" class="hidden mb-3 p-2.5 rounded-lg text-sm font-medium"></div>
+
+            <form id="product-form" class="space-y-3">
+                <input type="hidden" id="upc-value">
+                <input type="hidden" id="existing-product-id">
+
+                <!-- Brand -->
+                <div>
+                    <label class="block text-xs font-semibold text-gray-600 mb-1">Brand <span class="text-red-500">*</span></label>
+                    <div class="relative">
+                        <input type="text" id="brand-input" required
+                            class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-red-500 focus:border-transparent"
+                            placeholder="Brand name..."
+                            autocomplete="off">
+                        <div id="brand-suggestions" class="absolute z-20 w-full bg-white border border-gray-200 rounded-lg shadow-lg mt-1 hidden max-h-40 overflow-y-auto"></div>
+                    </div>
+                    <div id="shadow-brand-notice" class="hidden mt-1 text-xs text-amber-700 bg-amber-50 px-2 py-1.5 rounded-lg">
+                        &#9888; New brand — will be saved as <strong>Shadow Brand</strong> for later onboarding
+                    </div>
+                    <input type="hidden" id="brand-id-value">
+                    <input type="hidden" id="brand-is-shadow">
+                </div>
+
+                <!-- Product Name -->
+                <div>
+                    <label class="block text-xs font-semibold text-gray-600 mb-1">Product Name <span class="text-red-500">*</span></label>
+                    <input type="text" id="product-name" required
+                        class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-red-500 focus:border-transparent"
+                        placeholder="Product name...">
+                </div>
+
+                <!-- Size & Category -->
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-600 mb-1">Size / Weight</label>
+                        <input type="text" id="product-size"
+                            class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-red-500 focus:border-transparent"
+                            placeholder="e.g. 12 oz">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-600 mb-1">Category</label>
+                        <select id="product-category"
+                            class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-red-500 focus:border-transparent bg-white">
+                            <option value="">Select...</option>
+                            <option>Beverages</option>
+                            <option>Snacks</option>
+                            <option>Dairy</option>
+                            <option>Frozen</option>
+                            <option>Produce</option>
+                            <option>Meat &amp; Seafood</option>
+                            <option>Bakery</option>
+                            <option>Pantry</option>
+                            <option>Health &amp; Beauty</option>
+                            <option>Household</option>
+                            <option>Baby</option>
+                            <option>Pet</option>
+                            <option>Other</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Photos -->
+                <div>
+                    <label class="block text-xs font-semibold text-gray-600 mb-2">Photos</label>
+                    <div class="flex gap-2 flex-wrap">
+                        <button type="button" onclick="triggerPhoto('photo-shelf')"
+                            class="flex items-center gap-1.5 px-3 py-2 bg-gray-100 hover:bg-gray-200 active:bg-gray-300 rounded-lg text-xs font-medium text-gray-700 transition-colors">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/>
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"/>
+                            </svg>
+                            Shelf Context
+                        </button>
+                        <button type="button" onclick="triggerPhoto('photo-product')"
+                            class="flex items-center gap-1.5 px-3 py-2 bg-gray-100 hover:bg-gray-200 active:bg-gray-300 rounded-lg text-xs font-medium text-gray-700 transition-colors">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/>
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"/>
+                            </svg>
+                            Product Close-up
+                        </button>
+                    </div>
+                    <input type="file" id="photo-shelf" accept="image/*" capture="environment" class="hidden" onchange="handlePhotoSelected(this, 'shelf')">
+                    <input type="file" id="photo-product" accept="image/*" capture="environment" class="hidden" onchange="handlePhotoSelected(this, 'product')">
+                    <div id="photo-previews" class="flex gap-2 mt-2 flex-wrap"></div>
+                </div>
+
+                <!-- Notes -->
+                <div>
+                    <label class="block text-xs font-semibold text-gray-600 mb-1">Notes (optional)</label>
+                    <textarea id="product-notes" rows="2"
+                        class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-red-500 focus:border-transparent resize-none"
+                        placeholder="Shelf position, facing count, out of stock, price tag..."></textarea>
+                </div>
+
+                <div class="flex gap-2 pt-1">
+                    <button type="submit"
+                        class="flex-1 bg-red-600 hover:bg-red-700 active:bg-red-800 text-white font-semibold py-3 rounded-lg text-sm transition-colors">
+                        Save &amp; Scan Next
+                    </button>
+                    <button type="button" onclick="resetForm(false)"
+                        class="px-4 py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium rounded-lg text-sm transition-colors">
+                        Cancel
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <!-- Recent Scans -->
+        <div class="bg-white rounded-xl shadow-sm p-4">
+            <div class="flex items-center justify-between mb-3">
+                <h2 class="text-sm font-semibold text-gray-700">Recent Scans</h2>
+                <button onclick="loadRecentScans()" class="text-xs text-red-600 hover:text-red-700 font-medium">Refresh</button>
+            </div>
+            <div id="recent-scans" class="space-y-2 text-center text-gray-400 text-sm py-4">
+                Loading...
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Toast notification -->
+    <div id="toast" class="fixed bottom-24 left-1/2 transform -translate-x-1/2 hidden z-50 pointer-events-none">
+        <div id="toast-inner" class="px-5 py-3 rounded-xl shadow-xl text-sm font-semibold text-white min-w-52 text-center"></div>
+    </div>
+
+    <!-- Bottom Navigation -->
+    <div class="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 z-10">
+        <div class="flex justify-around py-2 max-w-lg mx-auto">
+            <button onclick="goToPage('barcode-capture.html')" class="flex flex-col items-center text-xs font-bold text-red-600 py-1 px-2">
+                <svg class="w-5 h-5 mb-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8H3a2 2 0 00-2 2v10a2 2 0 002 2h3m3-14v1M9 3H5a2 2 0 00-2 2v3m14-5h-4m4 0v4"/></svg>
+                Scan
+            </button>
+            <button onclick="goToPage('../dashboard/jobs.html')" class="flex flex-col items-center text-xs text-gray-500 hover:text-gray-700 py-1 px-2">
+                <svg class="w-5 h-5 mb-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
+                Jobs
+            </button>
+            <button onclick="goToPage('../dashboard/brands.html')" class="flex flex-col items-center text-xs text-gray-500 hover:text-gray-700 py-1 px-2">
+                <svg class="w-5 h-5 mb-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-2 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/></svg>
+                Brands
+            </button>
+            <button onclick="goToPage('../dashboard/profile.html')" class="flex flex-col items-center text-xs text-gray-500 hover:text-gray-700 py-1 px-2">
+                <svg class="w-5 h-5 mb-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                Settings
+            </button>
         </div>
     </div>
 
-    <!-- Include shared API -->
     <script src="config.js"></script>
     <script src="../shared/api.js"></script>
-    
-    <!-- Admin-specific script -->
     <script src="barcode-capture.js"></script>
 </body>
 </html>
