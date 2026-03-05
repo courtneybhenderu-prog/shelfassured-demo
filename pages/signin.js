@@ -48,7 +48,7 @@ window.handleForgotPassword = async function() {
             ? 'http://localhost:8000'
             : 'https://courtneybhenderu-prog.github.io/shelfassured-demo';
             
-        const { error } = await supabase.auth.resetPasswordForEmail(email.trim().toLowerCase(), {
+        const { error } = await (window.saClient || supabase).auth.resetPasswordForEmail(email.trim().toLowerCase(), {
             redirectTo: `${SA_BASE}/auth/confirmed.html`
         });
         
@@ -140,5 +140,4 @@ window.handleSignIn = async function() {
         console.error('❌ Sign in error:', error);
         showMessage(messageEl, 'Error: ' + error.message, 'error');
     }
-    });
 };
