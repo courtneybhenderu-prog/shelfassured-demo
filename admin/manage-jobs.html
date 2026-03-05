@@ -15,30 +15,19 @@
     <link rel="stylesheet" href="../shared/styles.css">
 </head>
 <body>
+<script src="../shared/admin-nav.js" data-page="manage-jobs"></script>
     <div class="min-h-screen bg-gray-100">
-        <!-- Header -->
-        <div class="bg-white shadow-sm border-b">
-            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                <div class="flex justify-between items-center py-4">
-                    <div class="flex items-center">
-                        <h1 class="text-2xl font-bold text-gray-900">Manage Jobs</h1>
-                        <span class="ml-3 px-2 py-1 text-xs font-semibold text-white bg-red-600 rounded-full">ADMIN ONLY</span>
-                    </div>
-                    <div class="flex items-center space-x-4">
-                        <button id="create-job-btn" onclick="showCreateJobForm()" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700">Create New Job</button>
-                        <a href="dashboard.html" class="text-gray-600 hover:text-gray-900">← Back to Dashboard</a>
-                        <button onclick="signOut()" class="text-gray-600 hover:text-gray-900">Sign Out</button>
-                    </div>
-                </div>
-            </div>
-        </div>
+        <!-- Create New Job button moved to page content area -->
 
         <!-- Main Content -->
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
             <!-- Jobs List Section (Default View) -->
             <div id="jobs-list-section">
                 <div class="mb-6">
-                    <h2 class="text-xl font-semibold text-gray-900 mb-4">All Jobs</h2>
+                    <div class="flex items-center justify-between mb-4">
+                        <h2 class="text-xl font-semibold text-gray-900">All Jobs</h2>
+                        <button id="create-job-btn" onclick="showCreateJobForm()" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 text-sm font-medium">+ Create New Job</button>
+                    </div>
                     <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
                         <div class="bg-white p-4 rounded-lg shadow">
                             <div class="text-sm text-gray-500">Total Jobs</div>

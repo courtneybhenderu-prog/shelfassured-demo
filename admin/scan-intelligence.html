@@ -20,14 +20,14 @@
 
     <style>
         /* ── Layout ── */
-        .page-wrapper { padding-bottom: 80px; }
+        .page-wrapper { padding-bottom: 24px; }
 
         /* ── KPI Cards ── */
         .kpi-card {
             background: white;
             border-radius: 0.75rem;
             box-shadow: 0 1px 3px rgba(0,0,0,0.08);
-            padding: 1.25rem 1.5rem;
+            padding: 1.1rem 1.25rem;
             border-left: 4px solid transparent;
         }
         .kpi-card.blue  { border-left-color: #3b82f6; }
@@ -40,8 +40,23 @@
             background: white;
             border-radius: 0.75rem;
             box-shadow: 0 1px 3px rgba(0,0,0,0.08);
-            padding: 1.25rem 1.5rem;
+            overflow: hidden;
         }
+        .filter-bar-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0.875rem 1.25rem;
+            cursor: pointer;
+            user-select: none;
+        }
+        .filter-bar-header:hover { background: #fafafa; }
+        .filter-bar-body {
+            padding: 0 1.25rem 1.25rem;
+            border-top: 1px solid #f3f4f6;
+        }
+        .filter-bar-body.collapsed { display: none; }
+
         .filter-bar select,
         .filter-bar input[type="text"],
         .filter-bar input[type="date"] {
@@ -52,6 +67,7 @@
             background: white;
             color: #374151;
             transition: border-color 0.15s;
+            width: 100%;
         }
         .filter-bar select:focus,
         .filter-bar input:focus {
@@ -59,6 +75,24 @@
             border-color: #C62828;
             box-shadow: 0 0 0 3px rgba(198,40,40,0.1);
         }
+
+        /* Scan type pill toggle */
+        .scan-type-pills { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+        .scan-type-pill {
+            padding: 0.3rem 0.9rem;
+            border-radius: 9999px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            border: 1.5px solid #e5e7eb;
+            background: white;
+            color: #6b7280;
+            cursor: pointer;
+            transition: all 0.15s;
+        }
+        .scan-type-pill:hover { border-color: #C62828; color: #C62828; }
+        .scan-type-pill.active { background: #C62828; color: white; border-color: #C62828; }
+        .scan-type-pill.active-admin { background: #7c3aed; color: white; border-color: #7c3aed; }
+        .scan-type-pill.active-shelfer { background: #0891b2; color: white; border-color: #0891b2; }
 
         /* ── View toggle ── */
         .view-toggle button {
@@ -120,6 +154,19 @@
             border: 1px solid #e5e7eb;
         }
         .thumb-mini:hover { opacity: 0.85; }
+
+        /* Scan type tag in table */
+        .scan-type-tag {
+            display: inline-block;
+            padding: 0.15rem 0.5rem;
+            border-radius: 9999px;
+            font-size: 0.65rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+        }
+        .scan-type-tag.admin   { background: #ede9fe; color: #6d28d9; }
+        .scan-type-tag.shelfer { background: #e0f2fe; color: #0369a1; }
 
         /* ── Status badges ── */
         .badge {
@@ -193,6 +240,11 @@
             padding: 2px 7px;
             border-radius: 9999px;
         }
+        .gallery-scan-type {
+            position: absolute;
+            top: 8px;
+            left: 8px;
+        }
         .gallery-body { padding: 0.875rem 1rem; }
         .gallery-body .store-name {
             font-weight: 600;
@@ -215,6 +267,64 @@
             align-items: center;
             justify-content: space-between;
             margin-top: 0.6rem;
+        }
+
+        /* ── Mobile card view ── */
+        #mobile-card-view { display: none; }
+        .mobile-scan-card {
+            background: white;
+            border-radius: 0.75rem;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+            border: 1px solid #e5e7eb;
+            padding: 1rem;
+            display: flex;
+            gap: 0.875rem;
+            align-items: flex-start;
+        }
+        .mobile-scan-card .card-thumb {
+            width: 60px;
+            height: 60px;
+            border-radius: 8px;
+            object-fit: cover;
+            flex-shrink: 0;
+            border: 1px solid #e5e7eb;
+            cursor: pointer;
+        }
+        .mobile-scan-card .card-thumb-placeholder {
+            width: 60px;
+            height: 60px;
+            border-radius: 8px;
+            background: #f3f4f6;
+            flex-shrink: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #d1d5db;
+            font-size: 1.25rem;
+        }
+        .mobile-scan-card .card-body { flex: 1; min-width: 0; }
+        .mobile-scan-card .card-store {
+            font-weight: 600;
+            font-size: 0.9rem;
+            color: #111827;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .mobile-scan-card .card-sku {
+            font-size: 0.78rem;
+            color: #6b7280;
+            margin-top: 1px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .mobile-scan-card .card-meta {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-top: 0.5rem;
+            flex-wrap: wrap;
         }
 
         /* ── Lightbox ── */
@@ -278,33 +388,6 @@
         }
         .empty-state svg { margin: 0 auto 1rem; display: block; }
 
-        /* ── Bottom nav ── */
-        .bottom-nav {
-            position: fixed;
-            bottom: 0;
-            left: 0;
-            right: 0;
-            background: white;
-            border-top: 1px solid #e5e7eb;
-            z-index: 100;
-        }
-        .bottom-nav .inner {
-            display: flex;
-            justify-content: space-around;
-            padding: 0.75rem 0;
-        }
-        .bottom-nav button {
-            background: none;
-            border: none;
-            font-size: 0.875rem;
-            font-weight: 500;
-            color: #6b7280;
-            cursor: pointer;
-            padding: 0.25rem 0.5rem;
-        }
-        .bottom-nav button:hover { color: #C62828; }
-        .bottom-nav button.active { color: #C62828; font-weight: 700; }
-
         /* ── Export buttons ── */
         .btn-export {
             display: inline-flex;
@@ -333,51 +416,53 @@
 
         /* ── Responsive ── */
         @media (max-width: 768px) {
-            .filter-grid { grid-template-columns: 1fr 1fr !important; }
             .kpi-grid    { grid-template-columns: 1fr 1fr !important; }
             #scan-table  { font-size: 0.78rem; }
             #scan-table thead th,
             #scan-table tbody td { padding: 0.5rem 0.6rem; }
             .hide-mobile { display: none !important; }
+            /* On mobile: hide desktop table, show card list */
+            #table-view  { display: none !important; }
+            #mobile-card-view { display: flex; flex-direction: column; gap: 0.75rem; }
+            #mobile-card-view.hidden { display: none !important; }
+            .export-bar { flex-direction: column; gap: 0.5rem; }
+        }
+        @media (min-width: 769px) {
+            #mobile-card-view { display: none !important; }
         }
     </style>
 </head>
 <body>
-<div class="page-wrapper min-h-screen bg-gray-100">
+<!-- Shared admin hamburger nav — injected before page content -->
+<script src="../shared/admin-nav.js" data-page="scan-intelligence"></script>
 
-    <!-- ═══════════════════════════════════════════════════
-         HEADER
-    ═══════════════════════════════════════════════════ -->
-    <div class="bg-white shadow-sm border-b sticky top-0 z-50">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="flex justify-between items-center py-4">
-                <div class="flex items-center gap-3">
-                    <a href="dashboard.html" class="text-gray-400 hover:text-gray-600 text-sm">← Dashboard</a>
-                    <span class="text-gray-300">|</span>
-                    <h1 class="text-xl font-bold text-gray-900">Scan Intelligence</h1>
-                    <span class="px-2 py-0.5 bg-red-100 text-red-800 text-xs font-semibold rounded-full">ADMIN</span>
-                </div>
-                <div class="flex items-center gap-3">
-                    <button onclick="exportCSV()" class="btn-export btn-export-csv">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
-                        CSV
-                    </button>
-                    <button onclick="exportExcel()" class="btn-export btn-export-excel">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
-                        Excel
-                    </button>
-                    <button onclick="handleSignOut()" class="text-sm text-gray-500 hover:text-gray-700">Sign Out</button>
-                </div>
+<div class="page-wrapper min-h-screen bg-gray-100">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-5">
+
+        <!-- ═══════════════════════════════════════════════════
+             PAGE TITLE + EXPORT BAR
+        ═══════════════════════════════════════════════════ -->
+        <div class="flex flex-wrap items-center justify-between gap-3 mb-5 export-bar">
+            <div>
+                <h1 class="text-xl font-bold text-gray-900">Scan Intelligence</h1>
+                <p class="text-sm text-gray-500 mt-0.5">All product scans — admin walkthroughs &amp; shelfer job submissions</p>
+            </div>
+            <div class="flex items-center gap-2">
+                <button onclick="exportCSV()" class="btn-export btn-export-csv">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+                    CSV
+                </button>
+                <button onclick="exportExcel()" class="btn-export btn-export-excel">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                    Excel
+                </button>
             </div>
         </div>
-    </div>
-
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
 
         <!-- ═══════════════════════════════════════════════════
              KPI SUMMARY ROW
         ═══════════════════════════════════════════════════ -->
-        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6 kpi-grid">
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-5 kpi-grid">
             <div class="kpi-card blue">
                 <p class="text-xs font-semibold text-gray-500 uppercase tracking-wide">Total Scans</p>
                 <p class="text-3xl font-bold text-blue-600 mt-1" id="kpi-total">—</p>
@@ -401,102 +486,129 @@
         </div>
 
         <!-- ═══════════════════════════════════════════════════
-             FILTER BAR
+             FILTER BAR (collapsible)
         ═══════════════════════════════════════════════════ -->
-        <div class="filter-bar mb-6">
-            <div class="flex flex-wrap items-end gap-3 filter-grid" style="grid-template-columns: repeat(auto-fill, minmax(160px,1fr));">
+        <div class="filter-bar mb-5" id="filter-bar-card">
 
-                <!-- Search -->
-                <div class="flex-1 min-w-[180px]">
-                    <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Search</label>
-                    <input type="text" id="f-search" placeholder="Store, SKU, shelfer…"
-                           class="w-full" oninput="applyFilters()">
+            <!-- Collapsible header -->
+            <div class="filter-bar-header" onclick="toggleFilters()" id="filter-bar-toggle">
+                <div class="flex items-center gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2a1 1 0 01-.293.707L13 13.414V19a1 1 0 01-.553.894l-4 2A1 1 0 017 21v-7.586L3.293 6.707A1 1 0 013 6V4z"/></svg>
+                    <span class="text-sm font-semibold text-gray-700">Filters</span>
+                    <span id="active-filter-count" class="hidden px-1.5 py-0.5 bg-red-100 text-red-700 text-xs font-bold rounded-full">0</span>
                 </div>
-
-                <!-- Banner -->
-                <div>
-                    <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Banner</label>
-                    <select id="f-banner" onchange="applyFilters()">
-                        <option value="">All Banners</option>
-                    </select>
-                </div>
-
-                <!-- Brand -->
-                <div>
-                    <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Brand</label>
-                    <select id="f-brand" onchange="applyFilters()">
-                        <option value="">All Brands</option>
-                    </select>
-                </div>
-
-                <!-- Category -->
-                <div>
-                    <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Category</label>
-                    <select id="f-category" onchange="applyFilters()">
-                        <option value="">All Categories</option>
-                    </select>
-                </div>
-
-                <!-- Status -->
-                <div>
-                    <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Status</label>
-                    <select id="f-status" onchange="applyFilters()">
-                        <option value="">All Statuses</option>
-                        <option value="approved">Approved</option>
-                        <option value="pending_review">Pending Review</option>
-                        <option value="rejected">Rejected</option>
-                    </select>
-                </div>
-
-                <!-- Shelfer -->
-                <div>
-                    <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Shelfer</label>
-                    <select id="f-shelfer" onchange="applyFilters()">
-                        <option value="">All Shelfers</option>
-                    </select>
-                </div>
-
-                <!-- Date from -->
-                <div>
-                    <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">From</label>
-                    <input type="date" id="f-date-from" onchange="applyFilters()">
-                </div>
-
-                <!-- Date to -->
-                <div>
-                    <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">To</label>
-                    <input type="date" id="f-date-to" onchange="applyFilters()">
-                </div>
-
-                <!-- Clear -->
-                <div class="flex items-end">
-                    <button onclick="clearFilters()"
-                            class="px-4 py-[0.45rem] text-sm font-medium bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 border border-gray-200 whitespace-nowrap">
-                        Clear Filters
-                    </button>
+                <div class="flex items-center gap-3">
+                    <span class="text-sm text-gray-500">
+                        Showing <span id="result-count" class="font-semibold text-gray-800">0</span> scan<span id="result-plural">s</span>
+                    </span>
+                    <svg id="filter-chevron" xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-gray-400 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
                 </div>
             </div>
 
-            <!-- Row 2: result count + view toggle -->
-            <div class="flex items-center justify-between mt-4 pt-3 border-t border-gray-100">
-                <p class="text-sm text-gray-500">
-                    Showing <span id="result-count" class="font-semibold text-gray-800">0</span> scan<span id="result-plural">s</span>
-                </p>
-                <div class="view-toggle flex">
-                    <button id="btn-table" class="active" onclick="switchView('table')">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="inline h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M3 6h18M3 14h18M3 18h18"/></svg>
-                        Table
-                    </button>
-                    <button id="btn-gallery" onclick="switchView('gallery')">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="inline h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"/></svg>
-                        Gallery
-                    </button>
+            <!-- Filter body -->
+            <div class="filter-bar-body" id="filter-bar-body">
+
+                <!-- Scan Type pills (top of filters — most important) -->
+                <div class="pt-4 pb-3 border-b border-gray-50 mb-3">
+                    <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Scan Type</label>
+                    <div class="scan-type-pills">
+                        <button class="scan-type-pill active" id="pill-all"     onclick="setScanType('all')">All Scans</button>
+                        <button class="scan-type-pill"        id="pill-admin"   onclick="setScanType('admin')">🔍 Admin Walkthrough</button>
+                        <button class="scan-type-pill"        id="pill-shelfer" onclick="setScanType('shelfer')">📦 Shelfer Submission</button>
+                    </div>
+                </div>
+
+                <div class="flex flex-wrap items-end gap-3" style="grid-template-columns: repeat(auto-fill, minmax(160px,1fr));">
+
+                    <!-- Search -->
+                    <div class="flex-1 min-w-[180px]">
+                        <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Search</label>
+                        <input type="text" id="f-search" placeholder="Store, SKU, shelfer, notes…"
+                               class="w-full" oninput="applyFilters()">
+                    </div>
+
+                    <!-- Banner -->
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Banner</label>
+                        <select id="f-banner" onchange="applyFilters()">
+                            <option value="">All Banners</option>
+                        </select>
+                    </div>
+
+                    <!-- Brand -->
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Brand</label>
+                        <select id="f-brand" onchange="applyFilters()">
+                            <option value="">All Brands</option>
+                        </select>
+                    </div>
+
+                    <!-- Category -->
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Category</label>
+                        <select id="f-category" onchange="applyFilters()">
+                            <option value="">All Categories</option>
+                        </select>
+                    </div>
+
+                    <!-- Status -->
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Status</label>
+                        <select id="f-status" onchange="applyFilters()">
+                            <option value="">All Statuses</option>
+                            <option value="approved">Approved</option>
+                            <option value="pending_review">Pending Review</option>
+                            <option value="rejected">Rejected</option>
+                        </select>
+                    </div>
+
+                    <!-- Shelfer -->
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Shelfer</label>
+                        <select id="f-shelfer" onchange="applyFilters()">
+                            <option value="">All Shelfers</option>
+                        </select>
+                    </div>
+
+                    <!-- Date from -->
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">From</label>
+                        <input type="date" id="f-date-from" onchange="applyFilters()">
+                    </div>
+
+                    <!-- Date to -->
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">To</label>
+                        <input type="date" id="f-date-to" onchange="applyFilters()">
+                    </div>
+
+                    <!-- Clear -->
+                    <div class="flex items-end">
+                        <button onclick="clearFilters()"
+                                class="px-4 py-[0.45rem] text-sm font-medium bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 border border-gray-200 whitespace-nowrap">
+                            Clear All
+                        </button>
+                    </div>
+                </div>
+
+                <!-- View toggle row -->
+                <div class="flex items-center justify-end mt-4 pt-3 border-t border-gray-100">
+                    <div class="view-toggle flex">
+                        <button id="btn-table" class="active" onclick="switchView('table')">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="inline h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M3 6h18M3 14h18M3 18h18"/></svg>
+                            Table
+                        </button>
+                        <button id="btn-gallery" onclick="switchView('gallery')">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="inline h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"/></svg>
+                            Gallery
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
 
         <!-- ═══════════════════════════════════════════════════
-             TABLE VIEW
+             TABLE VIEW (desktop)
         ═══════════════════════════════════════════════════ -->
         <div id="table-view" class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
             <div class="overflow-x-auto">
@@ -504,6 +616,7 @@
                     <thead>
                         <tr>
                             <th data-col="photos" class="hide-mobile" style="cursor:default;">Photo</th>
+                            <th data-col="scan_type" onclick="sortBy('scan_type')" class="hide-mobile">Type <span class="sort-icon"></span></th>
                             <th data-col="submitted_at" onclick="sortBy('submitted_at')">Date <span class="sort-icon"></span></th>
                             <th data-col="store_name" onclick="sortBy('store_name')">Store <span class="sort-icon"></span></th>
                             <th data-col="banner" onclick="sortBy('banner')" class="hide-mobile">Banner <span class="sort-icon"></span></th>
@@ -527,6 +640,14 @@
                     <p class="text-sm text-gray-400 mt-1">Try adjusting or clearing the filters above.</p>
                 </div>
             </div>
+        </div>
+
+        <!-- ═══════════════════════════════════════════════════
+             MOBILE CARD VIEW (phones only)
+        ═══════════════════════════════════════════════════ -->
+        <div id="mobile-card-view"></div>
+        <div id="mobile-card-empty" class="empty-state hidden">
+            <p class="text-lg font-medium text-gray-400">No scans match your filters</p>
         </div>
 
         <!-- ═══════════════════════════════════════════════════
@@ -554,50 +675,48 @@
 </div>
 
 <!-- ═══════════════════════════════════════════════════
-     BOTTOM NAV
-═══════════════════════════════════════════════════ -->
-<div class="bottom-nav">
-    <div class="inner max-w-7xl mx-auto">
-        <button onclick="location.href='dashboard.html'" class="active">Admin</button>
-        <button onclick="location.href='../dashboard/shelfer.html'">Shelfer</button>
-        <button onclick="location.href='../dashboard/brand-client.html'">Brand</button>
-        <button onclick="location.href='../dashboard/profile.html'">Profile</button>
-    </div>
-</div>
-
-<!-- ═══════════════════════════════════════════════════
      SCRIPTS
 ═══════════════════════════════════════════════════ -->
 <script src="config.js" onerror="console.warn('config.js not found — using demo mode')"></script>
-<script src="../shared/api.js?v=20250305-1" onerror="console.warn('api.js not found — using demo mode')"></script>
+<script src="../shared/api.js?v=20250305-2" onerror="console.warn('api.js not found — using demo mode')"></script>
 
 <script>
 // ────────────────────────────────────────────────────────────
-// MOCK DATA (embedded for demo; replace with Supabase query)
+// MOCK DATA
+// scan_type: 'admin'   = Courtney/admin walkthrough scan
+// scan_type: 'shelfer' = shelfer job submission
 // ────────────────────────────────────────────────────────────
 const MOCK_SCANS = [
-  { id:"sub-001", job_id:"job-001", job_title:"HEB Spring Reset — Snack Aisle", submitted_at:"2025-03-01T09:14:00Z", contractor_name:"Maria Reyes", store_name:"HEB - ALVIN", store_city:"Alvin", store_state:"TX", banner:"HEB", sku_name:"ShelfSnack Granola Bar 6pk", upc:"012345678901", category:"Snacks", brand_name:"NatureBite", status:"approved", compliance_score:97, shelf_tag_present:true, facing_count:4, out_of_stock:false, notes:"All facings clean, price tag correct.", photos:["https://images.unsplash.com/photo-1604719312566-8912e9227c6a?w=400","https://images.unsplash.com/photo-1601924994987-69e26d50dc26?w=400"] },
-  { id:"sub-002", job_id:"job-001", job_title:"HEB Spring Reset — Snack Aisle", submitted_at:"2025-03-01T10:45:00Z", contractor_name:"James Okafor", store_name:"HEB - PEARLAND", store_city:"Pearland", store_state:"TX", banner:"HEB", sku_name:"ShelfSnack Granola Bar 6pk", upc:"012345678901", category:"Snacks", brand_name:"NatureBite", status:"approved", compliance_score:88, shelf_tag_present:true, facing_count:3, out_of_stock:false, notes:"One facing slightly misaligned.", photos:["https://images.unsplash.com/photo-1509440159596-0249088772ff?w=400"] },
-  { id:"sub-003", job_id:"job-002", job_title:"Kroger Beverage Audit Q1", submitted_at:"2025-03-02T08:30:00Z", contractor_name:"Sofia Hernandez", store_name:"KROGER - HOUSTON HEIGHTS", store_city:"Houston", store_state:"TX", banner:"Kroger", sku_name:"HydroBoost Electrolyte 12oz", upc:"098765432109", category:"Beverages", brand_name:"HydroBoost", status:"pending_review", compliance_score:72, shelf_tag_present:false, facing_count:2, out_of_stock:false, notes:"Missing shelf tag. Reported to store manager.", photos:["https://images.unsplash.com/photo-1548839140-29a749e1cf4d?w=400","https://images.unsplash.com/photo-1602143407151-7111542de6e8?w=400"] },
-  { id:"sub-004", job_id:"job-002", job_title:"Kroger Beverage Audit Q1", submitted_at:"2025-03-02T11:00:00Z", contractor_name:"Maria Reyes", store_name:"KROGER - SUGAR LAND", store_city:"Sugar Land", store_state:"TX", banner:"Kroger", sku_name:"HydroBoost Electrolyte 12oz", upc:"098765432109", category:"Beverages", brand_name:"HydroBoost", status:"approved", compliance_score:95, shelf_tag_present:true, facing_count:5, out_of_stock:false, notes:"Perfect placement, 5 full facings.", photos:["https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?w=400"] },
-  { id:"sub-005", job_id:"job-003", job_title:"Walmart Organic Dairy Check", submitted_at:"2025-03-03T14:20:00Z", contractor_name:"DeShawn Williams", store_name:"WALMART - PASADENA", store_city:"Pasadena", store_state:"TX", banner:"Walmart", sku_name:"GreenMeadow Organic Milk 1gal", upc:"011110987654", category:"Dairy", brand_name:"GreenMeadow", status:"rejected", compliance_score:41, shelf_tag_present:false, facing_count:1, out_of_stock:true, notes:"Product out of stock. No shelf tag. Needs restock.", photos:["https://images.unsplash.com/photo-1563636619-e9143da7973b?w=400"] },
-  { id:"sub-006", job_id:"job-003", job_title:"Walmart Organic Dairy Check", submitted_at:"2025-03-03T15:55:00Z", contractor_name:"James Okafor", store_name:"WALMART - LEAGUE CITY", store_city:"League City", store_state:"TX", banner:"Walmart", sku_name:"GreenMeadow Organic Milk 1gal", upc:"011110987654", category:"Dairy", brand_name:"GreenMeadow", status:"approved", compliance_score:91, shelf_tag_present:true, facing_count:4, out_of_stock:false, notes:"Good stock levels, tag present.", photos:["https://images.unsplash.com/photo-1550583724-b2692b85b150?w=400","https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=400"] },
-  { id:"sub-007", job_id:"job-004", job_title:"Whole Foods Premium Snack Audit", submitted_at:"2025-03-04T09:00:00Z", contractor_name:"Sofia Hernandez", store_name:"WHOLE FOODS - RIVER OAKS", store_city:"Houston", store_state:"TX", banner:"Whole Foods", sku_name:"CrunchCraft Almond Clusters 8oz", upc:"074312456789", category:"Snacks", brand_name:"CrunchCraft", status:"approved", compliance_score:99, shelf_tag_present:true, facing_count:6, out_of_stock:false, notes:"Excellent placement. End-cap display active.", photos:["https://images.unsplash.com/photo-1599599810769-bcde5a160d32?w=400","https://images.unsplash.com/photo-1590080875515-8a3a8dc5735e?w=400"] },
-  { id:"sub-008", job_id:"job-004", job_title:"Whole Foods Premium Snack Audit", submitted_at:"2025-03-04T11:30:00Z", contractor_name:"DeShawn Williams", store_name:"WHOLE FOODS - MIDTOWN", store_city:"Houston", store_state:"TX", banner:"Whole Foods", sku_name:"CrunchCraft Almond Clusters 8oz", upc:"074312456789", category:"Snacks", brand_name:"CrunchCraft", status:"pending_review", compliance_score:80, shelf_tag_present:true, facing_count:3, out_of_stock:false, notes:"Shelf slightly crowded, facings reduced.", photos:["https://images.unsplash.com/photo-1606787366850-de6330128bfc?w=400"] },
-  { id:"sub-009", job_id:"job-005", job_title:"Target Frozen Foods Compliance", submitted_at:"2025-03-05T08:15:00Z", contractor_name:"Maria Reyes", store_name:"TARGET - FRIENDSWOOD", store_city:"Friendswood", store_state:"TX", banner:"Target", sku_name:"FrostBite Veggie Burgers 4pk", upc:"036800123456", category:"Frozen", brand_name:"FrostBite", status:"approved", compliance_score:94, shelf_tag_present:true, facing_count:4, out_of_stock:false, notes:"Freezer section well-organized.", photos:["https://images.unsplash.com/photo-1551782450-a2132b4ba21d?w=400","https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?w=400"] },
-  { id:"sub-010", job_id:"job-005", job_title:"Target Frozen Foods Compliance", submitted_at:"2025-03-05T10:00:00Z", contractor_name:"James Okafor", store_name:"TARGET - PEARLAND", store_city:"Pearland", store_state:"TX", banner:"Target", sku_name:"FrostBite Veggie Burgers 4pk", upc:"036800123456", category:"Frozen", brand_name:"FrostBite", status:"pending_review", compliance_score:65, shelf_tag_present:false, facing_count:2, out_of_stock:false, notes:"Tag missing, only 2 facings visible.", photos:["https://images.unsplash.com/photo-1567620905732-2d1ec7ab7445?w=400"] },
-  { id:"sub-011", job_id:"job-006", job_title:"Sprouts Natural Beauty Audit", submitted_at:"2025-03-05T13:45:00Z", contractor_name:"Sofia Hernandez", store_name:"SPROUTS - KATY", store_city:"Katy", store_state:"TX", banner:"Sprouts", sku_name:"PureGlow Face Serum 2oz", upc:"055000112233", category:"Beauty", brand_name:"PureGlow", status:"approved", compliance_score:100, shelf_tag_present:true, facing_count:3, out_of_stock:false, notes:"Perfect. Featured in new arrivals section.", photos:["https://images.unsplash.com/photo-1556228578-8c89e6adf883?w=400","https://images.unsplash.com/photo-1571781926291-c477ebfd024b?w=400"] },
-  { id:"sub-012", job_id:"job-006", job_title:"Sprouts Natural Beauty Audit", submitted_at:"2025-03-05T15:00:00Z", contractor_name:"DeShawn Williams", store_name:"SPROUTS - THE WOODLANDS", store_city:"The Woodlands", store_state:"TX", banner:"Sprouts", sku_name:"PureGlow Face Serum 2oz", upc:"055000112233", category:"Beauty", brand_name:"PureGlow", status:"rejected", compliance_score:35, shelf_tag_present:false, facing_count:1, out_of_stock:true, notes:"Out of stock. Wrong shelf location. Needs correction.", photos:["https://images.unsplash.com/photo-1512290923902-8a9f81dc236c?w=400"] }
+  // ── ADMIN WALKTHROUGHS ──────────────────────────────────
+  { id:"adm-001", job_id:null, job_title:"Admin Walkthrough", submitted_at:"2025-03-05T07:00:00Z", scan_type:"admin", contractor_name:"Courtney Henderu", store_name:"HEB - PEARLAND", store_city:"Pearland", store_state:"TX", banner:"HEB", sku_name:"ShelfSnack Granola Bar 6pk", upc:"012345678901", category:"Snacks", brand_name:"NatureBite", status:"approved", compliance_score:92, shelf_tag_present:true, facing_count:4, out_of_stock:false, notes:"Spot check — all good. Tag present and facing full.", photos:["https://images.unsplash.com/photo-1604719312566-8912e9227c6a?w=400"] },
+  { id:"adm-002", job_id:null, job_title:"Admin Walkthrough", submitted_at:"2025-03-04T16:30:00Z", scan_type:"admin", contractor_name:"Courtney Henderu", store_name:"KROGER - SUGAR LAND", store_city:"Sugar Land", store_state:"TX", banner:"Kroger", sku_name:"HydroBoost Electrolyte 12oz", upc:"098765432109", category:"Beverages", brand_name:"HydroBoost", status:"pending_review", compliance_score:68, shelf_tag_present:false, facing_count:2, out_of_stock:false, notes:"Tag missing during admin walkthrough. Flagged for shelfer follow-up.", photos:["https://images.unsplash.com/photo-1548839140-29a749e1cf4d?w=400","https://images.unsplash.com/photo-1602143407151-7111542de6e8?w=400"] },
+  { id:"adm-003", job_id:null, job_title:"Admin Walkthrough", submitted_at:"2025-03-03T10:15:00Z", scan_type:"admin", contractor_name:"Courtney Henderu", store_name:"WHOLE FOODS - RIVER OAKS", store_city:"Houston", store_state:"TX", banner:"Whole Foods", sku_name:"CrunchCraft Almond Clusters 8oz", upc:"074312456789", category:"Snacks", brand_name:"CrunchCraft", status:"approved", compliance_score:97, shelf_tag_present:true, facing_count:5, out_of_stock:false, notes:"End-cap display confirmed active. Excellent visibility.", photos:["https://images.unsplash.com/photo-1599599810769-bcde5a160d32?w=400"] },
+
+  // ── SHELFER SUBMISSIONS ─────────────────────────────────
+  { id:"sub-001", job_id:"job-001", job_title:"HEB Spring Reset — Snack Aisle", submitted_at:"2025-03-01T09:14:00Z", scan_type:"shelfer", contractor_name:"Maria Reyes", store_name:"HEB - ALVIN", store_city:"Alvin", store_state:"TX", banner:"HEB", sku_name:"ShelfSnack Granola Bar 6pk", upc:"012345678901", category:"Snacks", brand_name:"NatureBite", status:"approved", compliance_score:97, shelf_tag_present:true, facing_count:4, out_of_stock:false, notes:"All facings clean, price tag correct.", photos:["https://images.unsplash.com/photo-1509440159596-0249088772ff?w=400","https://images.unsplash.com/photo-1601924994987-69e26d50dc26?w=400"] },
+  { id:"sub-002", job_id:"job-001", job_title:"HEB Spring Reset — Snack Aisle", submitted_at:"2025-03-01T10:45:00Z", scan_type:"shelfer", contractor_name:"James Okafor", store_name:"HEB - PEARLAND", store_city:"Pearland", store_state:"TX", banner:"HEB", sku_name:"ShelfSnack Granola Bar 6pk", upc:"012345678901", category:"Snacks", brand_name:"NatureBite", status:"approved", compliance_score:88, shelf_tag_present:true, facing_count:3, out_of_stock:false, notes:"One facing slightly misaligned.", photos:["https://images.unsplash.com/photo-1509440159596-0249088772ff?w=400"] },
+  { id:"sub-003", job_id:"job-002", job_title:"Kroger Beverage Audit Q1", submitted_at:"2025-03-02T08:30:00Z", scan_type:"shelfer", contractor_name:"Sofia Hernandez", store_name:"KROGER - HOUSTON HEIGHTS", store_city:"Houston", store_state:"TX", banner:"Kroger", sku_name:"HydroBoost Electrolyte 12oz", upc:"098765432109", category:"Beverages", brand_name:"HydroBoost", status:"pending_review", compliance_score:72, shelf_tag_present:false, facing_count:2, out_of_stock:false, notes:"Missing shelf tag. Reported to store manager.", photos:["https://images.unsplash.com/photo-1548839140-29a749e1cf4d?w=400","https://images.unsplash.com/photo-1602143407151-7111542de6e8?w=400"] },
+  { id:"sub-004", job_id:"job-002", job_title:"Kroger Beverage Audit Q1", submitted_at:"2025-03-02T11:00:00Z", scan_type:"shelfer", contractor_name:"Maria Reyes", store_name:"KROGER - SUGAR LAND", store_city:"Sugar Land", store_state:"TX", banner:"Kroger", sku_name:"HydroBoost Electrolyte 12oz", upc:"098765432109", category:"Beverages", brand_name:"HydroBoost", status:"approved", compliance_score:95, shelf_tag_present:true, facing_count:5, out_of_stock:false, notes:"Perfect placement, 5 full facings.", photos:["https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?w=400"] },
+  { id:"sub-005", job_id:"job-003", job_title:"Walmart Organic Dairy Check", submitted_at:"2025-03-03T14:20:00Z", scan_type:"shelfer", contractor_name:"DeShawn Williams", store_name:"WALMART - PASADENA", store_city:"Pasadena", store_state:"TX", banner:"Walmart", sku_name:"GreenMeadow Organic Milk 1gal", upc:"011110987654", category:"Dairy", brand_name:"GreenMeadow", status:"rejected", compliance_score:41, shelf_tag_present:false, facing_count:1, out_of_stock:true, notes:"Product out of stock. No shelf tag. Needs restock.", photos:["https://images.unsplash.com/photo-1563636619-e9143da7973b?w=400"] },
+  { id:"sub-006", job_id:"job-003", job_title:"Walmart Organic Dairy Check", submitted_at:"2025-03-03T15:55:00Z", scan_type:"shelfer", contractor_name:"James Okafor", store_name:"WALMART - LEAGUE CITY", store_city:"League City", store_state:"TX", banner:"Walmart", sku_name:"GreenMeadow Organic Milk 1gal", upc:"011110987654", category:"Dairy", brand_name:"GreenMeadow", status:"approved", compliance_score:91, shelf_tag_present:true, facing_count:4, out_of_stock:false, notes:"Good stock levels, tag present.", photos:["https://images.unsplash.com/photo-1550583724-b2692b85b150?w=400","https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=400"] },
+  { id:"sub-007", job_id:"job-004", job_title:"Whole Foods Premium Snack Audit", submitted_at:"2025-03-04T09:00:00Z", scan_type:"shelfer", contractor_name:"Sofia Hernandez", store_name:"WHOLE FOODS - RIVER OAKS", store_city:"Houston", store_state:"TX", banner:"Whole Foods", sku_name:"CrunchCraft Almond Clusters 8oz", upc:"074312456789", category:"Snacks", brand_name:"CrunchCraft", status:"approved", compliance_score:99, shelf_tag_present:true, facing_count:6, out_of_stock:false, notes:"Excellent placement. End-cap display active.", photos:["https://images.unsplash.com/photo-1599599810769-bcde5a160d32?w=400","https://images.unsplash.com/photo-1590080875515-8a3a8dc5735e?w=400"] },
+  { id:"sub-008", job_id:"job-004", job_title:"Whole Foods Premium Snack Audit", submitted_at:"2025-03-04T11:30:00Z", scan_type:"shelfer", contractor_name:"DeShawn Williams", store_name:"WHOLE FOODS - MIDTOWN", store_city:"Houston", store_state:"TX", banner:"Whole Foods", sku_name:"CrunchCraft Almond Clusters 8oz", upc:"074312456789", category:"Snacks", brand_name:"CrunchCraft", status:"pending_review", compliance_score:80, shelf_tag_present:true, facing_count:3, out_of_stock:false, notes:"Shelf slightly crowded, facings reduced.", photos:["https://images.unsplash.com/photo-1606787366850-de6330128bfc?w=400"] },
+  { id:"sub-009", job_id:"job-005", job_title:"Target Frozen Foods Compliance", submitted_at:"2025-03-05T08:15:00Z", scan_type:"shelfer", contractor_name:"Maria Reyes", store_name:"TARGET - FRIENDSWOOD", store_city:"Friendswood", store_state:"TX", banner:"Target", sku_name:"FrostBite Veggie Burgers 4pk", upc:"036800123456", category:"Frozen", brand_name:"FrostBite", status:"approved", compliance_score:94, shelf_tag_present:true, facing_count:4, out_of_stock:false, notes:"Freezer section well-organized.", photos:["https://images.unsplash.com/photo-1551782450-a2132b4ba21d?w=400","https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?w=400"] },
+  { id:"sub-010", job_id:"job-005", job_title:"Target Frozen Foods Compliance", submitted_at:"2025-03-05T10:00:00Z", scan_type:"shelfer", contractor_name:"James Okafor", store_name:"TARGET - PEARLAND", store_city:"Pearland", store_state:"TX", banner:"Target", sku_name:"FrostBite Veggie Burgers 4pk", upc:"036800123456", category:"Frozen", brand_name:"FrostBite", status:"pending_review", compliance_score:65, shelf_tag_present:false, facing_count:2, out_of_stock:false, notes:"Tag missing, only 2 facings visible.", photos:["https://images.unsplash.com/photo-1567620905732-2d1ec7ab7445?w=400"] },
+  { id:"sub-011", job_id:"job-006", job_title:"Sprouts Natural Beauty Audit", submitted_at:"2025-03-05T13:45:00Z", scan_type:"shelfer", contractor_name:"Sofia Hernandez", store_name:"SPROUTS - KATY", store_city:"Katy", store_state:"TX", banner:"Sprouts", sku_name:"PureGlow Face Serum 2oz", upc:"055000112233", category:"Beauty", brand_name:"PureGlow", status:"approved", compliance_score:100, shelf_tag_present:true, facing_count:3, out_of_stock:false, notes:"Perfect. Featured in new arrivals section.", photos:["https://images.unsplash.com/photo-1556228578-8c89e6adf883?w=400","https://images.unsplash.com/photo-1571781926291-c477ebfd024b?w=400"] },
+  { id:"sub-012", job_id:"job-006", job_title:"Sprouts Natural Beauty Audit", submitted_at:"2025-03-05T15:00:00Z", scan_type:"shelfer", contractor_name:"DeShawn Williams", store_name:"SPROUTS - THE WOODLANDS", store_city:"The Woodlands", store_state:"TX", banner:"Sprouts", sku_name:"PureGlow Face Serum 2oz", upc:"055000112233", category:"Beauty", brand_name:"PureGlow", status:"rejected", compliance_score:35, shelf_tag_present:false, facing_count:1, out_of_stock:true, notes:"Out of stock. Wrong shelf location. Needs correction.", photos:["https://images.unsplash.com/photo-1512290923902-8a9f81dc236c?w=400"] }
 ];
 
 // ────────────────────────────────────────────────────────────
 // STATE
 // ────────────────────────────────────────────────────────────
-let allScans = [];
+let allScans      = [];
 let filteredScans = [];
-let currentView = 'table';
-let sortCol = 'submitted_at';
-let sortDir = 'desc';
+let currentView   = 'table';
+let sortCol       = 'submitted_at';
+let sortDir       = 'desc';
+let activeScanType = 'all';   // 'all' | 'admin' | 'shelfer'
+let filtersOpen   = true;
 
 // Lightbox state
 let lbPhotos = [];
@@ -610,17 +729,22 @@ document.addEventListener('DOMContentLoaded', async () => {
     allScans = await loadScans();
     populateFilterDropdowns(allScans);
     applyFilters();
+    // On mobile, collapse filters by default to save space
+    if (window.innerWidth < 768) {
+        filtersOpen = false;
+        document.getElementById('filter-bar-body').classList.add('collapsed');
+        document.getElementById('filter-chevron').style.transform = 'rotate(-90deg)';
+    }
 });
 
 async function loadScans() {
-    // Try Supabase first; fall back to mock data for demo
     try {
         if (typeof supabase !== 'undefined' && supabase) {
             const { data, error } = await supabase
                 .from('job_submissions')
                 .select(`
                     id, job_id, submitted_at, status, compliance_score,
-                    shelf_tag_present, facing_count, out_of_stock, notes,
+                    shelf_tag_present, facing_count, out_of_stock, notes, scan_type,
                     jobs ( title, brands ( name ) ),
                     stores ( STORE, city, state, retailer_banners ( name ) ),
                     skus ( name, upc, category ),
@@ -634,6 +758,7 @@ async function loadScans() {
                     job_id: r.job_id,
                     job_title: r.jobs?.title || 'Unknown Job',
                     submitted_at: r.submitted_at,
+                    scan_type: r.scan_type || (r.job_id ? 'shelfer' : 'admin'),
                     contractor_name: r.users?.full_name || 'Unknown',
                     store_name: r.stores?.STORE || r.stores?.name || 'Unknown Store',
                     store_city: r.stores?.city || '',
@@ -649,7 +774,7 @@ async function loadScans() {
                     facing_count: r.facing_count || 0,
                     out_of_stock: r.out_of_stock || false,
                     notes: r.notes || '',
-                    photos: [] // photos loaded separately from storage
+                    photos: []
                 }));
             }
         }
@@ -660,26 +785,19 @@ async function loadScans() {
 }
 
 // ────────────────────────────────────────────────────────────
-// FILTER DROPDOWNS — populate unique values
+// FILTER DROPDOWNS
 // ────────────────────────────────────────────────────────────
 function populateFilterDropdowns(scans) {
     const unique = (arr) => [...new Set(arr.filter(Boolean))].sort();
-
-    const banners    = unique(scans.map(s => s.banner));
-    const brands     = unique(scans.map(s => s.brand_name));
-    const categories = unique(scans.map(s => s.category));
-    const shelfers   = unique(scans.map(s => s.contractor_name));
-
-    fillSelect('f-banner',   banners);
-    fillSelect('f-brand',    brands);
-    fillSelect('f-category', categories);
-    fillSelect('f-shelfer',  shelfers);
+    fillSelect('f-banner',   unique(scans.map(s => s.banner)));
+    fillSelect('f-brand',    unique(scans.map(s => s.brand_name)));
+    fillSelect('f-category', unique(scans.map(s => s.category)));
+    fillSelect('f-shelfer',  unique(scans.map(s => s.contractor_name)));
 }
 
 function fillSelect(id, values) {
     const el = document.getElementById(id);
     const current = el.value;
-    // Keep first option (All …)
     while (el.options.length > 1) el.remove(1);
     values.forEach(v => {
         const opt = document.createElement('option');
@@ -688,6 +806,28 @@ function fillSelect(id, values) {
         el.appendChild(opt);
     });
     if (current) el.value = current;
+}
+
+// ────────────────────────────────────────────────────────────
+// SCAN TYPE TOGGLE
+// ────────────────────────────────────────────────────────────
+function setScanType(type) {
+    activeScanType = type;
+    document.getElementById('pill-all').className     = 'scan-type-pill' + (type === 'all'     ? ' active' : '');
+    document.getElementById('pill-admin').className   = 'scan-type-pill' + (type === 'admin'   ? ' active-admin' : '');
+    document.getElementById('pill-shelfer').className = 'scan-type-pill' + (type === 'shelfer' ? ' active-shelfer' : '');
+    applyFilters();
+}
+
+// ────────────────────────────────────────────────────────────
+// FILTER COLLAPSE TOGGLE
+// ────────────────────────────────────────────────────────────
+function toggleFilters() {
+    filtersOpen = !filtersOpen;
+    const body    = document.getElementById('filter-bar-body');
+    const chevron = document.getElementById('filter-chevron');
+    body.classList.toggle('collapsed', !filtersOpen);
+    chevron.style.transform = filtersOpen ? 'rotate(0deg)' : 'rotate(-90deg)';
 }
 
 // ────────────────────────────────────────────────────────────
@@ -704,14 +844,15 @@ function applyFilters() {
     const dateTo   = document.getElementById('f-date-to').value;
 
     filteredScans = allScans.filter(s => {
+        if (activeScanType !== 'all' && s.scan_type !== activeScanType) return false;
         if (search && ![s.store_name, s.sku_name, s.contractor_name, s.brand_name, s.upc, s.notes]
             .join(' ').toLowerCase().includes(search)) return false;
-        if (banner   && s.banner        !== banner)   return false;
-        if (brand    && s.brand_name    !== brand)    return false;
-        if (category && s.category      !== category) return false;
-        if (status   && s.status        !== status)   return false;
-        if (shelfer  && s.contractor_name !== shelfer) return false;
-        if (dateFrom && s.submitted_at < dateFrom)    return false;
+        if (banner   && s.banner          !== banner)   return false;
+        if (brand    && s.brand_name      !== brand)    return false;
+        if (category && s.category        !== category) return false;
+        if (status   && s.status          !== status)   return false;
+        if (shelfer  && s.contractor_name !== shelfer)  return false;
+        if (dateFrom && s.submitted_at < dateFrom)      return false;
         if (dateTo   && s.submitted_at > dateTo + 'T23:59:59Z') return false;
         return true;
     });
@@ -719,15 +860,29 @@ function applyFilters() {
     sortData();
     updateKPIs(filteredScans);
     updateResultCount(filteredScans.length);
+    updateActiveFilterBadge();
 
-    if (currentView === 'table') renderTable(filteredScans);
-    else renderGallery(filteredScans);
+    if (currentView === 'table') {
+        renderTable(filteredScans);
+        renderMobileCards(filteredScans);
+    } else {
+        renderGallery(filteredScans);
+    }
 }
 
 function clearFilters() {
     ['f-search','f-banner','f-brand','f-category','f-status','f-shelfer','f-date-from','f-date-to']
         .forEach(id => { document.getElementById(id).value = ''; });
-    applyFilters();
+    setScanType('all');
+}
+
+function updateActiveFilterBadge() {
+    const fields = ['f-search','f-banner','f-brand','f-category','f-status','f-shelfer','f-date-from','f-date-to'];
+    let count = fields.filter(id => document.getElementById(id).value).length;
+    if (activeScanType !== 'all') count++;
+    const badge = document.getElementById('active-filter-count');
+    badge.textContent = count;
+    badge.classList.toggle('hidden', count === 0);
 }
 
 // ────────────────────────────────────────────────────────────
@@ -740,7 +895,6 @@ function sortBy(col) {
         sortCol = col;
         sortDir = 'asc';
     }
-    // Update header icons
     document.querySelectorAll('#scan-table thead th').forEach(th => {
         th.classList.remove('sort-asc','sort-desc');
         if (th.dataset.col === col) th.classList.add(sortDir === 'asc' ? 'sort-asc' : 'sort-desc');
@@ -771,9 +925,9 @@ function updateKPIs(scans) {
         ? Math.round(scans.reduce((sum, s) => sum + (s.compliance_score || 0), 0) / total)
         : 0;
 
-    document.getElementById('kpi-total').textContent     = total;
-    document.getElementById('kpi-approved').textContent  = approved;
-    document.getElementById('kpi-pending').textContent   = pending;
+    document.getElementById('kpi-total').textContent      = total;
+    document.getElementById('kpi-approved').textContent   = approved;
+    document.getElementById('kpi-pending').textContent    = pending;
     document.getElementById('kpi-compliance').textContent = avgScore;
     document.getElementById('kpi-approved-pct').textContent =
         total > 0 ? `${Math.round(approved/total*100)}% of total` : '—% of total';
@@ -785,7 +939,7 @@ function updateResultCount(n) {
 }
 
 // ────────────────────────────────────────────────────────────
-// TABLE RENDER
+// TABLE RENDER (desktop)
 // ────────────────────────────────────────────────────────────
 function renderTable(scans) {
     const tbody = document.getElementById('table-body');
@@ -802,6 +956,7 @@ function renderTable(scans) {
         const date  = new Date(s.submitted_at).toLocaleDateString('en-US', { month:'short', day:'numeric', year:'2-digit' });
         const badge = badgeHTML(s.status);
         const score = scoreBarHTML(s.compliance_score);
+        const typeTag = scanTypeTagHTML(s.scan_type);
         const thumb = s.photos && s.photos.length
             ? `<img src="${s.photos[0]}" class="thumb-mini" alt="scan photo"
                     onclick="openLightbox(${JSON.stringify(s.photos).replace(/"/g,'&quot;')}, 0, '${esc(s.store_name)}')">`
@@ -812,6 +967,7 @@ function renderTable(scans) {
 
         return `<tr>
             <td class="hide-mobile">${thumb}</td>
+            <td class="hide-mobile">${typeTag}</td>
             <td class="whitespace-nowrap text-gray-500">${date}</td>
             <td class="font-medium">${esc(s.store_name)}</td>
             <td class="hide-mobile text-gray-500">${esc(s.banner)}</td>
@@ -827,21 +983,45 @@ function renderTable(scans) {
     }).join('');
 }
 
-function badgeHTML(status) {
-    const labels = { approved:'Approved', pending_review:'Pending', rejected:'Rejected' };
-    return `<span class="badge badge-${status}">${labels[status] || status}</span>`;
-}
+// ────────────────────────────────────────────────────────────
+// MOBILE CARD RENDER
+// ────────────────────────────────────────────────────────────
+function renderMobileCards(scans) {
+    const container = document.getElementById('mobile-card-view');
+    const empty     = document.getElementById('mobile-card-empty');
 
-function scoreBarHTML(score) {
-    const color = score >= 90 ? '#10b981' : score >= 70 ? '#f59e0b' : '#ef4444';
-    return `<div class="score-bar-wrap">
-        <div class="flex items-center gap-1.5">
-            <span class="text-xs font-semibold" style="color:${color};min-width:28px">${score}</span>
-            <div class="score-bar-bg flex-1">
-                <div class="score-bar-fill" style="width:${score}%;background:${color}"></div>
+    if (scans.length === 0) {
+        container.innerHTML = '';
+        empty.classList.remove('hidden');
+        return;
+    }
+    empty.classList.add('hidden');
+
+    container.innerHTML = scans.map(s => {
+        const date  = new Date(s.submitted_at).toLocaleDateString('en-US', { month:'short', day:'numeric' });
+        const badge = badgeHTML(s.status);
+        const score = scoreBarHTML(s.compliance_score);
+        const typeTag = scanTypeTagHTML(s.scan_type);
+        const photosJSON = JSON.stringify(s.photos || []).replace(/"/g,'&quot;');
+        const thumbEl = s.photos && s.photos.length
+            ? `<img src="${s.photos[0]}" class="card-thumb" alt="scan" onclick="openLightbox(${photosJSON}, 0, '${esc(s.store_name)}')">`
+            : `<div class="card-thumb-placeholder">📷</div>`;
+
+        return `<div class="mobile-scan-card">
+            ${thumbEl}
+            <div class="card-body">
+                <div class="card-store">${esc(s.store_name)}</div>
+                <div class="card-sku">${esc(s.sku_name)} · ${esc(s.brand_name)}</div>
+                <div class="card-meta">
+                    ${badge}
+                    ${typeTag}
+                    <span class="text-xs text-gray-400">${date} · ${esc(s.contractor_name.split(' ')[0])}</span>
+                </div>
+                <div class="mt-2">${score}</div>
+                ${s.notes ? `<p class="text-xs text-gray-500 mt-1 line-clamp-2">${esc(s.notes)}</p>` : ''}
             </div>
-        </div>
-    </div>`;
+        </div>`;
+    }).join('');
 }
 
 // ────────────────────────────────────────────────────────────
@@ -866,12 +1046,14 @@ function renderGallery(scans) {
         const badge = badgeHTML(s.status);
         const date  = new Date(s.submitted_at).toLocaleDateString('en-US', { month:'short', day:'numeric' });
         const photosJSON = JSON.stringify(s.photos || []).replace(/"/g,'&quot;');
+        const typeTag = scanTypeTagHTML(s.scan_type);
 
         return `<div class="gallery-card">
             <div class="gallery-thumb-wrap"
                  onclick="openLightbox(${photosJSON}, 0, '${esc(s.store_name)}')">
                 <img src="${thumb}" alt="${esc(s.store_name)}" loading="lazy">
                 ${count > 1 ? `<span class="gallery-photo-count">${count} photos</span>` : ''}
+                <span class="gallery-scan-type">${typeTag}</span>
             </div>
             <div class="gallery-body">
                 <div class="store-name" title="${esc(s.store_name)}">${esc(s.store_name)}</div>
@@ -895,21 +1077,66 @@ function switchView(view) {
     document.getElementById('btn-table').classList.toggle('active', view === 'table');
     document.getElementById('btn-gallery').classList.toggle('active', view === 'gallery');
 
-    const tableEl   = document.getElementById('table-view');
-    const galleryEl = document.getElementById('gallery-view');
-    const tEmpty    = document.getElementById('table-empty');
-    const gEmpty    = document.getElementById('gallery-empty');
+    const tableEl    = document.getElementById('table-view');
+    const mobileEl   = document.getElementById('mobile-card-view');
+    const galleryEl  = document.getElementById('gallery-view');
+    const tEmpty     = document.getElementById('table-empty');
+    const mEmpty     = document.getElementById('mobile-card-empty');
+    const gEmpty     = document.getElementById('gallery-empty');
 
     if (view === 'table') {
-        tableEl.style.display = '';
+        tableEl.style.display  = '';
+        mobileEl.classList.remove('hidden');
         galleryEl.classList.remove('active');
         gEmpty.classList.add('hidden');
         renderTable(filteredScans);
+        renderMobileCards(filteredScans);
     } else {
-        tableEl.style.display = 'none';
+        tableEl.style.display  = 'none';
+        mobileEl.classList.add('hidden');
+        mEmpty.classList.add('hidden');
         tEmpty.classList.add('hidden');
         renderGallery(filteredScans);
     }
+}
+
+// ────────────────────────────────────────────────────────────
+// HELPERS
+// ────────────────────────────────────────────────────────────
+function badgeHTML(status) {
+    const labels = { approved:'Approved', pending_review:'Pending', rejected:'Rejected' };
+    return `<span class="badge badge-${status}">${labels[status] || status}</span>`;
+}
+
+function scanTypeTagHTML(type) {
+    if (type === 'admin')   return `<span class="scan-type-tag admin">Admin</span>`;
+    if (type === 'shelfer') return `<span class="scan-type-tag shelfer">Shelfer</span>`;
+    return `<span class="scan-type-tag shelfer">Shelfer</span>`;
+}
+
+function scoreBarHTML(score) {
+    const color = score >= 90 ? '#10b981' : score >= 70 ? '#f59e0b' : '#ef4444';
+    return `<div class="score-bar-wrap">
+        <div class="flex items-center gap-1.5">
+            <span class="text-xs font-semibold" style="color:${color};min-width:28px">${score}</span>
+            <div class="score-bar-bg flex-1">
+                <div class="score-bar-fill" style="width:${score}%;background:${color}"></div>
+            </div>
+        </div>
+    </div>`;
+}
+
+function esc(str) {
+    if (!str) return '';
+    return String(str)
+        .replace(/&/g,'&amp;')
+        .replace(/</g,'&lt;')
+        .replace(/>/g,'&gt;')
+        .replace(/"/g,'&quot;');
+}
+
+function today() {
+    return new Date().toISOString().split('T')[0];
 }
 
 // ────────────────────────────────────────────────────────────
@@ -919,7 +1146,7 @@ function openLightbox(photos, index, caption) {
     if (!photos || photos.length === 0) return;
     lbPhotos  = photos;
     lbIndex   = index;
-    document.getElementById('lightbox-img').src       = photos[index];
+    document.getElementById('lightbox-img').src = photos[index];
     document.getElementById('lightbox-caption').textContent =
         `${caption} — Photo ${index + 1} of ${photos.length}`;
     document.getElementById('lightbox-prev').style.display = photos.length > 1 ? '' : 'none';
@@ -943,21 +1170,24 @@ function closeLightbox(e) {
     document.body.style.overflow = '';
 }
 
-// Keyboard navigation for lightbox
 document.addEventListener('keydown', e => {
     if (!document.getElementById('lightbox').classList.contains('open')) return;
     if (e.key === 'ArrowLeft')  lightboxNav(-1);
     if (e.key === 'ArrowRight') lightboxNav(1);
-    if (e.key === 'Escape')     { document.getElementById('lightbox').classList.remove('open'); document.body.style.overflow = ''; }
+    if (e.key === 'Escape') {
+        document.getElementById('lightbox').classList.remove('open');
+        document.body.style.overflow = '';
+    }
 });
 
 // ────────────────────────────────────────────────────────────
 // EXPORT — CSV
 // ────────────────────────────────────────────────────────────
 function exportCSV() {
-    const headers = ['ID','Date','Store','Banner','SKU','UPC','Category','Brand','Shelfer','Status','Compliance Score','Shelf Tag','Facings','Out of Stock','Notes'];
+    const headers = ['ID','Scan Type','Date','Store','Banner','SKU','UPC','Category','Brand','Shelfer','Status','Compliance Score','Shelf Tag','Facings','Out of Stock','Notes'];
     const rows = filteredScans.map(s => [
         s.id,
+        s.scan_type,
         new Date(s.submitted_at).toISOString().split('T')[0],
         s.store_name,
         s.banner,
@@ -974,10 +1204,7 @@ function exportCSV() {
         `"${(s.notes || '').replace(/"/g,'""')}"`
     ]);
 
-    const csvContent = [headers, ...rows]
-        .map(r => r.join(','))
-        .join('\n');
-
+    const csvContent = [headers, ...rows].map(r => r.join(',')).join('\n');
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const url  = URL.createObjectURL(blob);
     const a    = document.createElement('a');
@@ -997,19 +1224,12 @@ function exportExcel() {
     }
 
     const wsData = [
-        ['ID','Date','Store','Banner','SKU','UPC','Category','Brand','Shelfer','Status','Compliance Score','Shelf Tag','Facings','Out of Stock','Notes'],
+        ['ID','Scan Type','Date','Store','Banner','SKU','UPC','Category','Brand','Shelfer','Status','Compliance Score','Shelf Tag','Facings','Out of Stock','Notes'],
         ...filteredScans.map(s => [
-            s.id,
+            s.id, s.scan_type,
             new Date(s.submitted_at).toISOString().split('T')[0],
-            s.store_name,
-            s.banner,
-            s.sku_name,
-            s.upc,
-            s.category,
-            s.brand_name,
-            s.contractor_name,
-            s.status,
-            s.compliance_score,
+            s.store_name, s.banner, s.sku_name, s.upc, s.category, s.brand_name,
+            s.contractor_name, s.status, s.compliance_score,
             s.shelf_tag_present ? 'Yes' : 'No',
             s.facing_count,
             s.out_of_stock ? 'Yes' : 'No',
@@ -1019,20 +1239,19 @@ function exportExcel() {
 
     const wb = XLSX.utils.book_new();
     const ws = XLSX.utils.aoa_to_sheet(wsData);
-
-    // Column widths
     ws['!cols'] = [
-        {wch:12},{wch:12},{wch:28},{wch:14},{wch:28},{wch:14},{wch:12},{wch:16},
+        {wch:12},{wch:10},{wch:12},{wch:28},{wch:14},{wch:28},{wch:14},{wch:12},{wch:16},
         {wch:18},{wch:14},{wch:16},{wch:10},{wch:8},{wch:12},{wch:40}
     ];
-
     XLSX.utils.book_append_sheet(wb, ws, 'Scan Intelligence');
 
-    // Summary sheet
     const summary = [
         ['ShelfAssured — Scan Intelligence Export'],
         ['Generated:', new Date().toLocaleString()],
+        ['Filter: Scan Type', activeScanType],
         ['Total Scans:', filteredScans.length],
+        ['Admin Walkthroughs:', filteredScans.filter(s=>s.scan_type==='admin').length],
+        ['Shelfer Submissions:', filteredScans.filter(s=>s.scan_type==='shelfer').length],
         ['Approved:', filteredScans.filter(s=>s.status==='approved').length],
         ['Pending Review:', filteredScans.filter(s=>s.status==='pending_review').length],
         ['Rejected:', filteredScans.filter(s=>s.status==='rejected').length],
@@ -1047,23 +1266,7 @@ function exportExcel() {
     XLSX.writeFile(wb, `scan-intelligence-${today()}.xlsx`);
 }
 
-// ────────────────────────────────────────────────────────────
-// HELPERS
-// ────────────────────────────────────────────────────────────
-function esc(str) {
-    if (!str) return '';
-    return String(str)
-        .replace(/&/g,'&amp;')
-        .replace(/</g,'&lt;')
-        .replace(/>/g,'&gt;')
-        .replace(/"/g,'&quot;');
-}
-
-function today() {
-    return new Date().toISOString().split('T')[0];
-}
-
-// Sign out (delegates to shared api.js if available)
+// Sign out
 function handleSignOut() {
     if (typeof signOut === 'function') { signOut(); return; }
     if (typeof supabase !== 'undefined' && supabase) {
