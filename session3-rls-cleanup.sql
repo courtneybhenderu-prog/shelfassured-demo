@@ -264,7 +264,8 @@ CREATE POLICY "admin: full access" ON public._probe                     FOR ALL 
 -- ============================================================
 
 -- ── v_distinct_banners ───────────────────────────────────────
-CREATE OR REPLACE VIEW public.v_distinct_banners
+DROP VIEW IF EXISTS public.v_distinct_banners CASCADE;
+CREATE VIEW public.v_distinct_banners
   WITH (security_invoker = true)
 AS
 SELECT DISTINCT
@@ -279,7 +280,8 @@ GRANT SELECT ON public.v_distinct_banners TO authenticated;
 
 
 -- ── store_banners ────────────────────────────────────────────
-CREATE OR REPLACE VIEW public.store_banners
+DROP VIEW IF EXISTS public.store_banners CASCADE;
+CREATE VIEW public.store_banners
   WITH (security_invoker = true)
 AS
 SELECT DISTINCT
@@ -296,7 +298,8 @@ GRANT SELECT ON public.store_banners TO authenticated;
 
 
 -- ── v_job_assignments ────────────────────────────────────────
-CREATE OR REPLACE VIEW public.v_job_assignments
+DROP VIEW IF EXISTS public.v_job_assignments CASCADE;
+CREATE VIEW public.v_job_assignments
   WITH (security_invoker = true)
 AS
 SELECT
@@ -321,7 +324,8 @@ GRANT SELECT ON public.v_job_assignments TO authenticated;
 
 
 -- ── job_assignments ──────────────────────────────────────────
-CREATE OR REPLACE VIEW public.job_assignments
+DROP VIEW IF EXISTS public.job_assignments CASCADE;
+CREATE VIEW public.job_assignments
   WITH (security_invoker = true)
 AS
 SELECT
@@ -348,7 +352,8 @@ GRANT SELECT ON public.job_assignments TO authenticated;
 
 
 -- ── submission_tracking ──────────────────────────────────────
-CREATE OR REPLACE VIEW public.submission_tracking
+DROP VIEW IF EXISTS public.submission_tracking CASCADE;
+CREATE VIEW public.submission_tracking
   WITH (security_invoker = true)
 AS
 SELECT
