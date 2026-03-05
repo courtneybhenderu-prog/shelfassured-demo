@@ -79,7 +79,7 @@ CREATE POLICY "admin: full access"
 
 CREATE POLICY "user: own audit requests"
   ON public.audit_requests FOR ALL
-  USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
+  USING (auth.uid() = client_id) WITH CHECK (auth.uid() = client_id);
 
 
 -- ── pilot_leads ──────────────────────────────────────────────
