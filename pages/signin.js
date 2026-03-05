@@ -65,8 +65,12 @@ window.handleForgotPassword = async function() {
 };
 
 // Handle form submission
-document.addEventListener('DOMContentLoaded', function() {
-    document.getElementById('signin-form').addEventListener('submit', async function(e) {
+// Scripts load after DOM is ready, so attach listener immediately
+// Use a safe wrapper in case DOMContentLoaded hasn't fired yet
+function attachSigninListener() {
+    const form = document.getElementById('signin-form');
+    if (!form) { document.addEventListener('DOMContentLoaded', attachSigninListener); return; }
+    form.addEventListener('submit', async function(e) {
     e.preventDefault();
     
     const email = document.getElementById('login-email').value;
@@ -140,4 +144,6 @@ document.addEventListener('DOMContentLoaded', function() {
         showMessage(messageEl, 'Error: ' + error.message, 'error');
     }
     });
-});
+    });
+}
+attachSigninListener();
