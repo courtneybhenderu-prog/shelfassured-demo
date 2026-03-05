@@ -17,10 +17,20 @@ function initializeSupabase() {
   try {
     // Check if Supabase is available globally
     if (typeof window.supabase !== 'undefined' && window.supabase.createClient) {
-      supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+      supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+        auth: {
+          // Always persist session in localStorage so mobile browsers
+          // don't lose the session when navigating between pages.
+          // sessionStorage is wiped on every page load on iOS Safari/Chrome.
+          storage: window.localStorage,
+          persistSession: true,
+          autoRefreshToken: true,
+          detectSessionInUrl: true,
+        }
+      });
       // Make sure supabase is available globally
-      window.supabase = window.supabase || supabase;
-      console.log('✅ Supabase client initialized');
+      window.supabase = supabase;
+      console.log('✅ Supabase client initialized (localStorage session)');
       return true;
     } else {
       console.log('⏳ Supabase library not loaded yet, waiting...');
@@ -210,13 +220,9 @@ window.saSignIn = async function(email, password, rememberMe = false) {
   try {
     const { data, error } = await supabase.auth.signInWithPassword({
       email,
-      password,
-      options: {
-        // Set session persistence based on rememberMe checkbox
-        // 'local' = persistent across browser sessions
-        // 'session' = only for current browser session
-        persistSession: rememberMe ? 'local' : 'session'
-      }
+      password
+      // Session persistence is handled at the client level (localStorage, persistSession: true)
+      // so the session survives page navigation on mobile browsers.
     });
     
     if (error) throw error;
