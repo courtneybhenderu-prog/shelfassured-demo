@@ -407,105 +407,31 @@ window.ensureProfile = async function(user) {
 // Initialize app with Supabase
 document.addEventListener('DOMContentLoaded', async function() {
   console.log('🚀 ShelfAssured API initialized with Supabase!');
-  
-  // Wait for Supabase to be available
-  if (!supabase) {
-    console.log('⏳ Waiting for Supabase to initialize...');
-    return;
-  }
-  
-  // DEVELOPMENT DEBUGGING: Colorized console logging for troubleshooting
-  // This system helps debug redirect issues, role mismatches, and script loading problems
-  // Enable with ?dev=1 on any page, disable with ?dev=0
-  
-  // Blue info log: Shows what the guard sees (path and role) every time it runs
-  // This helps verify the guard is working correctly and roles are set properly
-  window.__SA_DEV__ && console.info('%c[SA][guard]', 'color: #2563eb; font-weight: bold;', 'path=', location.pathname, 'role=', String(window.SA_PAGE_ROLE));
-  
-  // Red warning log: Alerts when a page forgot to set SA_PAGE_ROLE
-  // This catches the exact issue we had where index.html wasn't setting the role before shared/api.js loaded
-  window.__SA_DEV__ && typeof window.SA_PAGE_ROLE === 'undefined' && console.warn('%c[SA][guard] Missing SA_PAGE_ROLE on', 'color: #dc2626; font-weight: bold;', location.pathname);
-  
-  // Cooperative global guard - respects per-page overrides
-  console.log('🔍 GLOBAL GUARD: Checking flags...');
-  console.log('🔍 GLOBAL GUARD: SA_DISABLE_GLOBAL_GUARD =', window.SA_DISABLE_GLOBAL_GUARD);
-  console.log('🔍 GLOBAL GUARD: SA_PAGE_ROLE =', window.SA_PAGE_ROLE);
-  
+
+  // If the page has disabled the global guard, do nothing.
   if (window.SA_DISABLE_GLOBAL_GUARD === true) {
-    console.log('🔒 Global guard disabled by page');
+    console.log('🔒 Global guard disabled by page — skipping.');
     return;
   }
-  
-  // Check if user is logged in
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) {
-    console.log('ℹ️ No user logged in');
-    // Only redirect if no page role is declared
-    if (!window.SA_PAGE_ROLE) {
-      console.log('🔄 No page role declared, redirecting to signin');
-      window.location.href = '../auth/signin.html';
-    }
+
+  // If no page role is declared, skip.
+  if (!window.SA_PAGE_ROLE || window.SA_PAGE_ROLE === 'public') {
     return;
   }
-  
-  console.log('✅ User logged in:', user.email);
-  
-  // If page has declared a role, check if user matches
-  if (window.SA_PAGE_ROLE) {
-    console.log('🔍 Page role declared:', window.SA_PAGE_ROLE);
-    
-    // Handle public pages (no authentication required)
-    if (window.SA_PAGE_ROLE === 'public') {
-      console.log('✅ Public page, no authentication required');
-      return;
-    }
-    
-    // If admin page and already passed admin check, do nothing
-    if (window.SA_PAGE_ROLE === 'admin' && window.SA_ADMIN_READY === true) {
-      console.log('✅ Admin page already passed checks, skipping global guard');
-      return;
-    }
-    
-    // Get user profile to check role
-    try {
-      const prof = await ensureProfile(user);
-      const role = prof?.role ?? user?.user_metadata?.role ?? 'shelfer';
-      
-      if (role !== window.SA_PAGE_ROLE) {
-        console.log('❌ Role mismatch:', role, 'vs', window.SA_PAGE_ROLE);
-        // Redirect to correct dashboard
-        const base = location.origin.includes('localhost')
-          ? 'http://localhost:8000'
-          : 'https://courtneybhenderu-prog.github.io/shelfassured-demo';
-        
-        if (role === 'admin') {
-          window.location.href = `${base}/admin/dashboard.html`;
-        } else if (role === 'brand_client') {
-          window.location.href = `${base}/dashboard/brand-client.html`;
-        } else {
-          window.location.href = `${base}/dashboard/shelfer.html`;
-        }
-        return;
-      }
-      
-      console.log('✅ Role matches page requirement:', role);
-    } catch (error) {
-      console.error('❌ Error checking role:', error);
-    }
+
+  if (!supabase) {
+    console.warn('⏳ Supabase not ready in global guard — skipping redirect.');
+    return;
   }
-  
-  // Load data from Supabase
-  try {
-    const brands = await saGet('brands', []);
-    const stores = await saGet('stores', []);
-    const jobs = await saGet('jobs', []);
-    
-    console.log('📊 Data loaded:', { 
-      brands: brands.length, 
-      stores: stores.length, 
-      jobs: jobs.length 
-    });
-  } catch (error) {
-    console.error('❌ Error loading data:', error);
+
+  // Use getSession() (reads localStorage, no network call) to avoid
+  // false "no user" from network latency or token refresh timing.
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session) {
+    console.log('🔄 No session found, redirecting to signin');
+    window.location.href = '../auth/signin.html';
+    return;
   }
+
+  console.log('✅ Session valid for:', session.user.email);
 });
