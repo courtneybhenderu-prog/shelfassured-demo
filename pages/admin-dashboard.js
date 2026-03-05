@@ -39,17 +39,29 @@ async function initializeDashboard() {
         }
         currentUser = user;
         
-        // Get user profile
-        const { data: profile, error } = await supabase
+        // Get user profile — use ensureProfile as fallback so a missing row doesn't boot the user
+        let profile = null;
+        const { data: profileData, error: profileError } = await supabase
             .from('users')
             .select('role, full_name, approval_status')
             .eq('id', user.id)
             .single();
             
-        if (error || !profile) {
-            console.error('❌ Error fetching user profile:', error);
-            window.location.href = '../auth/signin.html';
-            return;
+        if (profileError || !profileData) {
+            console.warn('⚠️ Profile not found in users table, attempting ensureProfile...');
+            try {
+                const created = await ensureProfile(user);
+                profile = created;
+            } catch (e) {
+                console.error('❌ ensureProfile failed:', e);
+            }
+            if (!profile) {
+                console.error('❌ Could not load or create profile, redirecting to signin');
+                window.location.href = '../auth/signin.html';
+                return;
+            }
+        } else {
+            profile = profileData;
         }
         
         userProfile = profile;
