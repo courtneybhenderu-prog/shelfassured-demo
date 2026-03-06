@@ -89,6 +89,7 @@
 <script src="../shared/api.js"></script>
 <script>
     let allBrandUsers  = [];
+    let allBrands      = [];   // from the brands table (logos, websites)
     let allJobs        = [];
     let allAuditReqs   = [];
     let currentTab     = 'audit-requests';
@@ -116,15 +117,17 @@
 
     async function loadBrandData() {
         const sc = window.saClient || supabase;
-        const [{ data: users }, { data: jobs }, { data: auditReqs }] = await Promise.all([
+        const [{ data: users }, { data: jobs }, { data: auditReqs }, { data: brands }] = await Promise.all([
             sc.from('users').select('id, full_name, email, role, is_active, created_at, company_name').eq('role', 'brand_client').order('created_at', { ascending: false }),
             sc.from('jobs').select('id, title, status, created_at, client_id, total_payout').order('created_at', { ascending: false }),
-            sc.from('audit_requests').select('id, title, audit_type, status, created_at, client_id, preferred_contact').order('created_at', { ascending: false })
+            sc.from('audit_requests').select('id, title, audit_type, status, created_at, client_id, preferred_contact').order('created_at', { ascending: false }),
+            sc.from('brands').select('id, name, website, created_at, logo_url').order('created_at', { ascending: false })
         ]);
 
         allBrandUsers = users    || [];
         allJobs       = jobs     || [];
         allAuditReqs  = auditReqs || [];
+        allBrands     = brands   || [];
 
         const now = Date.now();
         const WEEK = 7 * 24 * 60 * 60 * 1000;
@@ -241,35 +244,39 @@
 
         else if (currentTab === 'all-brands') {
             const term = (document.getElementById('brand-search')?.value || '').toLowerCase().trim();
-            let list = [...allBrandUsers];
+            let list = [...allBrands];
             if (term) {
-                list = list.filter(u =>
-                    (u.full_name || '').toLowerCase().includes(term) ||
-                    (u.email || '').toLowerCase().includes(term) ||
-                    (u.company_name || '').toLowerCase().includes(term)
+                list = list.filter(b =>
+                    (b.name || '').toLowerCase().includes(term) ||
+                    (b.website || '').toLowerCase().includes(term)
                 );
             }
             if (list.length === 0) {
                 container.innerHTML = '<div class="p-6 text-center text-gray-400 text-sm">No brands found</div>';
                 return;
             }
-            container.innerHTML = list.map(u => {
-                const jobCount       = allJobs.filter(j => j.client_id === u.id).length;
-                const completedCount = allJobs.filter(j => j.client_id === u.id && j.status === 'completed').length;
-                const auditCount     = allAuditReqs.filter(r => r.client_id === u.id).length;
+            container.innerHTML = list.map(b => {
+                let logoHtml;
+                if (b.logo_url) {
+                    let logoUrl = b.logo_url.replace('/brand logos/', '/brand_logos/');
+                    logoUrl = encodeURI(logoUrl);
+                    logoHtml = `<img src="${esc(logoUrl)}" alt="${esc(b.name)} logo"
+                        class="w-10 h-10 object-contain rounded border border-gray-200 bg-white p-1"
+                        loading="lazy"
+                        onerror="this.onerror=null;this.parentElement.innerHTML='<div class=\'w-10 h-10 flex items-center justify-center bg-gray-100 rounded border border-gray-200 text-gray-400 text-xs\'>No Logo</div>'">`;
+                } else {
+                    logoHtml = `<div class="w-10 h-10 flex items-center justify-center bg-gray-100 rounded border border-gray-200 text-gray-400 text-xs">No Logo</div>`;
+                }
                 return `
-                <div class="px-4 py-4 row-hover">
-                    <div class="flex items-center justify-between">
-                        <div>
-                            <p class="text-sm font-semibold text-gray-900">${esc(u.full_name || 'No name')}</p>
-                            <p class="text-xs text-gray-500">${esc(u.email)}</p>
-                            ${u.company_name ? `<p class="text-xs text-gray-400">${esc(u.company_name)}</p>` : ''}
+                <div class="px-4 py-3 row-hover">
+                    <div class="flex items-center gap-3">
+                        ${logoHtml}
+                        <div class="flex-1 min-w-0">
+                            <a href="brands-detail.html?id=${b.id}" class="text-sm font-semibold text-blue-600 hover:underline">${esc(b.name || 'Unnamed Brand')}</a>
+                            ${b.website ? `<p class="text-xs text-gray-500 truncate">${esc(b.website)}</p>` : ''}
+                            <p class="text-xs text-gray-400">Added ${timeAgo(b.created_at)}</p>
                         </div>
-                        <div class="text-right">
-                            <p class="text-sm font-semibold text-gray-700">${completedCount} completed</p>
-                            <p class="text-xs text-gray-400">${jobCount} total jobs &middot; ${auditCount} audit req${auditCount !== 1 ? 's' : ''}</p>
-                            <p class="text-xs text-gray-400">Joined ${timeAgo(u.created_at)}</p>
-                        </div>
+                        <a href="brands-detail.html?id=${b.id}" class="text-xs text-[#C62828] hover:underline shrink-0">View</a>
                     </div>
                 </div>`;
             }).join('');
