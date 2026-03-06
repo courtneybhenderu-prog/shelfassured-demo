@@ -14,7 +14,8 @@ document.addEventListener('DOMContentLoaded', async function() {
 // Check if user has brand client or admin access
 async function checkAccess() {
     try {
-        const { data: { user } } = await supabase.auth.getUser();
+        const { data: { session } } = await supabase.auth.getSession();
+        const user = session?.user;
         
         if (!user) {
             alert('Please sign in to access this page');
@@ -157,10 +158,15 @@ async function handleFormSubmit(event) {
             return;
         }
         
-        // Get current user
-        const { data: { user } } = await supabase.auth.getUser();
+        // Get current user via session (reads localStorage — no network call)
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) {
+            showMessage(messageEl, 'Your session has expired. Please sign in again.', 'error');
+            setTimeout(() => { window.location.href = '../auth/signin.html'; }, 2000);
+            return;
+        }
         
-        // Create audit request object
+        // Build audit request — let Supabase set created_at automatically
         const auditRequest = {
             audit_type: auditType,
             title,
@@ -173,30 +179,36 @@ async function handleFormSubmit(event) {
             contact_phone: contactPhone || null,
             preferred_contact: preferredContact,
             additional_notes: additionalNotes || null,
-            client_id: user.id,
-            status: 'pending_review',
-            created_at: new Date().toISOString()
+            client_id: session.user.id,
+            status: 'pending_review'
         };
         
-        console.log('📝 Creating audit request:', auditRequest);
+        console.log('📝 Inserting audit request into Supabase:', auditRequest);
         
-        // Save audit request to database
-        const result = await saSet('audit_requests', auditRequest);
+        // Direct Supabase insert — no localStorage fallback
+        const { data, error } = await supabase
+            .from('audit_requests')
+            .insert(auditRequest)
+            .select()
+            .single();
         
-        if (result.success) {
-            showMessage(messageEl, 'Audit request submitted successfully! Our team will review it within 24 hours and reach out with custom pricing.', 'success');
-            
-            // Clear form
-            event.target.reset();
-            document.getElementById('product-list').innerHTML = '';
-            addProductInput();
-            
-            setTimeout(() => {
-                window.location.href = 'brand-client.html';
-            }, 3000);
-        } else {
-            showMessage(messageEl, 'Error submitting audit request: ' + result.error, 'error');
+        if (error) {
+            console.error('❌ Insert error:', error);
+            showMessage(messageEl, 'Error submitting audit request: ' + error.message, 'error');
+            return;
         }
+        
+        console.log('✅ Audit request saved:', data);
+        showMessage(messageEl, 'Audit request submitted successfully! Our team will review it within 24 hours and reach out with custom pricing.', 'success');
+        
+        // Clear form and redirect
+        event.target.reset();
+        document.getElementById('product-list').innerHTML = '';
+        addProductInput();
+        
+        setTimeout(() => {
+            window.location.href = 'brand-client.html';
+        }, 3000);
         
     } catch (error) {
         console.error('Error submitting audit request:', error);
