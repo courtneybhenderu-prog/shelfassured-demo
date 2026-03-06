@@ -6,7 +6,7 @@
  *   <script src="../shared/admin-nav.js" data-page="dashboard"></script>
  *
  * data-page values:
- *   dashboard | manage-jobs | review-submissions | scan-intelligence |
+ *   dashboard | manage-jobs | review-submissions | report-queue | scan-intelligence |
  *   user-management | brands | barcode-capture | help-support
  */
 (function () {
@@ -16,6 +16,7 @@
     { id: 'brand-hub',           label: 'Brand Hub',           href: 'brand-hub.html' },
     { id: 'scan-intelligence',   label: 'Scan Intelligence',   href: 'scan-intelligence.html' },
     { id: 'review-submissions',  label: 'Review Submissions',  href: 'review-submissions.html' },
+    { id: 'report-queue',         label: 'Report Queue',         href: 'report-queue.html' },
     { id: 'manage-jobs',         label: 'Manage Jobs',         href: 'manage-jobs.html' },
     { id: 'brands',              label: 'Brands',              href: 'brands.html' },
     { id: 'user-management',     label: 'User Management',     href: 'user-management.html' },
@@ -35,6 +36,7 @@
     'brand-hub':          'Brand Hub',
     'scan-intelligence':  'Scan Intelligence',
     'review-submissions': 'Review Submissions',
+    'report-queue':       'Report Queue',
     'manage-jobs':        'Manage Jobs',
     'brands':             'Brands',
     'user-management':    'User Management',

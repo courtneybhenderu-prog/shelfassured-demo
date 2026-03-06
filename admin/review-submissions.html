@@ -1266,8 +1266,8 @@
 
                 if (error) throw error;
 
-                // Show toast
-                showToast('Submission approved — payment created (pending).', 'success');
+                // Show toast with link to report queue
+                showToast('Submission approved. <a href="report-queue.html" style="text-decoration:underline;font-weight:700;">Generate Report &rarr;</a>', 'success', true);
                 
                 // Reload list
                 await loadSubmissions();
@@ -1305,12 +1305,12 @@
         }
 
         // Show toast notification
-        function showToast(message, type = 'success') {
+        function showToast(message, type = 'success', isHtml = false) {
             const toast = document.createElement('div');
             toast.className = `fixed top-4 right-4 px-6 py-3 rounded-lg shadow-lg z-50 ${
                 type === 'success' ? 'bg-green-600 text-white' : 'bg-red-600 text-white'
             }`;
-            toast.textContent = message;
+            if (isHtml) { toast.innerHTML = message; } else { toast.textContent = message; }
             document.body.appendChild(toast);
 
             setTimeout(() => {

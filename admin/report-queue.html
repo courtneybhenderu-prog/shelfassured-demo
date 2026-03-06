@@ -1,0 +1,646 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Report Queue - ShelfAssured Admin</title>
+    <script>
+        window.SA_DISABLE_GLOBAL_GUARD = true;
+        window.SA_PAGE_ROLE = 'admin';
+    </script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.47.5/dist/umd/supabase.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+    <link rel="stylesheet" href="../shared/styles.css">
+    <style>
+        .status-badge { display: inline-block; padding: 2px 10px; border-radius: 999px; font-size: 0.75rem; font-weight: 600; }
+        .badge-sent    { background: #E8F5E9; color: #2E7D32; }
+        .badge-ready   { background: #FFF3E0; color: #E65100; }
+        .badge-pending { background: #F3F4F6; color: #6B7280; }
+        .photo-thumb   { width: 80px; height: 64px; object-fit: cover; border-radius: 4px; border: 1px solid #E0E0E0; cursor: pointer; }
+        .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 1000; display: flex; align-items: center; justify-content: center; }
+        .modal-box     { background: white; border-radius: 12px; max-width: 680px; width: 95vw; max-height: 90vh; overflow-y: auto; padding: 28px; }
+    </style>
+</head>
+<body>
+<script src="../shared/admin-nav.js" data-page="report-queue"></script>
+
+<div class="min-h-screen bg-gray-100">
+    <div class="max-w-5xl mx-auto px-4 py-8">
+
+        <!-- Page Header -->
+        <div class="flex items-center justify-between mb-6">
+            <div>
+                <h1 class="text-2xl font-bold text-gray-900">Report Queue</h1>
+                <p class="text-sm text-gray-500 mt-1">Approved submissions ready for brand delivery</p>
+            </div>
+            <button onclick="loadQueue()" class="text-sm text-red-600 font-medium hover:text-red-800">Refresh</button>
+        </div>
+
+        <!-- Stats Row -->
+        <div class="grid grid-cols-3 gap-4 mb-6">
+            <div class="bg-white rounded-lg shadow-sm p-4 text-center">
+                <div class="text-xs text-gray-500 uppercase tracking-wide mb-1">Ready to Send</div>
+                <div id="stat-ready" class="text-2xl font-bold text-orange-600">—</div>
+            </div>
+            <div class="bg-white rounded-lg shadow-sm p-4 text-center">
+                <div class="text-xs text-gray-500 uppercase tracking-wide mb-1">Sent This Week</div>
+                <div id="stat-sent-week" class="text-2xl font-bold text-green-600">—</div>
+            </div>
+            <div class="bg-white rounded-lg shadow-sm p-4 text-center">
+                <div class="text-xs text-gray-500 uppercase tracking-wide mb-1">Total Sent</div>
+                <div id="stat-sent-total" class="text-2xl font-bold text-gray-700">—</div>
+            </div>
+        </div>
+
+        <!-- Loading -->
+        <div id="loading" class="text-center py-12 text-gray-400">Loading approved submissions...</div>
+
+        <!-- Empty State -->
+        <div id="empty-state" class="hidden text-center py-12 text-gray-400">
+            <div class="text-4xl mb-3">&#10003;</div>
+            <div class="font-medium">All reports sent</div>
+            <div class="text-sm mt-1">No approved submissions are waiting for a report.</div>
+        </div>
+
+        <!-- Queue List -->
+        <div id="queue-list" class="space-y-4 hidden"></div>
+
+    </div>
+</div>
+
+<!-- Report Generation Modal -->
+<div id="report-modal" class="modal-overlay hidden">
+    <div class="modal-box">
+        <div class="flex items-center justify-between mb-5">
+            <h2 class="text-lg font-bold text-gray-900">Generate Report</h2>
+            <button onclick="closeModal()" class="text-gray-400 hover:text-gray-600 text-2xl leading-none">&times;</button>
+        </div>
+
+        <!-- Job Summary in Modal -->
+        <div id="modal-summary" class="bg-gray-50 rounded-lg p-4 mb-5 text-sm space-y-1"></div>
+
+        <!-- Photos Preview -->
+        <div id="modal-photos-section" class="mb-5">
+            <div class="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Photos</div>
+            <div id="modal-photos" class="flex gap-3 flex-wrap"></div>
+        </div>
+
+        <!-- Verification -->
+        <div id="modal-verif" class="mb-5 text-sm space-y-1"></div>
+
+        <!-- Personal Note -->
+        <div class="mb-5">
+            <label class="block text-sm font-semibold text-gray-700 mb-1">Personal Note <span class="text-gray-400 font-normal">(optional — appears in the report)</span></label>
+            <textarea id="personal-note" rows="3"
+                class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-red-500 focus:border-transparent"
+                placeholder="e.g., Hi Sarah — great shelf presence this week! Let us know if you have questions."></textarea>
+        </div>
+
+        <!-- Brand Email -->
+        <div class="mb-6">
+            <label class="block text-sm font-semibold text-gray-700 mb-1">Brand Contact Email</label>
+            <input type="email" id="brand-email"
+                class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-red-500 focus:border-transparent"
+                placeholder="brand@example.com">
+            <p class="text-xs text-gray-400 mt-1">For your reference — copy this to send the PDF manually.</p>
+        </div>
+
+        <!-- Actions -->
+        <div class="flex gap-3">
+            <button onclick="generateAndDownload()" id="generate-btn"
+                class="flex-1 bg-red-600 text-white py-2 px-4 rounded-lg font-semibold hover:bg-red-700 text-sm">
+                Download PDF Report
+            </button>
+            <button onclick="markSent()" id="mark-sent-btn"
+                class="flex-1 bg-green-600 text-white py-2 px-4 rounded-lg font-semibold hover:bg-green-700 text-sm">
+                Mark as Sent
+            </button>
+            <button onclick="closeModal()" class="px-4 py-2 border border-gray-300 rounded-lg text-sm text-gray-600 hover:bg-gray-50">
+                Cancel
+            </button>
+        </div>
+    </div>
+</div>
+
+<script>
+// ── Supabase init ─────────────────────────────────────────────────────────────
+let supabase;
+let allItems = [];
+let currentItem = null;
+
+document.addEventListener('DOMContentLoaded', async () => {
+    // Wait for admin-nav.js to init Supabase
+    let attempts = 0;
+    while (!window.saClient && attempts < 30) {
+        await new Promise(r => setTimeout(r, 100));
+        attempts++;
+    }
+    supabase = window.saClient;
+    if (!supabase) {
+        document.getElementById('loading').textContent = 'Error: Supabase not initialized.';
+        return;
+    }
+
+    // Auth check
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) { window.location.href = '../auth/signin.html'; return; }
+
+    await loadQueue();
+});
+
+async function loadQueue() {
+    document.getElementById('loading').classList.remove('hidden');
+    document.getElementById('queue-list').classList.add('hidden');
+    document.getElementById('empty-state').classList.add('hidden');
+
+    try {
+        // Fetch approved submissions (is_validated = true)
+        const { data, error } = await supabase
+            .from('job_submissions')
+            .select(`
+                *,
+                jobs (
+                    id, title, payout_per_store,
+                    brands ( id, name, logo_url )
+                ),
+                users!job_submissions_contractor_id_fkey ( id, full_name, email ),
+                stores ( id, STORE, name, address, city, state, zip_code ),
+                skus ( id, name, upc )
+            `)
+            .eq('is_validated', true)
+            .order('updated_at', { ascending: false });
+
+        if (error) throw error;
+
+        allItems = data || [];
+
+        // Stats
+        const ready = allItems.filter(s => !s.report_sent_at).length;
+        const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+        const sentWeek = allItems.filter(s => s.report_sent_at && new Date(s.report_sent_at) > weekAgo).length;
+        const sentTotal = allItems.filter(s => s.report_sent_at).length;
+
+        document.getElementById('stat-ready').textContent = ready;
+        document.getElementById('stat-sent-week').textContent = sentWeek;
+        document.getElementById('stat-sent-total').textContent = sentTotal;
+
+        renderQueue(allItems);
+    } catch (err) {
+        console.error('Error loading queue:', err);
+        document.getElementById('loading').textContent = 'Error loading queue. Check console.';
+    }
+}
+
+function renderQueue(items) {
+    document.getElementById('loading').classList.add('hidden');
+
+    if (!items || items.length === 0) {
+        document.getElementById('empty-state').classList.remove('hidden');
+        return;
+    }
+
+    const list = document.getElementById('queue-list');
+    list.innerHTML = '';
+
+    items.forEach(item => {
+        const job   = item.jobs || {};
+        const brand = job.brands || {};
+        const store = item.stores || {};
+        const sku   = item.skus || {};
+        const contractor = item.users || {};
+        const sent  = !!item.report_sent_at;
+
+        const storeStr = [store.STORE || store.name, store.city, store.state].filter(Boolean).join(', ');
+        const dateStr  = new Date(item.updated_at || item.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+
+        const card = document.createElement('div');
+        card.className = 'bg-white rounded-lg shadow-sm border border-gray-200 p-5';
+        card.innerHTML = `
+            <div class="flex items-start justify-between gap-4">
+                <div class="flex-1 min-w-0">
+                    <div class="flex items-center gap-2 mb-1">
+                        <span class="status-badge ${sent ? 'badge-sent' : 'badge-ready'}">${sent ? 'Sent' : 'Ready to Send'}</span>
+                        <span class="text-xs text-gray-400">${dateStr}</span>
+                    </div>
+                    <div class="font-semibold text-gray-900 truncate">${escHtml(job.title || 'Untitled Job')}</div>
+                    <div class="text-sm text-gray-600 mt-0.5">${escHtml(brand.name || 'Unknown Brand')} &mdash; ${escHtml(storeStr || 'Unknown Store')}</div>
+                    ${sku.name ? `<div class="text-xs text-gray-400 mt-0.5">Product: ${escHtml(sku.name)}${sku.upc ? ` (${escHtml(sku.upc)})` : ''}</div>` : ''}
+                    ${sent ? `<div class="text-xs text-green-600 mt-1">Sent ${new Date(item.report_sent_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</div>` : ''}
+                </div>
+                <div class="flex flex-col gap-2 shrink-0">
+                    <button onclick="openModal('${item.id}')"
+                        class="text-sm font-medium px-4 py-2 rounded-lg ${sent ? 'bg-gray-100 text-gray-600 hover:bg-gray-200' : 'bg-red-600 text-white hover:bg-red-700'}">
+                        ${sent ? 'Re-send Report' : 'Generate Report'}
+                    </button>
+                </div>
+            </div>
+        `;
+        list.appendChild(card);
+    });
+
+    list.classList.remove('hidden');
+}
+
+function openModal(submissionId) {
+    currentItem = allItems.find(s => s.id === submissionId);
+    if (!currentItem) return;
+
+    const job   = currentItem.jobs || {};
+    const brand = job.brands || {};
+    const store = currentItem.stores || {};
+    const sku   = currentItem.skus || {};
+    const contractor = currentItem.users || {};
+    const subData = currentItem.data || {};
+
+    // Summary
+    const storeAddr = store.address
+        ? `${store.address}, ${store.city || ''}, ${store.state || ''} ${store.zip_code || ''}`.trim()
+        : 'N/A';
+
+    document.getElementById('modal-summary').innerHTML = `
+        <div><span class="font-semibold">Job:</span> ${escHtml(job.title || 'N/A')}</div>
+        <div><span class="font-semibold">Brand:</span> ${escHtml(brand.name || 'N/A')}</div>
+        <div><span class="font-semibold">Store:</span> ${escHtml(store.STORE || store.name || 'N/A')} &mdash; ${escHtml(storeAddr)}</div>
+        <div><span class="font-semibold">Product:</span> ${escHtml(sku.name || 'N/A')}${sku.upc ? ` (${escHtml(sku.upc)})` : ''}</div>
+        <div><span class="font-semibold">Completed by:</span> ${escHtml((contractor.full_name || '').split(' ')[0] || 'Shelfer')}</div>
+    `;
+
+    // Photos
+    const files = Array.isArray(currentItem.files) ? currentItem.files : [];
+    const photosEl = document.getElementById('modal-photos');
+    if (files.length > 0) {
+        photosEl.innerHTML = files.map(f => {
+            const src = f.url || f.file_data || '';
+            const cap = (f.type || '').replace(/_/g, ' ');
+            return src
+                ? `<div class="text-center"><img src="${src}" class="photo-thumb" alt="${escHtml(cap)}" onclick="window.open('${src}','_blank')"><div class="text-xs text-gray-400 mt-1">${escHtml(cap)}</div></div>`
+                : `<div class="text-center"><div class="photo-thumb flex items-center justify-center bg-gray-100 text-gray-400 text-xs">No photo</div><div class="text-xs text-gray-400 mt-1">${escHtml(cap)}</div></div>`;
+        }).join('');
+    } else {
+        photosEl.innerHTML = '<span class="text-sm text-gray-400">No photos uploaded</span>';
+    }
+
+    // Verification
+    const priceVerified = subData.price_verified;
+    const priceFound    = subData.price || subData.price_found;
+    const stockLevel    = subData.stock_level;
+    let verifHtml = '';
+    if (priceVerified === true)  verifHtml += `<div class="text-green-700 font-semibold">Price: VERIFIED ($${priceFound || 'N/A'})</div>`;
+    if (priceVerified === false) verifHtml += `<div class="text-orange-600 font-semibold">Price: MISMATCH (found $${priceFound || 'N/A'})</div>`;
+    if (stockLevel) verifHtml += `<div>Stock Level: <strong>${escHtml(stockLevel)}</strong></div>`;
+    document.getElementById('modal-verif').innerHTML = verifHtml || '<div class="text-gray-400 text-sm">No verification data</div>';
+
+    // Clear note
+    document.getElementById('personal-note').value = '';
+    document.getElementById('brand-email').value = '';
+
+    document.getElementById('report-modal').classList.remove('hidden');
+}
+
+function closeModal() {
+    document.getElementById('report-modal').classList.add('hidden');
+    currentItem = null;
+}
+
+async function generateAndDownload() {
+    if (!currentItem) return;
+
+    const btn = document.getElementById('generate-btn');
+    btn.textContent = 'Generating...';
+    btn.disabled = true;
+
+    try {
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF({ orientation: 'portrait', unit: 'pt', format: 'letter' });
+
+        const job        = currentItem.jobs || {};
+        const brand      = job.brands || {};
+        const store      = currentItem.stores || {};
+        const sku        = currentItem.skus || {};
+        const contractor = currentItem.users || {};
+        const subData    = currentItem.data || {};
+        const files      = Array.isArray(currentItem.files) ? currentItem.files : [];
+        const note       = document.getElementById('personal-note').value.trim();
+
+        const pageW = 612;
+        const pageH = 792;
+        const margin = 54;
+        const contentW = pageW - margin * 2;
+        let y = margin;
+
+        // ── Colors ──
+        const RED    = [198, 40, 40];
+        const CHROME = [176, 190, 197];
+        const GRAY   = [66, 66, 66];
+        const LGRAY  = [245, 245, 245];
+        const MGRAY  = [158, 158, 158];
+        const GREEN  = [46, 125, 50];
+        const AMBER  = [230, 81, 0];
+
+        // ── Header ──
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(22);
+        doc.setTextColor(...RED);
+        doc.text('ShelfAssured', margin, y);
+
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(9);
+        doc.setTextColor(...CHROME);
+        const dateStr = new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+        doc.text(`Shelf Audit Report  |  ${dateStr}`, pageW - margin, y, { align: 'right' });
+
+        y += 8;
+        // Chrome rule
+        doc.setFillColor(...RED);
+        doc.rect(margin, y, 20, 3, 'F');
+        doc.setFillColor(...CHROME);
+        doc.rect(margin + 20, y, contentW - 20, 3, 'F');
+        y += 14;
+
+        // ── Job Title ──
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(15);
+        doc.setTextColor(...GRAY);
+        doc.text(job.title || 'Shelf Audit Report', margin, y);
+        y += 20;
+
+        // ── Section: Job Summary ──
+        y = sectionHeader(doc, 'JOB SUMMARY', margin, y, contentW, RED, LGRAY);
+
+        const submittedAt = currentItem.updated_at || currentItem.created_at;
+        const submittedStr = submittedAt
+            ? new Date(submittedAt).toLocaleString('en-US', { month: 'long', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' })
+            : 'N/A';
+
+        const storeAddr = store.address
+            ? `${store.address}, ${store.city || ''}, ${store.state || ''} ${store.zip_code || ''}`.trim()
+            : 'N/A';
+
+        const summaryRows = [
+            ['Brand',         brand.name || 'N/A'],
+            ['Store Banner',  store.STORE || 'N/A'],
+            ['Store Name',    store.name || 'N/A'],
+            ['Store Address', storeAddr],
+            ['Product / SKU', sku.name || 'N/A'],
+            ['UPC',           sku.upc || 'N/A'],
+            ['Completed',     submittedStr],
+            ['Verified By',   (contractor.full_name || '').split(' ')[0] || 'ShelfAssured Shelfer'],
+        ];
+        y = drawTable(doc, summaryRows, margin, y, contentW, LGRAY, CHROME, MGRAY, GRAY);
+        y += 14;
+
+        // ── Section: Verification Results ──
+        y = sectionHeader(doc, 'VERIFICATION RESULTS', margin, y, contentW, RED, LGRAY);
+
+        const priceVerified = subData.price_verified;
+        const priceFound    = subData.price || subData.price_found;
+        const stockLevel    = subData.stock_level || 'N/A';
+
+        let priceStatusText  = 'Not recorded';
+        let priceStatusColor = MGRAY;
+        if (priceVerified === true)  { priceStatusText = 'VERIFIED — Price matches expected'; priceStatusColor = GREEN; }
+        if (priceVerified === false) { priceStatusText = 'MISMATCH — Price does not match expected'; priceStatusColor = AMBER; }
+
+        let stockColor = GRAY;
+        if (stockLevel.toLowerCase().includes('in stock') || stockLevel.toLowerCase() === 'full') stockColor = GREEN;
+        else if (stockLevel.toLowerCase().includes('low')) stockColor = AMBER;
+        else if (stockLevel.toLowerCase().includes('out')) stockColor = RED;
+
+        const verifRows = [
+            ['Price Status',   { text: priceStatusText, color: priceStatusColor }],
+            ['Price Found',    priceFound ? `$${priceFound}` : 'N/A'],
+            ['Stock Level',    { text: stockLevel, color: stockColor }],
+        ];
+        y = drawTable(doc, verifRows, margin, y, contentW, LGRAY, CHROME, MGRAY, GRAY);
+        y += 14;
+
+        // ── Section: Photos ──
+        if (files.length > 0) {
+            y = sectionHeader(doc, 'SHELF PHOTOS', margin, y, contentW, RED, LGRAY);
+
+            const photoW  = (contentW - 16) / 3;
+            const photoH  = photoW * 0.75;
+            const captions = { product_closeup: 'Product Close-Up', section_context: 'Shelf Section', wide_angle: 'Wide-Angle Aisle View' };
+
+            // Check if we need a new page for photos
+            if (y + photoH + 30 > pageH - margin) { doc.addPage(); y = margin; }
+
+            const photoPromises = files.slice(0, 3).map((f, i) => {
+                return new Promise(resolve => {
+                    const src = f.url || f.file_data || '';
+                    const cap = captions[f.type] || (f.type || '').replace(/_/g, ' ');
+                    const x   = margin + i * (photoW + 8);
+                    if (!src) { resolve({ x, y, w: photoW, h: photoH, cap, img: null }); return; }
+
+                    const img = new Image();
+                    img.crossOrigin = 'anonymous';
+                    img.onload = () => resolve({ x, y, w: photoW, h: photoH, cap, img });
+                    img.onerror = () => resolve({ x, y, w: photoW, h: photoH, cap, img: null });
+                    img.src = src;
+                });
+            });
+
+            const photoResults = await Promise.all(photoPromises);
+
+            // Draw photo boxes
+            doc.setFillColor(...LGRAY);
+            doc.setDrawColor(...CHROME);
+            photoResults.forEach(({ x, y: py, w, h, cap, img }) => {
+                doc.rect(x, py, w, h, 'FD');
+                if (img) {
+                    try {
+                        const canvas = document.createElement('canvas');
+                        canvas.width  = img.naturalWidth;
+                        canvas.height = img.naturalHeight;
+                        canvas.getContext('2d').drawImage(img, 0, 0);
+                        const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
+                        doc.addImage(dataUrl, 'JPEG', x, py, w, h);
+                    } catch (e) {
+                        // CORS blocked — show placeholder
+                        doc.setFont('helvetica', 'normal');
+                        doc.setFontSize(7);
+                        doc.setTextColor(...MGRAY);
+                        doc.text('[Photo]', x + w / 2, py + h / 2, { align: 'center' });
+                    }
+                } else {
+                    doc.setFont('helvetica', 'normal');
+                    doc.setFontSize(7);
+                    doc.setTextColor(...MGRAY);
+                    doc.text('[No photo]', x + w / 2, py + h / 2, { align: 'center' });
+                }
+                // Caption
+                doc.setFont('helvetica', 'oblique');
+                doc.setFontSize(7);
+                doc.setTextColor(...MGRAY);
+                doc.text(cap, x + w / 2, py + h + 10, { align: 'center' });
+            });
+
+            y += photoH + 20;
+        }
+
+        // ── Section: Field Notes ──
+        const shelferNotes = (subData.notes || '').trim();
+        if (shelferNotes) {
+            if (y + 60 > pageH - margin) { doc.addPage(); y = margin; }
+            y = sectionHeader(doc, 'FIELD NOTES', margin, y, contentW, RED, LGRAY);
+            doc.setFillColor(...LGRAY);
+            doc.setDrawColor(...CHROME);
+            const noteLines = doc.splitTextToSize(shelferNotes, contentW - 20);
+            const noteH = noteLines.length * 13 + 16;
+            doc.rect(margin, y, contentW, noteH, 'FD');
+            doc.setFont('helvetica', 'normal');
+            doc.setFontSize(9);
+            doc.setTextColor(...GRAY);
+            doc.text(noteLines, margin + 10, y + 12);
+            y += noteH + 14;
+        }
+
+        // ── Section: Personal Note ──
+        if (note) {
+            if (y + 70 > pageH - margin) { doc.addPage(); y = margin; }
+            y = sectionHeader(doc, 'A NOTE FROM SHELFASSURED', margin, y, contentW, RED, LGRAY);
+            doc.setFillColor(255, 248, 248);
+            doc.setDrawColor(...RED);
+            doc.setLineWidth(1);
+            const noteLines = doc.splitTextToSize(note, contentW - 24);
+            const noteH = noteLines.length * 13 + 20;
+            doc.rect(margin, y, contentW, noteH, 'FD');
+            doc.setFont('helvetica', 'oblique');
+            doc.setFontSize(9.5);
+            doc.setTextColor(...GRAY);
+            doc.text(noteLines, margin + 12, y + 14);
+            doc.setLineWidth(0.5);
+            y += noteH + 14;
+        }
+
+        // ── Footer ──
+        if (y + 30 > pageH - margin) { doc.addPage(); y = margin; }
+        y = Math.max(y, pageH - margin - 30);
+        doc.setFillColor(...RED);
+        doc.rect(margin, y, 20, 3, 'F');
+        doc.setFillColor(...CHROME);
+        doc.rect(margin + 20, y, contentW - 20, 3, 'F');
+        y += 8;
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(6.5);
+        doc.setTextColor(...MGRAY);
+        const footerText = 'This report was prepared by ShelfAssured and is intended solely for the recipient named above. Photos and data remain the property of ShelfAssured. Questions? hello@beshelfassured.com';
+        doc.text(footerText, pageW / 2, y, { align: 'center', maxWidth: contentW });
+
+        // ── Save ──
+        const safeName = (job.title || 'report').replace(/[^a-z0-9]/gi, '_').toLowerCase();
+        doc.save(`shelfassured_report_${safeName}.pdf`);
+
+    } catch (err) {
+        console.error('PDF generation error:', err);
+        alert('Error generating PDF: ' + err.message);
+    } finally {
+        btn.textContent = 'Download PDF Report';
+        btn.disabled = false;
+    }
+}
+
+// ── Helper: section header ────────────────────────────────────────────────────
+function sectionHeader(doc, text, x, y, w, red, lgray) {
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(9);
+    doc.setTextColor(...red);
+    doc.text(text, x, y);
+    y += 4;
+    doc.setDrawColor(220, 220, 220);
+    doc.setLineWidth(0.5);
+    doc.line(x, y, x + w, y);
+    return y + 8;
+}
+
+// ── Helper: draw key-value table ─────────────────────────────────────────────
+function drawTable(doc, rows, x, y, w, lgray, chrome, mgray, gray) {
+    const labelW = 100;
+    const valueW = w - labelW;
+    const rowH   = 18;
+
+    rows.forEach((row, i) => {
+        const label = row[0];
+        const value = row[1];
+        const vy    = y + i * rowH;
+
+        // Label cell background
+        doc.setFillColor(...lgray);
+        doc.rect(x, vy, labelW, rowH, 'F');
+
+        // Label text
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(8);
+        doc.setTextColor(...mgray);
+        doc.text(label, x + 6, vy + 12);
+
+        // Value text
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(9);
+        if (typeof value === 'object' && value.color) {
+            doc.setTextColor(...value.color);
+            doc.text(value.text, x + labelW + 8, vy + 12);
+        } else {
+            doc.setTextColor(...gray);
+            doc.text(String(value || 'N/A'), x + labelW + 8, vy + 12);
+        }
+
+        // Row divider
+        if (i < rows.length - 1) {
+            doc.setDrawColor(224, 224, 224);
+            doc.setLineWidth(0.3);
+            doc.line(x, vy + rowH, x + w, vy + rowH);
+        }
+    });
+
+    // Outer border
+    doc.setDrawColor(...chrome);
+    doc.setLineWidth(0.5);
+    doc.rect(x, y, w, rows.length * rowH, 'S');
+
+    return y + rows.length * rowH;
+}
+
+async function markSent() {
+    if (!currentItem) return;
+    const btn = document.getElementById('mark-sent-btn');
+    btn.textContent = 'Saving...';
+    btn.disabled = true;
+
+    try {
+        const { error } = await supabase
+            .from('job_submissions')
+            .update({ report_sent_at: new Date().toISOString() })
+            .eq('id', currentItem.id);
+
+        if (error) throw error;
+
+        showToast('Marked as sent.', 'success');
+        closeModal();
+        await loadQueue();
+    } catch (err) {
+        console.error('Error marking sent:', err);
+        alert('Error: ' + err.message);
+    } finally {
+        btn.textContent = 'Mark as Sent';
+        btn.disabled = false;
+    }
+}
+
+function showToast(msg, type) {
+    const t = document.createElement('div');
+    t.className = `fixed top-4 right-4 px-5 py-3 rounded-lg shadow-lg z-50 text-white text-sm font-medium ${type === 'success' ? 'bg-green-600' : 'bg-red-600'}`;
+    t.textContent = msg;
+    document.body.appendChild(t);
+    setTimeout(() => { t.style.opacity = '0'; t.style.transition = 'opacity 0.3s'; setTimeout(() => t.remove(), 300); }, 3000);
+}
+
+function escHtml(str) {
+    const d = document.createElement('div');
+    d.textContent = str || '';
+    return d.innerHTML;
+}
+</script>
+</body>
+</html>
