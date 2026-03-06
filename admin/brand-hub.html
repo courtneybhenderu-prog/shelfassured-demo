@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Brand Hub - ShelfAssured Admin</title>
+    <script>
+        window.SA_PAGE_ROLE = 'admin';
+        window.SA_DISABLE_GLOBAL_GUARD = true;
+    </script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.47.5/dist/umd/supabase.min.js"></script>
+    <link rel="stylesheet" href="../shared/styles.css">
+    <style>
+        .tab-btn { transition: color 0.15s, border-color 0.15s; }
+        .tab-btn.active { color: #C62828; border-bottom: 2px solid #C62828; }
+        .tab-btn:not(.active) { color: #6b7280; border-bottom: 2px solid transparent; }
+        .row-hover:hover { background: #f9fafb; }
+    </style>
+</head>
+<body class="bg-gray-50">
+<script src="../shared/admin-nav.js" data-page="brand-hub"></script>
+
+<div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-6 pb-24">
+
+    <!-- Header -->
+    <div class="flex items-center justify-between mb-6">
+        <div>
+            <h1 class="text-xl font-bold text-gray-900">Brand Hub</h1>
+            <p class="text-sm text-gray-500" id="brand-summary">Loading...</p>
+        </div>
+        <button onclick="loadBrandData()" class="text-sm text-[#C62828] font-medium hover:underline">Refresh</button>
+    </div>
+
+    <!-- Stats Row -->
+    <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
+        <div class="bg-white rounded-lg shadow-sm p-4">
+            <p class="text-xs font-semibold text-gray-500 uppercase tracking-wide">Total Brands</p>
+            <p class="text-3xl font-bold text-gray-900 mt-1" id="br-total">—</p>
+        </div>
+        <div class="bg-white rounded-lg shadow-sm p-4">
+            <p class="text-xs font-semibold text-gray-500 uppercase tracking-wide">New This Week</p>
+            <p class="text-3xl font-bold text-green-600 mt-1" id="br-new">—</p>
+        </div>
+        <div class="bg-white rounded-lg shadow-sm p-4">
+            <p class="text-xs font-semibold text-gray-500 uppercase tracking-wide">Open Jobs</p>
+            <p class="text-3xl font-bold text-blue-600 mt-1" id="br-open-jobs">—</p>
+        </div>
+        <div class="bg-white rounded-lg shadow-sm p-4">
+            <p class="text-xs font-semibold text-gray-500 uppercase tracking-wide">Audit Requests</p>
+            <p class="text-3xl font-bold text-orange-500 mt-1" id="br-audit-reqs">—</p>
+        </div>
+    </div>
+
+    <!-- Tabs -->
+    <div class="bg-white rounded-lg shadow-sm mb-6">
+        <div class="flex border-b border-gray-200 px-4 overflow-x-auto">
+            <button class="tab-btn active py-3 mr-6 text-sm font-medium whitespace-nowrap" onclick="switchTab('audit-requests')" id="tab-audit-requests">Audit Requests</button>
+            <button class="tab-btn py-3 mr-6 text-sm font-medium whitespace-nowrap" onclick="switchTab('open-jobs')" id="tab-open-jobs">Open Jobs</button>
+            <button class="tab-btn py-3 mr-6 text-sm font-medium whitespace-nowrap" onclick="switchTab('new-signups')" id="tab-new-signups">New Signups</button>
+            <button class="tab-btn py-3 text-sm font-medium whitespace-nowrap" onclick="switchTab('all-brands')" id="tab-all-brands">All Brands</button>
+        </div>
+
+        <!-- Search (shown on all-brands tab) -->
+        <div class="px-4 pt-3 pb-1 hidden" id="brand-search-bar">
+            <input type="text" id="brand-search" placeholder="Search by name, email, or company..."
+                   class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-300">
+        </div>
+
+        <!-- Tab content -->
+        <div id="tab-content" class="divide-y divide-gray-100 min-h-[200px]">
+            <div class="p-6 text-center text-gray-400 text-sm">Loading...</div>
+        </div>
+    </div>
+
+</div>
+
+<!-- Bottom Nav -->
+<div class="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 z-50">
+    <div class="flex justify-around py-3 text-xs sm:text-sm">
+        <button onclick="goToPage('dashboard.html')" class="text-gray-500 hover:text-gray-700">Admin</button>
+        <button onclick="goToPage('shelfer-hub.html')" class="text-gray-500 hover:text-gray-700">Shelfers</button>
+        <button onclick="goToPage('brand-hub.html')" class="font-bold text-[#C62828]">Brands</button>
+        <button onclick="goToPage('../dashboard/profile.html')" class="text-gray-500 hover:text-gray-700">Profile</button>
+    </div>
+</div>
+
+<script src="config.js"></script>
+<script src="../shared/api.js"></script>
+<script>
+    let allBrandUsers  = [];
+    let allJobs        = [];
+    let allAuditReqs   = [];
+    let currentTab     = 'audit-requests';
+
+    function goToPage(p) { window.location.href = p; }
+    window.goToPage = goToPage;
+
+    document.addEventListener('DOMContentLoaded', async function () {
+        let attempts = 0;
+        while (!window.saClient && attempts < 20) {
+            await new Promise(r => setTimeout(r, 100));
+            attempts++;
+        }
+        if (!window.saClient) { window.location.href = '../auth/signin.html'; return; }
+
+        const { data: { session } } = await (window.saClient || supabase).auth.getSession();
+        if (!session) { window.location.href = '../auth/signin.html'; return; }
+
+        await loadBrandData();
+
+        document.getElementById('brand-search').addEventListener('input', function () {
+            renderActiveTab();
+        });
+    });
+
+    async function loadBrandData() {
+        const sc = window.saClient || supabase;
+        const [{ data: users }, { data: jobs }, { data: auditReqs }] = await Promise.all([
+            sc.from('users').select('id, full_name, email, role, is_active, created_at, company_name').eq('role', 'brand_client').order('created_at', { ascending: false }),
+            sc.from('jobs').select('id, title, status, created_at, client_id, total_payout').order('created_at', { ascending: false }),
+            sc.from('audit_requests').select('id, title, audit_type, status, created_at, client_id, preferred_contact').order('created_at', { ascending: false })
+        ]);
+
+        allBrandUsers = users    || [];
+        allJobs       = jobs     || [];
+        allAuditReqs  = auditReqs || [];
+
+        const now = Date.now();
+        const WEEK = 7 * 24 * 60 * 60 * 1000;
+        const newThisWeek = allBrandUsers.filter(u => (now - new Date(u.created_at).getTime()) < WEEK).length;
+        const openJobs    = allJobs.filter(j => j.status === 'pending' || j.status === 'assigned').length;
+        const pendingAudit = allAuditReqs.filter(r => r.status === 'pending_review').length;
+
+        setText('br-total',      allBrandUsers.length);
+        setText('br-new',        newThisWeek);
+        setText('br-open-jobs',  openJobs);
+        setText('br-audit-reqs', pendingAudit);
+
+        const el = document.getElementById('brand-summary');
+        if (el) el.textContent = `${allBrandUsers.length} brand clients total`;
+
+        renderActiveTab();
+    }
+
+    function switchTab(tab) {
+        currentTab = tab;
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+        document.getElementById('tab-' + tab).classList.add('active');
+        const searchBar = document.getElementById('brand-search-bar');
+        if (tab === 'all-brands') { searchBar.classList.remove('hidden'); }
+        else { searchBar.classList.add('hidden'); }
+        renderActiveTab();
+    }
+
+    function renderActiveTab() {
+        const container = document.getElementById('tab-content');
+        if (!container) return;
+
+        if (currentTab === 'audit-requests') {
+            const pending = allAuditReqs.filter(r => r.status === 'pending_review');
+            if (pending.length === 0) {
+                container.innerHTML = '<div class="p-6 text-center text-gray-400 text-sm">No pending audit requests</div>';
+                return;
+            }
+            container.innerHTML = pending.map(r => {
+                const brand = allBrandUsers.find(u => u.id === r.client_id);
+                return `
+                <div class="px-4 py-4 row-hover">
+                    <div class="flex items-start justify-between gap-4">
+                        <div class="flex-1 min-w-0">
+                            <p class="text-sm font-semibold text-gray-900">${esc(r.title || 'Untitled Request')}</p>
+                            <p class="text-xs text-gray-500 mt-0.5">${esc(r.audit_type || '')} &middot; ${timeAgo(r.created_at)}</p>
+                            ${brand ? `<p class="text-xs text-gray-400 mt-0.5">From: ${esc(brand.full_name || brand.email)}</p>` : ''}
+                            <p class="text-xs text-gray-400">Preferred contact: ${esc(r.preferred_contact || 'email')}</p>
+                        </div>
+                        <div class="flex flex-col gap-2 shrink-0">
+                            <span class="px-2 py-0.5 text-xs font-semibold rounded-full bg-orange-100 text-orange-700">Pending Review</span>
+                            <button onclick="markAuditInProgress('${r.id}')" class="text-xs text-[#C62828] hover:underline text-right">Mark In Progress</button>
+                        </div>
+                    </div>
+                </div>`;
+            }).join('');
+        }
+
+        else if (currentTab === 'open-jobs') {
+            const open = allJobs.filter(j => j.status === 'pending' || j.status === 'assigned');
+            if (open.length === 0) {
+                container.innerHTML = '<div class="p-6 text-center text-gray-400 text-sm">No open jobs</div>';
+                return;
+            }
+            container.innerHTML = open.map(j => {
+                const brand = allBrandUsers.find(u => u.id === j.client_id);
+                const statusColor = j.status === 'assigned' ? 'bg-blue-100 text-blue-700' : 'bg-yellow-100 text-yellow-700';
+                const now = Date.now();
+                const ageHours = Math.floor((now - new Date(j.created_at).getTime()) / 3600000);
+                const isStale = j.status === 'pending' && ageHours > 24;
+                return `
+                <div class="px-4 py-4 row-hover ${isStale ? 'border-l-4 border-red-400' : ''}">
+                    <div class="flex items-center justify-between gap-4">
+                        <div class="flex-1 min-w-0">
+                            <p class="text-sm font-semibold text-gray-900">${esc(j.title || 'Untitled Job')}</p>
+                            ${brand ? `<p class="text-xs text-gray-500">${esc(brand.full_name || brand.email)}</p>` : ''}
+                            <p class="text-xs text-gray-400">${timeAgo(j.created_at)}${isStale ? ' &mdash; <span class="text-red-500 font-medium">No takers yet</span>' : ''}</p>
+                        </div>
+                        <div class="text-right shrink-0">
+                            <span class="px-2 py-0.5 text-xs font-semibold rounded-full ${statusColor}">${capitalize(j.status)}</span>
+                            <p class="text-xs text-gray-500 mt-1">$${j.total_payout || 0}</p>
+                        </div>
+                    </div>
+                </div>`;
+            }).join('');
+        }
+
+        else if (currentTab === 'new-signups') {
+            const now = Date.now();
+            const WEEK = 7 * 24 * 60 * 60 * 1000;
+            const newBrands = allBrandUsers.filter(u => (now - new Date(u.created_at).getTime()) < WEEK);
+            if (newBrands.length === 0) {
+                container.innerHTML = '<div class="p-6 text-center text-gray-400 text-sm">No new brand signups in the last 7 days</div>';
+                return;
+            }
+            container.innerHTML = newBrands.map(u => {
+                const jobCount = allJobs.filter(j => j.client_id === u.id).length;
+                return `
+                <div class="px-4 py-4 row-hover">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-sm font-semibold text-gray-900">${esc(u.full_name || 'No name')}</p>
+                            <p class="text-xs text-gray-500">${esc(u.email)}</p>
+                            ${u.company_name ? `<p class="text-xs text-gray-400">${esc(u.company_name)}</p>` : ''}
+                        </div>
+                        <div class="text-right">
+                            <p class="text-xs text-gray-400">Joined ${timeAgo(u.created_at)}</p>
+                            <p class="text-xs text-gray-500 mt-1">${jobCount} job${jobCount !== 1 ? 's' : ''} created</p>
+                        </div>
+                    </div>
+                </div>`;
+            }).join('');
+        }
+
+        else if (currentTab === 'all-brands') {
+            const term = (document.getElementById('brand-search')?.value || '').toLowerCase().trim();
+            let list = [...allBrandUsers];
+            if (term) {
+                list = list.filter(u =>
+                    (u.full_name || '').toLowerCase().includes(term) ||
+                    (u.email || '').toLowerCase().includes(term) ||
+                    (u.company_name || '').toLowerCase().includes(term)
+                );
+            }
+            if (list.length === 0) {
+                container.innerHTML = '<div class="p-6 text-center text-gray-400 text-sm">No brands found</div>';
+                return;
+            }
+            container.innerHTML = list.map(u => {
+                const jobCount       = allJobs.filter(j => j.client_id === u.id).length;
+                const completedCount = allJobs.filter(j => j.client_id === u.id && j.status === 'completed').length;
+                const auditCount     = allAuditReqs.filter(r => r.client_id === u.id).length;
+                return `
+                <div class="px-4 py-4 row-hover">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-sm font-semibold text-gray-900">${esc(u.full_name || 'No name')}</p>
+                            <p class="text-xs text-gray-500">${esc(u.email)}</p>
+                            ${u.company_name ? `<p class="text-xs text-gray-400">${esc(u.company_name)}</p>` : ''}
+                        </div>
+                        <div class="text-right">
+                            <p class="text-sm font-semibold text-gray-700">${completedCount} completed</p>
+                            <p class="text-xs text-gray-400">${jobCount} total jobs &middot; ${auditCount} audit req${auditCount !== 1 ? 's' : ''}</p>
+                            <p class="text-xs text-gray-400">Joined ${timeAgo(u.created_at)}</p>
+                        </div>
+                    </div>
+                </div>`;
+            }).join('');
+        }
+    }
+
+    async function markAuditInProgress(auditId) {
+        const sc = window.saClient || supabase;
+        const { error } = await sc.from('audit_requests').update({ status: 'in_review' }).eq('id', auditId);
+        if (error) { alert('Error updating status: ' + error.message); return; }
+        await loadBrandData();
+    }
+
+    function setText(id, val) { const el = document.getElementById(id); if (el) el.textContent = val; }
+    function esc(t) { if (t == null) return ''; const d = document.createElement('div'); d.textContent = String(t); return d.innerHTML; }
+    function capitalize(s) { return s ? s.charAt(0).toUpperCase() + s.slice(1) : ''; }
+    function timeAgo(d) {
+        if (!d) return '';
+        const diff = Date.now() - new Date(d).getTime();
+        const mins = Math.floor(diff/60000), hours = Math.floor(diff/3600000), days = Math.floor(diff/86400000);
+        if (mins < 60) return `${mins}m ago`;
+        if (hours < 24) return `${hours}h ago`;
+        return `${days}d ago`;
+    }
+
+    window.loadBrandData        = loadBrandData;
+    window.switchTab            = switchTab;
+    window.markAuditInProgress  = markAuditInProgress;
+</script>
+</body>
+</html>

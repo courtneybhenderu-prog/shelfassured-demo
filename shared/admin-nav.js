@@ -11,14 +11,16 @@
  */
 (function () {
   const NAV_ITEMS = [
-    { id: 'dashboard',           label: '🏠 Dashboard',           href: 'dashboard.html' },
-    { id: 'scan-intelligence',   label: '📊 Scan Intelligence',   href: 'scan-intelligence.html' },
-    { id: 'review-submissions',  label: '✅ Review Submissions',  href: 'review-submissions.html' },
-    { id: 'manage-jobs',         label: '💼 Manage Jobs',         href: 'manage-jobs.html' },
-    { id: 'brands',              label: '🏷️ Brands',              href: 'brands.html' },
-    { id: 'user-management',     label: '👥 User Management',     href: 'user-management.html' },
-    { id: 'barcode-capture',     label: '📷 Barcode Scanner',     href: 'barcode-capture.html' },
-    { id: 'help-support',        label: '❓ Help & Support',      href: 'help-support.html' },
+    { id: 'dashboard',           label: 'Dashboard',           href: 'dashboard.html' },
+    { id: 'shelfer-hub',         label: 'Shelfer Hub',         href: 'shelfer-hub.html' },
+    { id: 'brand-hub',           label: 'Brand Hub',           href: 'brand-hub.html' },
+    { id: 'scan-intelligence',   label: 'Scan Intelligence',   href: 'scan-intelligence.html' },
+    { id: 'review-submissions',  label: 'Review Submissions',  href: 'review-submissions.html' },
+    { id: 'manage-jobs',         label: 'Manage Jobs',         href: 'manage-jobs.html' },
+    { id: 'brands',              label: 'Brands',              href: 'brands.html' },
+    { id: 'user-management',     label: 'User Management',     href: 'user-management.html' },
+    { id: 'barcode-capture',     label: 'Barcode Scanner',     href: 'barcode-capture.html' },
+    { id: 'help-support',        label: 'Help & Support',      href: 'help-support.html' },
   ];
 
   // Determine current page from script tag attribute
@@ -29,6 +31,8 @@
   // Page titles map
   const PAGE_TITLES = {
     'dashboard':          'Admin Dashboard',
+    'shelfer-hub':        'Shelfer Hub',
+    'brand-hub':          'Brand Hub',
     'scan-intelligence':  'Scan Intelligence',
     'review-submissions': 'Review Submissions',
     'manage-jobs':        'Manage Jobs',

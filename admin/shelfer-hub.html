@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Shelfer Hub - ShelfAssured Admin</title>
+    <script>
+        window.SA_PAGE_ROLE = 'admin';
+        window.SA_DISABLE_GLOBAL_GUARD = true;
+    </script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.47.5/dist/umd/supabase.min.js"></script>
+    <link rel="stylesheet" href="../shared/styles.css">
+    <style>
+        .tab-btn { transition: color 0.15s, border-color 0.15s; }
+        .tab-btn.active { color: #C62828; border-bottom: 2px solid #C62828; }
+        .tab-btn:not(.active) { color: #6b7280; border-bottom: 2px solid transparent; }
+        .row-hover:hover { background: #f9fafb; }
+    </style>
+</head>
+<body class="bg-gray-50">
+<script src="../shared/admin-nav.js" data-page="shelfer-hub"></script>
+
+<div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-6 pb-24">
+
+    <!-- Header -->
+    <div class="flex items-center justify-between mb-6">
+        <div>
+            <h1 class="text-xl font-bold text-gray-900">Shelfer Hub</h1>
+            <p class="text-sm text-gray-500" id="shelfer-summary">Loading...</p>
+        </div>
+        <button onclick="loadShelferData()" class="text-sm text-[#C62828] font-medium hover:underline">Refresh</button>
+    </div>
+
+    <!-- Stats Row -->
+    <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
+        <div class="bg-white rounded-lg shadow-sm p-4">
+            <p class="text-xs font-semibold text-gray-500 uppercase tracking-wide">Total Shelfers</p>
+            <p class="text-3xl font-bold text-gray-900 mt-1" id="sh-total">—</p>
+        </div>
+        <div class="bg-white rounded-lg shadow-sm p-4">
+            <p class="text-xs font-semibold text-gray-500 uppercase tracking-wide">Approved</p>
+            <p class="text-3xl font-bold text-green-600 mt-1" id="sh-approved">—</p>
+        </div>
+        <div class="bg-white rounded-lg shadow-sm p-4">
+            <p class="text-xs font-semibold text-gray-500 uppercase tracking-wide">Pending Approval</p>
+            <p class="text-3xl font-bold text-orange-500 mt-1" id="sh-pending">—</p>
+        </div>
+        <div class="bg-white rounded-lg shadow-sm p-4">
+            <p class="text-xs font-semibold text-gray-500 uppercase tracking-wide">Submitted Today</p>
+            <p class="text-3xl font-bold text-blue-600 mt-1" id="sh-today">—</p>
+        </div>
+    </div>
+
+    <!-- Tabs -->
+    <div class="bg-white rounded-lg shadow-sm mb-6">
+        <div class="flex border-b border-gray-200 px-4">
+            <button class="tab-btn active py-3 mr-6 text-sm font-medium" onclick="switchTab('pending')" id="tab-pending">Pending Approval</button>
+            <button class="tab-btn py-3 mr-6 text-sm font-medium" onclick="switchTab('active')" id="tab-active">Active Shelfers</button>
+            <button class="tab-btn py-3 mr-6 text-sm font-medium" onclick="switchTab('performers')" id="tab-performers">Top Performers</button>
+            <button class="tab-btn py-3 text-sm font-medium" onclick="switchTab('stalled')" id="tab-stalled">Stalled Jobs</button>
+        </div>
+
+        <!-- Search (shown on active tab) -->
+        <div class="px-4 pt-3 pb-1 hidden" id="search-bar">
+            <input type="text" id="shelfer-search" placeholder="Search by name, email, or city..."
+                   class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-300">
+        </div>
+
+        <!-- Tab content -->
+        <div id="tab-content" class="divide-y divide-gray-100 min-h-[200px]">
+            <div class="p-6 text-center text-gray-400 text-sm">Loading...</div>
+        </div>
+    </div>
+
+</div>
+
+<!-- Bottom Nav -->
+<div class="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 z-50">
+    <div class="flex justify-around py-3 text-xs sm:text-sm">
+        <button onclick="goToPage('dashboard.html')" class="text-gray-500 hover:text-gray-700">Admin</button>
+        <button onclick="goToPage('shelfer-hub.html')" class="font-bold text-[#C62828]">Shelfers</button>
+        <button onclick="goToPage('brand-hub.html')" class="text-gray-500 hover:text-gray-700">Brands</button>
+        <button onclick="goToPage('../dashboard/profile.html')" class="text-gray-500 hover:text-gray-700">Profile</button>
+    </div>
+</div>
+
+<script src="config.js"></script>
+<script src="../shared/api.js"></script>
+<script>
+    let allShelfers = [];
+    let allJobs     = [];
+    let currentTab  = 'pending';
+
+    function goToPage(p) { window.location.href = p; }
+    window.goToPage = goToPage;
+
+    document.addEventListener('DOMContentLoaded', async function () {
+        let attempts = 0;
+        while (!window.saClient && attempts < 20) {
+            await new Promise(r => setTimeout(r, 100));
+            attempts++;
+        }
+        if (!window.saClient) { window.location.href = '../auth/signin.html'; return; }
+
+        const { data: { session } } = await (window.saClient || supabase).auth.getSession();
+        if (!session) { window.location.href = '../auth/signin.html'; return; }
+
+        await loadShelferData();
+
+        document.getElementById('shelfer-search').addEventListener('input', function () {
+            renderActiveTab();
+        });
+    });
+
+    async function loadShelferData() {
+        const sc = window.saClient || supabase;
+        const [{ data: users }, { data: jobs }] = await Promise.all([
+            sc.from('users').select('id, full_name, email, role, is_active, approval_status, city, state, created_at').eq('role', 'shelfer').order('created_at', { ascending: false }),
+            sc.from('jobs').select('id, title, status, created_at, shelfer_id').order('created_at', { ascending: false })
+        ]);
+
+        allShelfers = users || [];
+        allJobs     = jobs  || [];
+
+        const today = new Date(); today.setHours(0,0,0,0);
+        const submittedToday = allJobs.filter(j => j.status === 'submitted' && new Date(j.created_at) >= today).length;
+
+        setText('sh-total',    allShelfers.length);
+        setText('sh-approved', allShelfers.filter(u => u.approval_status === 'approved').length);
+        setText('sh-pending',  allShelfers.filter(u => u.approval_status === 'pending').length);
+        setText('sh-today',    submittedToday);
+
+        const el = document.getElementById('shelfer-summary');
+        if (el) el.textContent = `${allShelfers.length} shelfers total`;
+
+        renderActiveTab();
+    }
+
+    function switchTab(tab) {
+        currentTab = tab;
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+        document.getElementById('tab-' + tab).classList.add('active');
+        const searchBar = document.getElementById('search-bar');
+        if (tab === 'active') { searchBar.classList.remove('hidden'); }
+        else { searchBar.classList.add('hidden'); }
+        renderActiveTab();
+    }
+
+    function renderActiveTab() {
+        const container = document.getElementById('tab-content');
+        if (!container) return;
+
+        if (currentTab === 'pending') {
+            const pending = allShelfers.filter(u => u.approval_status === 'pending');
+            if (pending.length === 0) {
+                container.innerHTML = '<div class="p-6 text-center text-gray-400 text-sm">No shelfers awaiting approval</div>';
+                return;
+            }
+            container.innerHTML = pending.map(u => `
+                <div class="px-4 py-4 row-hover">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-sm font-semibold text-gray-900">${esc(u.full_name || 'No name')}</p>
+                            <p class="text-xs text-gray-500">${esc(u.email)}</p>
+                            ${u.city ? `<p class="text-xs text-gray-400">${esc(u.city)}${u.state ? ', ' + esc(u.state) : ''}</p>` : ''}
+                            <p class="text-xs text-gray-400">Registered ${timeAgo(u.created_at)}</p>
+                        </div>
+                        <div class="flex gap-2 ml-4">
+                            <button onclick="approveUser('${u.id}')" class="px-3 py-1.5 text-xs font-semibold bg-green-600 text-white rounded hover:bg-green-700">Approve</button>
+                            <button onclick="rejectUser('${u.id}')" class="px-3 py-1.5 text-xs font-semibold bg-gray-200 text-gray-700 rounded hover:bg-gray-300">Reject</button>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        else if (currentTab === 'active') {
+            const term = (document.getElementById('shelfer-search')?.value || '').toLowerCase().trim();
+            let list = allShelfers.filter(u => u.approval_status === 'approved');
+            if (term) {
+                list = list.filter(u =>
+                    (u.full_name || '').toLowerCase().includes(term) ||
+                    (u.email || '').toLowerCase().includes(term) ||
+                    (u.city || '').toLowerCase().includes(term)
+                );
+            }
+            if (list.length === 0) {
+                container.innerHTML = '<div class="p-6 text-center text-gray-400 text-sm">No shelfers found</div>';
+                return;
+            }
+            container.innerHTML = list.map(u => {
+                const jobCount = allJobs.filter(j => j.shelfer_id === u.id).length;
+                const completedCount = allJobs.filter(j => j.shelfer_id === u.id && j.status === 'completed').length;
+                return `
+                <div class="px-4 py-4 row-hover">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-sm font-semibold text-gray-900">${esc(u.full_name || 'No name')}</p>
+                            <p class="text-xs text-gray-500">${esc(u.email)}</p>
+                            ${u.city ? `<p class="text-xs text-gray-400">${esc(u.city)}${u.state ? ', ' + esc(u.state) : ''}</p>` : ''}
+                        </div>
+                        <div class="text-right">
+                            <p class="text-sm font-semibold text-gray-700">${completedCount} completed</p>
+                            <p class="text-xs text-gray-400">${jobCount} total jobs</p>
+                            <span class="inline-block mt-1 px-2 py-0.5 text-xs rounded-full ${u.is_active ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}">${u.is_active ? 'Active' : 'Inactive'}</span>
+                        </div>
+                    </div>
+                </div>`;
+            }).join('');
+        }
+
+        else if (currentTab === 'performers') {
+            const approved = allShelfers.filter(u => u.approval_status === 'approved');
+            const ranked = approved.map(u => {
+                const completed = allJobs.filter(j => j.shelfer_id === u.id && j.status === 'completed').length;
+                return { ...u, completed };
+            }).sort((a, b) => b.completed - a.completed).slice(0, 20);
+
+            if (ranked.length === 0) {
+                container.innerHTML = '<div class="p-6 text-center text-gray-400 text-sm">No completed jobs yet</div>';
+                return;
+            }
+            container.innerHTML = ranked.map((u, i) => `
+                <div class="px-4 py-4 row-hover">
+                    <div class="flex items-center gap-4">
+                        <span class="text-lg font-bold text-gray-300 w-6 text-center">${i + 1}</span>
+                        <div class="flex-1">
+                            <p class="text-sm font-semibold text-gray-900">${esc(u.full_name || 'No name')}</p>
+                            <p class="text-xs text-gray-500">${u.city ? esc(u.city) + (u.state ? ', ' + esc(u.state) : '') : esc(u.email)}</p>
+                        </div>
+                        <div class="text-right">
+                            <p class="text-sm font-bold text-green-600">${u.completed} completed</p>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        else if (currentTab === 'stalled') {
+            const now = Date.now();
+            const HOURS48 = 48 * 60 * 60 * 1000;
+            const stalled = allJobs.filter(j => j.status === 'assigned' && (now - new Date(j.created_at).getTime()) > HOURS48);
+            if (stalled.length === 0) {
+                container.innerHTML = '<div class="p-6 text-center text-gray-400 text-sm">No stalled jobs</div>';
+                return;
+            }
+            container.innerHTML = stalled.map(j => {
+                const shelfer = allShelfers.find(u => u.id === j.shelfer_id);
+                return `
+                <div class="px-4 py-4 row-hover">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-sm font-semibold text-gray-900">${esc(j.title || 'Untitled Job')}</p>
+                            ${shelfer ? `<p class="text-xs text-gray-500">Assigned to: ${esc(shelfer.full_name || shelfer.email)}</p>` : ''}
+                            <p class="text-xs text-gray-400">Assigned ${timeAgo(j.created_at)}</p>
+                        </div>
+                        <a href="manage-jobs.html" class="text-xs text-[#C62828] hover:underline">Review</a>
+                    </div>
+                </div>`;
+            }).join('');
+        }
+    }
+
+    async function approveUser(userId) {
+        const sc = window.saClient || supabase;
+        const { error } = await sc.from('users').update({ approval_status: 'approved', is_active: true }).eq('id', userId);
+        if (error) { alert('Error approving user: ' + error.message); return; }
+        await loadShelferData();
+    }
+
+    async function rejectUser(userId) {
+        if (!confirm('Reject this shelfer application?')) return;
+        const sc = window.saClient || supabase;
+        const { error } = await sc.from('users').update({ approval_status: 'rejected', is_active: false }).eq('id', userId);
+        if (error) { alert('Error rejecting user: ' + error.message); return; }
+        await loadShelferData();
+    }
+
+    function setText(id, val) { const el = document.getElementById(id); if (el) el.textContent = val; }
+    function esc(t) { if (t == null) return ''; const d = document.createElement('div'); d.textContent = String(t); return d.innerHTML; }
+    function timeAgo(d) {
+        if (!d) return '';
+        const diff = Date.now() - new Date(d).getTime();
+        const mins = Math.floor(diff/60000), hours = Math.floor(diff/3600000), days = Math.floor(diff/86400000);
+        if (mins < 60) return `${mins}m ago`;
+        if (hours < 24) return `${hours}h ago`;
+        return `${days}d ago`;
+    }
+
+    window.loadShelferData = loadShelferData;
+    window.approveUser = approveUser;
+    window.rejectUser  = rejectUser;
+    window.switchTab   = switchTab;
+</script>
+</body>
+</html>
