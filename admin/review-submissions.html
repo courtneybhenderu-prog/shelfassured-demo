@@ -574,7 +574,8 @@
                            (s.is_validated === null || s.is_validated === false) &&
                            (s.review_outcome === null || s.review_outcome === undefined || s.review_outcome !== 'superseded');
                 }).length;
-                document.getElementById('pending-count').textContent = pendingCount;
+                const pendingCountEl = document.getElementById('pending-count');
+                if (pendingCountEl) pendingCountEl.textContent = pendingCount;
 
                 filterSubmissions();
 
@@ -1295,6 +1296,10 @@
 
                 // Show toast with link to report queue
                 showToast('Submission approved. <a href="report-queue.html" style="text-decoration:underline;font-weight:700;">Generate Report &rarr;</a>', 'success', true);
+                
+                // Switch filter to 'all' so the approved submission stays visible
+                const statusFilterEl = document.getElementById('status-filter');
+                if (statusFilterEl) statusFilterEl.value = 'all';
                 
                 // Reload list
                 await loadSubmissions();
