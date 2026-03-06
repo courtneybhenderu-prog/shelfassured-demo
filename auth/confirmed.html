@@ -36,10 +36,13 @@
       title.textContent = "Something went wrong";
       sub.innerHTML = msg + "<br><br><a href=./signin.html style=color:#dc2626>Back to sign in</a>";
     }
+    // Wait up to 3 seconds for supabase client to be ready
     let waited = 0;
+    while (typeof supabase === 'undefined' && waited < 3000) {
       await new Promise(r => setTimeout(r, 100));
       waited += 100;
     }
+    if (typeof supabase === 'undefined') {
       showError("Could not load authentication library. Please try the link again.");
       return;
     }
@@ -73,6 +76,7 @@
       showError("Confirmation failed: " + (err.message || "unknown error"));
       return;
     }
+    if (!user) {
       showError("Could not verify your identity. Please try the link again.");
       return;
     }
