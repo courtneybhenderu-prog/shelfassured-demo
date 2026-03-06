@@ -204,10 +204,26 @@ window.saSignUp = async function(email, password, userData = {}) {
       throw error;
     }
     
-    // Note: Profile will be created by ensureProfile() when user first logs in
-    // This is more reliable than trying to create it during signup
-    console.log('✅ Auth signup successful, profile will be created on first login');
-    
+    // Create the users table record immediately so admins can see pending shelfers
+    if (data.user) {
+      const role = userData.role || 'shelfer';
+      const approval = role === 'shelfer' ? 'pending' : 'approved';
+      const { error: profileError } = await supabase.from('users').insert({
+        id: data.user.id,
+        email,
+        full_name: userData.full_name || null,
+        phone: userData.phone || null,
+        role,
+        approval_status: approval,
+        is_active: role !== 'shelfer'
+      });
+      if (profileError) {
+        console.warn('Profile insert warning (may already exist):', profileError.message);
+      } else {
+        console.log('Profile created at signup with approval_status:', approval);
+      }
+    }
+    console.log('Auth signup successful');
     return { success: true, data };
   } catch (error) {
     console.error('❌ saSignUp error:', error);
@@ -373,7 +389,7 @@ window.ensureProfile = async function(user) {
       full_name: md.full_name || null,
       phone: md.phone || null,
       role: role,
-      approval_status: 'approved' // All users approved by default
+      approval_status: role === 'shelfer' ? 'pending' : 'approved'
     };
     console.log('📋 Profile data to insert:', profileData);
     
