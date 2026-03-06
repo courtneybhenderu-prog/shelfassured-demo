@@ -132,15 +132,28 @@ let allItems = [];
 let currentItem = null;
 
 document.addEventListener('DOMContentLoaded', async () => {
-    // Wait for admin-nav.js to init Supabase
+    // Wait up to 15 seconds for api.js to initialize window.saClient
+    // (mobile CDN loads can be slow — api.js uses exponential backoff up to ~15s)
     let attempts = 0;
-    while (!window.saClient && attempts < 30) {
+    while (!window.saClient && attempts < 150) {
         await new Promise(r => setTimeout(r, 100));
         attempts++;
     }
+
+    // Fallback: create client directly from SA_CONFIG if api.js still hasn't fired
+    if (!window.saClient && window.SA_CONFIG && window.supabase && window.supabase.createClient) {
+        try {
+            window.saClient = window.supabase.createClient(
+                window.SA_CONFIG.SUPABASE_URL,
+                window.SA_CONFIG.SUPABASE_ANON_KEY,
+                { auth: { storage: window.localStorage, persistSession: true, autoRefreshToken: true } }
+            );
+        } catch(e) { console.error('Fallback Supabase init failed:', e); }
+    }
+
     supabase = window.saClient;
     if (!supabase) {
-        document.getElementById('loading').textContent = 'Error: Supabase not initialized.';
+        document.getElementById('loading').textContent = 'Error: Could not connect to database. Please refresh.';
         return;
     }
 
