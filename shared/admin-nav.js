@@ -186,6 +186,7 @@
       display: flex;
       flex-direction: column;
       box-shadow: -4px 0 24px rgba(0,0,0,.12);
+      overflow: hidden;
     }
     #sa-nav-drawer.open { transform: translateX(0); }
 
@@ -225,7 +226,10 @@
     .drawer-nav {
       flex: 1;
       overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+      overscroll-behavior: contain;
       padding: 0.5rem 0;
+      min-height: 0;
     }
     .drawer-nav a {
       display: flex;
@@ -252,7 +256,9 @@
     }
     .drawer-footer {
       padding: 1rem 1.25rem;
+      padding-bottom: max(1rem, env(safe-area-inset-bottom));
       border-top: 1px solid #f3f4f6;
+      flex-shrink: 0;
     }
     .drawer-signout {
       width: 100%;

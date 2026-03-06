@@ -456,7 +456,8 @@
                 document.getElementById('submissions-list').innerHTML = '';
                 document.getElementById('empty-state').classList.add('hidden');
 
-                // Load submissions with all needed joins (MVP query)
+                // Load submissions with job and user joins
+                // (store/sku are looked up via job_store_skus since store_id/sku_id on submissions may be null)
                 const { data: submissions, error: subError } = await supabase
                     .from('job_submissions')
                     .select(`
@@ -478,25 +479,51 @@
                             id,
                             full_name,
                             email
-                        ),
-                        stores (
-                            id,
-                            STORE,
-                            name,
-                            address,
-                            city,
-                            state,
-                            zip_code
-                        ),
-                        skus (
-                            id,
-                            name,
-                            upc
                         )
                     `)
                     .order('created_at', { ascending: false });
 
                 if (subError) throw subError;
+
+                // Look up store/SKU info via job_store_skus for each unique job_id
+                const jobIds = [...new Set((submissions || []).map(s => s.job_id).filter(Boolean))];
+                let jobStoreSkuMap = {};
+                if (jobIds.length > 0) {
+                    const { data: jssData } = await supabase
+                        .from('job_store_skus')
+                        .select(`
+                            job_id,
+                            stores (
+                                id,
+                                STORE,
+                                name,
+                                address,
+                                city,
+                                state,
+                                zip_code
+                            ),
+                            skus (
+                                id,
+                                name,
+                                upc
+                            )
+                        `)
+                        .in('job_id', jobIds);
+                    if (jssData) {
+                        jssData.forEach(row => {
+                            // Use first store/sku per job (most jobs have one)
+                            if (!jobStoreSkuMap[row.job_id]) {
+                                jobStoreSkuMap[row.job_id] = { stores: row.stores || {}, skus: row.skus || {} };
+                            }
+                        });
+                    }
+                }
+                // Merge store/sku data into each submission
+                (submissions || []).forEach(sub => {
+                    const jss = jobStoreSkuMap[sub.job_id] || {};
+                    sub.stores = jss.stores || {};
+                    sub.skus = jss.skus || {};
+                });
 
                 // Also load jobs with pending_review status
                 const { data: pendingJobs, error: jobsError } = await supabase
