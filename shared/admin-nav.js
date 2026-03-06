@@ -187,6 +187,10 @@
       flex-direction: column;
       box-shadow: -4px 0 24px rgba(0,0,0,.12);
       overflow: hidden;
+      /* iOS safe area support */
+      padding-bottom: env(safe-area-inset-bottom);
+      height: 100%;
+      height: -webkit-fill-available;
     }
     #sa-nav-drawer.open { transform: translateX(0); }
 
@@ -224,12 +228,14 @@
     .drawer-user strong { color: #111827; }
 
     .drawer-nav {
-      flex: 1;
-      overflow-y: auto;
+      flex: 1 1 0;
+      overflow-y: scroll;
       -webkit-overflow-scrolling: touch;
       overscroll-behavior: contain;
       padding: 0.5rem 0;
       min-height: 0;
+      /* Force scrollability on iOS Safari */
+      max-height: calc(100vh - 130px);
     }
     .drawer-nav a {
       display: flex;

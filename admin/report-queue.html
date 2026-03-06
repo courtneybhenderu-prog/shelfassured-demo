@@ -163,7 +163,12 @@ async function loadQueue() {
                 *,
                 jobs (
                     id, title, payout_per_store,
-                    brands ( id, name, logo_url )
+                    brands ( id, name, logo_url ),
+                    job_store_skus (
+                        store_id, sku_id,
+                        stores ( id, STORE, name, address, city, state, zip_code ),
+                        skus ( id, name, upc )
+                    )
                 ),
                 users!job_submissions_contractor_id_fkey ( id, full_name, email ),
                 stores ( id, STORE, name, address, city, state, zip_code ),
@@ -174,7 +179,20 @@ async function loadQueue() {
 
         if (error) throw error;
 
-        allItems = data || [];
+        // For submissions with null store_id/sku_id, fall back to job_store_skus
+        const enriched = (data || []).map(sub => {
+            if (!sub.stores && sub.jobs && sub.jobs.job_store_skus && sub.jobs.job_store_skus.length > 0) {
+                const jss = sub.jobs.job_store_skus[0];
+                sub._resolvedStore = jss.stores;
+                sub._resolvedSku   = jss.skus;
+            } else {
+                sub._resolvedStore = sub.stores;
+                sub._resolvedSku   = sub.skus;
+            }
+            return sub;
+        });
+
+        allItems = enriched;
 
         // Stats
         const ready = allItems.filter(s => !s.report_sent_at).length;
@@ -207,8 +225,8 @@ function renderQueue(items) {
     items.forEach(item => {
         const job   = item.jobs || {};
         const brand = job.brands || {};
-        const store = item.stores || {};
-        const sku   = item.skus || {};
+        const store = item._resolvedStore || item.stores || {};
+        const sku   = item._resolvedSku   || item.skus   || {};
         const contractor = item.users || {};
         const sent  = !!item.report_sent_at;
 
@@ -249,8 +267,8 @@ function openModal(submissionId) {
 
     const job   = currentItem.jobs || {};
     const brand = job.brands || {};
-    const store = currentItem.stores || {};
-    const sku   = currentItem.skus || {};
+    const store = currentItem._resolvedStore || currentItem.stores || {};
+    const sku   = currentItem._resolvedSku   || currentItem.skus   || {};
     const contractor = currentItem.users || {};
     const subData = currentItem.data || {};
 
@@ -317,8 +335,8 @@ async function generateAndDownload() {
 
         const job        = currentItem.jobs || {};
         const brand      = job.brands || {};
-        const store      = currentItem.stores || {};
-        const sku        = currentItem.skus || {};
+        const store      = currentItem._resolvedStore || currentItem.stores || {};
+        const sku        = currentItem._resolvedSku   || currentItem.skus   || {};
         const contractor = currentItem.users || {};
         const subData    = currentItem.data || {};
         const files      = Array.isArray(currentItem.files) ? currentItem.files : [];
