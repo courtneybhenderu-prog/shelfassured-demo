@@ -234,8 +234,9 @@
       overscroll-behavior: contain;
       padding: 0.5rem 0;
       min-height: 0;
-      /* Force scrollability on iOS Safari */
-      max-height: calc(100vh - 130px);
+      /* Force scrollability on iOS Safari — full height minus header (56px) + user row (~44px) */
+      max-height: calc(100dvh - 100px);
+      max-height: calc(100vh - 100px);
     }
     .drawer-nav a {
       display: flex;
@@ -334,10 +335,10 @@
       <nav class="drawer-nav" aria-label="Admin pages">
         ${buildDrawerLinks()}
         <div class="drawer-divider"></div>
+        <div style="padding: 0.75rem 1.25rem 1.5rem;">
+          <button class="drawer-signout" id="sa-nav-signout" style="width:100%;">Sign Out</button>
+        </div>
       </nav>
-      <div class="drawer-footer">
-        <button class="drawer-signout" id="sa-nav-signout">Sign Out</button>
-      </div>
     </aside>
   `;
 
