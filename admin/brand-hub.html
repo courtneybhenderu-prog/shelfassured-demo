@@ -61,10 +61,20 @@
             <button class="tab-btn py-3 text-sm font-medium whitespace-nowrap" onclick="switchTab('all-brands')" id="tab-all-brands">All Brands</button>
         </div>
 
-        <!-- Search (shown on all-brands tab) -->
-        <div class="px-4 pt-3 pb-1 hidden" id="brand-search-bar">
-            <input type="text" id="brand-search" placeholder="Search by name, email, or company..."
-                   class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-300">
+        <!-- Search + toggle (shown on all-brands tab) -->
+        <div class="px-4 pt-3 pb-2 hidden" id="brand-search-bar">
+            <input type="text" id="brand-search" placeholder="Search by name or website..."
+                   class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-300 mb-2">
+            <div class="flex items-center gap-3">
+                <label class="flex items-center gap-2 cursor-pointer select-none">
+                    <div class="relative">
+                        <input type="checkbox" id="show-shadow-toggle" class="sr-only">
+                        <div id="toggle-track" class="w-9 h-5 bg-gray-300 rounded-full transition-colors"></div>
+                        <div id="toggle-thumb" class="absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform"></div>
+                    </div>
+                    <span class="text-xs text-gray-500" id="toggle-label">Client brands only</span>
+                </label>
+            </div>
         </div>
 
         <!-- Tab content -->
@@ -113,6 +123,24 @@
         document.getElementById('brand-search').addEventListener('input', function () {
             renderActiveTab();
         });
+
+        // Toggle: show shadow brands
+        const toggle = document.getElementById('show-shadow-toggle');
+        const track  = document.getElementById('toggle-track');
+        const thumb  = document.getElementById('toggle-thumb');
+        const label  = document.getElementById('toggle-label');
+        toggle.addEventListener('change', function () {
+            if (this.checked) {
+                track.classList.replace('bg-gray-300', 'bg-red-500');
+                thumb.style.transform = 'translateX(16px)';
+                label.textContent = 'Showing all brands (incl. intelligence)';
+            } else {
+                track.classList.replace('bg-red-500', 'bg-gray-300');
+                thumb.style.transform = 'translateX(0)';
+                label.textContent = 'Client brands only';
+            }
+            renderActiveTab();
+        });
     });
 
     async function loadBrandData() {
@@ -121,7 +149,7 @@
             sc.from('users').select('id, full_name, email, role, is_active, created_at, company_name').eq('role', 'brand_client').order('created_at', { ascending: false }),
             sc.from('jobs').select('id, title, status, created_at, client_id, total_payout').order('created_at', { ascending: false }),
             sc.from('audit_requests').select('id, title, audit_type, status, created_at, client_id, preferred_contact').order('created_at', { ascending: false }),
-            sc.from('brands').select('id, name, website, created_at, logo_url').order('created_at', { ascending: false })
+            sc.from('brands').select('id, name, website, created_at, logo_url, is_shadow').order('created_at', { ascending: false })
         ]);
 
         allBrandUsers = users    || [];
@@ -131,17 +159,19 @@
 
         const now = Date.now();
         const WEEK = 7 * 24 * 60 * 60 * 1000;
-        const newThisWeek = allBrandUsers.filter(u => (now - new Date(u.created_at).getTime()) < WEEK).length;
-        const openJobs    = allJobs.filter(j => j.status === 'pending' || j.status === 'assigned').length;
+        const newThisWeek  = allBrandUsers.filter(u => (now - new Date(u.created_at).getTime()) < WEEK).length;
+        const openJobs     = allJobs.filter(j => j.status === 'pending' || j.status === 'assigned').length;
         const pendingAudit = allAuditReqs.filter(r => r.status === 'pending_review').length;
+        const clientBrands = allBrands.filter(b => !b.is_shadow).length;
+        const shadowBrands = allBrands.filter(b => b.is_shadow).length;
 
-        setText('br-total',      allBrandUsers.length);
+        setText('br-total',      clientBrands);
         setText('br-new',        newThisWeek);
         setText('br-open-jobs',  openJobs);
         setText('br-audit-reqs', pendingAudit);
 
         const el = document.getElementById('brand-summary');
-        if (el) el.textContent = `${allBrandUsers.length} brand clients total`;
+        if (el) el.textContent = `${clientBrands} client brand${clientBrands !== 1 ? 's' : ''} &middot; ${shadowBrands} scanned (intelligence)`;
 
         renderActiveTab();
     }
@@ -243,8 +273,9 @@
         }
 
         else if (currentTab === 'all-brands') {
-            const term = (document.getElementById('brand-search')?.value || '').toLowerCase().trim();
-            let list = [...allBrands];
+            const term        = (document.getElementById('brand-search')?.value || '').toLowerCase().trim();
+            const showShadow  = document.getElementById('show-shadow-toggle')?.checked || false;
+            let list = showShadow ? [...allBrands] : allBrands.filter(b => !b.is_shadow);
             if (term) {
                 list = list.filter(b =>
                     (b.name || '').toLowerCase().includes(term) ||

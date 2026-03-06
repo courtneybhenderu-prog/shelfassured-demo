@@ -55,20 +55,23 @@ async function loadDashboardData() {
             { data: jobs },
             { data: users },
             { data: auditRequests },
-            { data: helpRequests }
+            { data: helpRequests },
+            { data: brands }
         ] = await Promise.all([
             supabaseClient.from('jobs').select('id, title, status, created_at, total_payout, client_id').order('created_at', { ascending: false }),
             supabaseClient.from('users').select('id, full_name, email, role, is_active, approval_status, created_at').order('created_at', { ascending: false }),
             supabaseClient.from('audit_requests').select('id, title, audit_type, status, created_at, client_id').order('created_at', { ascending: false }),
-            supabaseClient.from('help_requests').select('id, subject, status, priority, created_at').eq('status', 'open').order('created_at', { ascending: false })
+            supabaseClient.from('help_requests').select('id, subject, status, priority, created_at').eq('status', 'open').order('created_at', { ascending: false }),
+            supabaseClient.from('brands').select('id, is_shadow')
         ]);
 
         const allJobs        = jobs || [];
         const allUsers       = users || [];
         const allAuditReqs   = auditRequests || [];
         const openHelpReqs   = helpRequests || [];
+        const allBrands      = brands || [];
 
-        updateStats(allJobs, allUsers);
+        updateStats(allJobs, allUsers, allBrands);
         buildFlags(allJobs, allUsers, allAuditReqs, openHelpReqs);
         buildRecentJobs(allJobs.slice(0, 6));
         buildAuditRequests(allAuditReqs.filter(r => r.status === 'pending_review').slice(0, 5));
@@ -83,15 +86,19 @@ async function loadDashboardData() {
 }
 
 // ── Stats ────────────────────────────────────────────────────────────────────
-function updateStats(jobs, users) {
-    const completed = jobs.filter(j => j.status === 'completed').length;
-    const shelfers  = users.filter(u => u.role === 'shelfer' && u.approval_status === 'approved').length;
-    const brands    = users.filter(u => u.role === 'brand_client').length;
+function updateStats(jobs, users, brands) {
+    const completed     = jobs.filter(j => j.status === 'completed').length;
+    const shelfers      = users.filter(u => u.role === 'shelfer' && u.approval_status === 'approved').length;
+    const clientBrands  = brands.filter(b => !b.is_shadow).length;
+    const shadowBrands  = brands.filter(b => b.is_shadow).length;
 
     setText('stat-total-jobs', jobs.length);
     setText('stat-completed',  completed);
     setText('stat-shelfers',   shelfers);
-    setText('stat-brands',     brands);
+    setText('stat-brands',     clientBrands);
+
+    const sub = document.getElementById('stat-brands-sub');
+    if (sub) sub.textContent = shadowBrands > 0 ? `+ ${shadowBrands} scanned` : 'Clients';
 }
 
 // ── Flags ────────────────────────────────────────────────────────────────────
