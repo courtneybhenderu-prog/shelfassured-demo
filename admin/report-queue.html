@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Report Queue - ShelfAssured Admin</title>
+    <!-- v20260306-3 -->
     <script>
         window.SA_DISABLE_GLOBAL_GUARD = true;
         window.SA_PAGE_ROLE = 'admin';
@@ -221,7 +222,7 @@ async function loadQueue() {
         renderQueue(allItems);
     } catch (err) {
         console.error('Error loading queue:', err);
-        document.getElementById('loading').textContent = 'Error loading queue. Check console.';
+        document.getElementById('loading').textContent = 'Error: ' + (err.message || err.details || JSON.stringify(err));
     }
 }
 
