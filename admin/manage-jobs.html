@@ -685,16 +685,15 @@
             }
         }
 
-        // Populate user dropdown (filtered to Courtney and Marc only)
+        // Populate user dropdown with all active approved users
         function populateUserDropdown() {
             const select = document.getElementById('assigned-user');
             select.innerHTML = '<option value="">Select user...</option>';
             
-            // Filter to only show Courtney and Marc
-            const filteredUsers = users.filter(user => {
-                const name = (user.full_name || '').toLowerCase();
-                return name.includes('courtney') || name.includes('marc');
-            });
+            // Show all active, approved users sorted alphabetically
+            const filteredUsers = users
+                .filter(user => user.is_active && user.approval_status === 'approved')
+                .sort((a, b) => (a.full_name || '').localeCompare(b.full_name || ''));
             
             filteredUsers.forEach(user => {
                 const option = document.createElement('option');
