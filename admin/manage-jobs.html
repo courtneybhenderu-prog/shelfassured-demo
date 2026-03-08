@@ -26,7 +26,10 @@
                 <div class="mb-6">
                     <div class="flex items-center justify-between mb-4">
                         <h2 class="text-xl font-semibold text-gray-900">All Jobs</h2>
-                        <button id="create-job-btn" onclick="showCreateJobForm()" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 text-sm font-medium">+ Create New Job</button>
+                        <div class="flex gap-2">
+                            <a href="../dashboard/request-audit.html" class="bg-gray-100 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-200 text-sm font-medium border border-gray-300">+ Custom Audit</a>
+                            <button id="create-job-btn" onclick="showCreateJobForm()" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 text-sm font-medium">+ Create New Job</button>
+                        </div>
                     </div>
                     <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
                         <div class="bg-white p-4 rounded-lg shadow">
@@ -106,169 +109,67 @@
                 </div>
 
                 <form id="job-creation-form" class="space-y-6">
-                    <!-- Job Title -->
-                    <div>
-                        <label for="job-title" class="block text-sm font-medium text-gray-700 mb-2">Job Title *</label>
-                        <input type="text" id="job-title" name="job-title" required
-                               class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                               placeholder="e.g., DJ's Boudain Shelf Audit">
-                        <p class="mt-1 text-sm text-gray-500">5-255 characters</p>
-                    </div>
-
-                    <!-- Description -->
-                    <div>
-                        <label for="job-description" class="block text-sm font-medium text-gray-700 mb-2">Job Description</label>
-                        <textarea id="job-description" name="job-description" rows="3"
-                                  class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                  placeholder="Optional description of the job requirements"></textarea>
-                        <p class="mt-1 text-sm text-gray-500">Maximum 2000 characters</p>
-                    </div>
+                    <!-- Hidden fields for backward compat -->
+                    <input type="hidden" id="job-title" name="job-title">
+                    <input type="hidden" id="job-description" name="job-description">
+                    <input type="hidden" id="priority" name="priority" value="normal">
 
                     <!-- Brand Selection -->
                     <div>
                         <label for="brand-name" class="block text-sm font-medium text-gray-700 mb-2">Brand *</label>
                         <div class="relative">
-                            <input type="text" id="brand-name" name="brand-name" required
+                            <input type="text" id="brand-name" name="brand-name" required autocomplete="off"
                                    class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                   placeholder="e.g., DJ's Boudain, Callie's Hot Little Biscuits">
+                                   placeholder="e.g., DJ's Boudain, Rambler">
                             <div id="brand-suggestions" class="absolute z-10 w-full bg-white border border-gray-300 rounded-lg shadow-lg hidden"></div>
                         </div>
-                        <p class="mt-1 text-sm text-gray-500">Type brand name - will create new brand if not found</p>
+                        <p id="brand-stores-notice" class="mt-1 text-sm text-gray-500 hidden"></p>
                     </div>
 
-                    <!-- Enhanced Store Selection -->
-                    <div class="space-y-4">
-                        <div class="flex items-center justify-between">
-                            <label class="block text-sm font-medium text-gray-700">Store Selection *</label>
-                            <div class="flex space-x-2">
-                                <button type="button" onclick="console.log('Select All Filtered clicked'); if(window.storeSelector) { window.storeSelector.selectAllFiltered(); } else { console.error('storeSelector not found'); }" 
-                                        class="px-3 py-1 text-sm bg-blue-600 text-white rounded hover:bg-blue-700">
-                                    Select All Filtered
-                                </button>
-                                <button type="button" onclick="console.log('Clear All clicked'); if(window.storeSelector) { window.storeSelector.clearAll(); } else { console.error('storeSelector not found'); }" 
-                                        class="px-3 py-1 text-sm bg-gray-600 text-white rounded hover:bg-gray-700">
-                                    Clear All
-                                </button>
+                    <!-- Store Selection — Typeahead Dropdown -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Stores *</label>
+
+                        <!-- Selected store chips -->
+                        <div id="selected-stores-chips" class="flex flex-wrap gap-2 mb-2 empty:hidden"></div>
+
+                        <!-- Search input with dropdown -->
+                        <div class="relative">
+                            <input type="text" id="store-search"
+                                   placeholder="Search by store name, city, chain, or metro area (e.g. Houston)…"
+                                   autocomplete="off"
+                                   class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                            <!-- Dropdown results appear directly below -->
+                            <div id="store-search-results"
+                                 class="absolute z-20 w-full bg-white border border-gray-300 rounded-lg shadow-xl hidden mt-1 max-h-64 overflow-y-auto">
                             </div>
                         </div>
 
-                        <!-- Search and Filter Controls -->
-                        <div class="space-y-4">
-                            <!-- Search Input with Typeahead -->
-                            <div>
-                                <label for="store-search" class="block text-sm font-medium text-gray-700 mb-1">Search Stores</label>
-                                <input type="text" id="store-search" placeholder="Type to search by name, city, state, address, or store number..."
-                                       class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
-                                <p class="mt-1 text-xs text-gray-500">Search matches: Store name, city, state, address, store number</p>
-                            </div>
-
-                            <!-- Filter by Chain (Text Input - Searches Database) -->
-                            <div>
-                                <label for="chain-filter-input" class="block text-sm font-medium text-gray-700 mb-1">Filter by Chain</label>
-                                <input 
-                                    type="text" 
-                                    id="chain-filter-input" 
-                                    placeholder="Type chain/banner name (e.g., H-E-B, Whole Foods, Albertsons)..."
-                                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                />
-                                <p class="mt-1 text-xs text-gray-500">Searches stores by banner/chain name - results appear below</p>
-                            </div>
-
-                            <!-- Filter Chips (Active Filters) -->
-                            <div id="filter-chips" class="flex flex-wrap gap-2">
-                                <!-- Filter chips will be rendered here dynamically -->
-                            </div>
-
-                            <!-- Quick Filter Buttons -->
-                            <div class="grid grid-cols-2 md:grid-cols-4 gap-2">
-                                <!-- State Filters -->
-                                <button type="button" onclick="storeSelector.filterByState('TX')" 
-                                        class="px-3 py-2 text-sm bg-blue-100 text-blue-800 rounded-lg hover:bg-blue-200 border border-blue-300">
-                                    Texas Only
-                                </button>
-                                
-                                <!-- Banner Filters -->
-                                <button type="button" onclick="storeSelector.filterByBanner('HEB')" 
-                                        class="px-3 py-2 text-sm bg-green-100 text-green-800 rounded-lg hover:bg-green-200 border border-green-300">
-                                    H-E-B Only
-                                </button>
-                                <button type="button" onclick="storeSelector.filterByBanner('WHOLE FOODS MARKET')" 
-                                        class="px-3 py-2 text-sm bg-green-100 text-green-800 rounded-lg hover:bg-green-200 border border-green-300">
-                                    Whole Foods
-                                </button>
-                                <button type="button" onclick="storeSelector.clearFilters()" 
-                                        class="px-3 py-2 text-sm bg-gray-100 text-gray-800 rounded-lg hover:bg-gray-200 border border-gray-300">
-                                    Clear Filters
-                                </button>
-                            </div>
+                        <!-- Quick filter pills -->
+                        <div class="flex flex-wrap gap-2 mt-3">
+                            <button type="button" onclick="storeSelector.filterByBanner('HEB')"
+                                    class="px-3 py-1 text-xs bg-green-100 text-green-800 rounded-full hover:bg-green-200 border border-green-300">H-E-B</button>
+                            <button type="button" onclick="storeSelector.filterByBanner('WHOLE FOODS MARKET')"
+                                    class="px-3 py-1 text-xs bg-green-100 text-green-800 rounded-full hover:bg-green-200 border border-green-300">Whole Foods</button>
+                            <button type="button" onclick="storeSelector.filterByState('TX')"
+                                    class="px-3 py-1 text-xs bg-blue-100 text-blue-800 rounded-full hover:bg-blue-200 border border-blue-300">Texas Only</button>
+                            <button type="button" onclick="storeSelector.filterByBanner('ALBERTSONS')"
+                                    class="px-3 py-1 text-xs bg-gray-100 text-gray-700 rounded-full hover:bg-gray-200 border border-gray-300">Albertsons</button>
+                            <button type="button" onclick="storeSelector.filterByBanner('WALMART')"
+                                    class="px-3 py-1 text-xs bg-gray-100 text-gray-700 rounded-full hover:bg-gray-200 border border-gray-300">Walmart</button>
+                            <button type="button" onclick="storeSelector.filterByBanner('TARGET')"
+                                    class="px-3 py-1 text-xs bg-gray-100 text-gray-700 rounded-full hover:bg-gray-200 border border-gray-300">Target</button>
+                            <button type="button" onclick="storeSelector.clearAll(); renderSelectedChips();"
+                                    class="px-3 py-1 text-xs bg-red-50 text-red-700 rounded-full hover:bg-red-100 border border-red-200">Clear All</button>
                         </div>
 
-                        <!-- Location Services -->
-                        <div class="bg-blue-50 border border-blue-200 rounded-lg p-3">
-                            <div class="flex items-center justify-between">
-                                <div>
-                                    <div class="text-sm font-medium text-blue-900">📍 Location Services</div>
-                                    <div class="text-sm text-blue-700">Get nearby store suggestions based on your location</div>
-                                </div>
-                                <button type="button" onclick="storeSelector.getCurrentLocation()" 
-                                        class="px-3 py-1 text-sm bg-blue-600 text-white rounded hover:bg-blue-700">
-                                    Enable Location
-                                </button>
-                            </div>
-                        </div>
-
-                        <!-- Selected Stores Display -->
-                        <div>
-                            <div class="text-sm font-medium text-gray-700 mb-2">
-                                Selected Stores (<span id="selected-count">0</span>)
-                            </div>
-                            <div id="selected-stores" class="space-y-2 max-h-40 overflow-y-auto border border-gray-200 rounded-lg p-3">
-                                <div class="text-center text-gray-500 py-4">No stores selected</div>
-                            </div>
-                        </div>
-
-                        <!-- Store Search Results -->
-                        <div>
-                            <div class="text-sm font-medium text-gray-700 mb-2">
-                                Available Stores (<span id="filtered-count">0</span>)
-                            </div>
-                            <div id="store-search-results" class="space-y-2 max-h-60 overflow-y-auto border border-gray-200 rounded-lg p-3">
-                                <div class="text-center text-gray-500 py-4">Loading stores...</div>
-                            </div>
-                        </div>
-
-                        <!-- Additional Quick Actions (Optional) -->
-                        <div class="bg-gray-50 border border-gray-200 rounded-lg p-3">
-                            <div class="text-sm font-medium text-gray-700 mb-2">More Quick Filters</div>
-                            <div class="grid grid-cols-2 md:grid-cols-4 gap-2">
-                                <button type="button" onclick="storeSelector.filterByBanner('TOM THUMB')" 
-                                        class="px-3 py-2 text-sm bg-gray-100 text-gray-800 rounded-lg hover:bg-gray-200 border border-gray-300">
-                                    Tom Thumb
-                                </button>
-                                <button type="button" onclick="storeSelector.filterByBanner('ALBERTSONS')" 
-                                        class="px-3 py-2 text-sm bg-gray-100 text-gray-800 rounded-lg hover:bg-gray-200 border border-gray-300">
-                                    Albertsons
-                                </button>
-                                <button type="button" onclick="storeSelector.filterByBanner('TARGET')" 
-                                        class="px-3 py-2 text-sm bg-gray-100 text-gray-800 rounded-lg hover:bg-gray-200 border border-gray-300">
-                                    Target
-                                </button>
-                                <button type="button" onclick="storeSelector.filterByBanner('WALMART')" 
-                                        class="px-3 py-2 text-sm bg-gray-100 text-gray-800 rounded-lg hover:bg-gray-200 border border-gray-300">
-                                    Walmart
-                                </button>
-                            </div>
-                        </div>
-
-                        <!-- Help Text -->
-                        <div class="text-sm text-gray-500">
-                            <p>💡 <strong>Tips:</strong></p>
-                            <ul class="list-disc list-inside space-y-1 ml-4">
-                                <li>Search by store name, city, address, or ZIP code</li>
-                                <li>Use location services to find stores near you</li>
-                                <li>Filter by chain to focus on specific retailers</li>
-                                <li>Click on stores to select them for the job</li>
-                            </ul>
+                        <!-- Hidden elements still expected by enhanced-store-selector.js -->
+                        <div class="hidden">
+                            <span id="selected-count">0</span>
+                            <span id="filtered-count">0</span>
+                            <div id="selected-stores"></div>
+                            <div id="filter-chips"></div>
+                            <input type="text" id="chain-filter-input">
                         </div>
                     </div>
 
@@ -278,11 +179,12 @@
                         <div id="sku-selection" class="space-y-2">
                             <div class="space-y-2">
                                 <div class="relative">
-                                    <input type="text" id="product-name" placeholder="Product name (e.g., Original Boudain)" 
+                                    <input type="text" id="product-name" placeholder="Product name (e.g., Original Boudain)"
+                                           autocomplete="off"
                                            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
                                     <div id="product-suggestions" class="absolute z-10 w-full bg-white border border-gray-300 rounded-lg shadow-lg hidden mt-1 max-h-60 overflow-y-auto"></div>
                                 </div>
-                                <input type="text" id="product-sku" placeholder="UPC (optional, e.g., 0123456789012)" 
+                                <input type="text" id="product-sku" placeholder="UPC (optional)"
                                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
                                 <select id="product-category" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
                                     <!-- Categories will be populated by JavaScript -->
@@ -291,28 +193,33 @@
                                 <div id="available-products" class="mt-3 p-2 bg-gray-50 rounded hidden"></div>
                             </div>
                         </div>
-                        <p class="mt-1 text-sm text-gray-500">Add products to audit - UPC can be added later in store if not known</p>
+                        <p class="mt-1 text-sm text-gray-500">Add products to audit — UPC can be added later if not known</p>
                     </div>
 
-                    <!-- Assigned User -->
+                    <!-- Assignment Toggle -->
                     <div>
-                        <label for="assigned-user" class="block text-sm font-medium text-gray-700 mb-2">Assigned To *</label>
-                        <select id="assigned-user" name="assigned-user" required
-                                class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
-                            <option value="">Select user...</option>
-                        </select>
-                    </div>
-
-                    <!-- Priority -->
-                    <div>
-                        <label for="priority" class="block text-sm font-medium text-gray-700 mb-2">Priority</label>
-                        <select id="priority" name="priority"
-                                class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
-                            <option value="normal">Normal</option>
-                            <option value="low">Low</option>
-                            <option value="high">High</option>
-                            <option value="urgent">Urgent</option>
-                        </select>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Assignment</label>
+                        <div class="flex rounded-lg border border-gray-300 overflow-hidden">
+                            <button type="button" id="assign-market-btn"
+                                    onclick="setAssignmentMode('market')"
+                                    class="flex-1 px-4 py-3 text-sm font-medium bg-blue-600 text-white">
+                                Post to Market
+                            </button>
+                            <button type="button" id="assign-specific-btn"
+                                    onclick="setAssignmentMode('specific')"
+                                    class="flex-1 px-4 py-3 text-sm font-medium bg-white text-gray-700 hover:bg-gray-50">
+                                Assign to Shelfer
+                            </button>
+                        </div>
+                        <p id="assignment-hint" class="mt-1 text-sm text-gray-500">Job will be visible to all approved shelfers near this store.</p>
+                        <div id="specific-shelfer-picker" class="hidden mt-3">
+                            <select id="assigned-user" name="assigned-user"
+                                    class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                                <option value="">Select shelfer…</option>
+                            </select>
+                        </div>
+                        <!-- Hidden assigned-user fallback for post-to-market mode -->
+                        <input type="hidden" id="assigned-user-hidden" value="">
                     </div>
 
                     <!-- Due Date (Auto-calculated: 48 hours from creation) -->
@@ -432,6 +339,12 @@
                 // Setup error handling
                 console.log('🔄 Setting up error handling...');
                 setupErrorHandling();
+
+                // Setup typeahead dropdown after store selector initializes (it uses a 1s delay)
+                setTimeout(() => {
+                    setupStoreTypeahead();
+                    console.log('✅ Store typeahead dropdown initialized');
+                }, 1200);
                 
                 // Populate category dropdown
                 populateCategoryDropdown();
@@ -687,20 +600,23 @@
 
         // Populate user dropdown with all active approved users
         function populateUserDropdown() {
+            // Populate the hidden legacy select (used in edit mode)
             const select = document.getElementById('assigned-user');
-            select.innerHTML = '<option value="">Select user...</option>';
-            
-            // Show all active, approved users sorted alphabetically
-            const filteredUsers = users
-                .filter(user => user.is_active && user.approval_status === 'approved')
-                .sort((a, b) => (a.full_name || '').localeCompare(b.full_name || ''));
-            
-            filteredUsers.forEach(user => {
-                const option = document.createElement('option');
-                option.value = user.id;
-                option.textContent = `${user.full_name || 'No name'} (${user.role})`;
-                select.appendChild(option);
-            });
+            if (select) {
+                select.innerHTML = '<option value="">Select user...</option>';
+                const filteredUsers = users
+                    .filter(user => user.is_active && user.approval_status === 'approved')
+                    .sort((a, b) => (a.full_name || '').localeCompare(b.full_name || ''));
+                filteredUsers.forEach(user => {
+                    const option = document.createElement('option');
+                    option.value = user.id;
+                    option.textContent = `${user.full_name || 'No name'} (${user.role})`;
+                    select.appendChild(option);
+                });
+            }
+
+            // The assignment toggle uses the same #assigned-user select (inside #specific-shelfer-picker)
+            // so no separate population needed — the block above covers it.
         }
 
         // Setup form event listeners
@@ -1328,23 +1244,22 @@
 
         // Update job summary
         function updateJobSummary() {
-            const title = document.getElementById('job-title').value.trim();
             const brand = document.getElementById('brand-name').value.trim();
-            
-            // Get selected stores from enhanced store selector
             const selectedStores = storeSelector ? storeSelector.getSelectedStores() : [];
             const skus = selectedSkus;
             
-            if (title && brand && selectedStores.length > 0 && skus.length > 0) {
-                const totalJobs = selectedStores.length * skus.length;
+            if (brand && selectedStores.length > 0 && skus.length > 0) {
+                const totalJobs = selectedStores.length;
+                const month = new Date().toLocaleString('default', { month: 'long', year: 'numeric' });
+                const autoTitle = `${brand} — ${skus.map(s=>s.name).join(', ')} — ${selectedStores.length} Store${selectedStores.length!==1?'s':''} — ${month}`;
                 const summary = document.getElementById('summary-details');
                 summary.innerHTML = `
                     <div class="space-y-1">
-                        <div><strong>Title:</strong> ${title}</div>
+                        <div><strong>Title:</strong> ${autoTitle}</div>
                         <div><strong>Brand:</strong> ${brand}</div>
                         <div><strong>Stores:</strong> ${selectedStores.length}</div>
                         <div><strong>Products:</strong> ${skus.length}</div>
-                        <div class="font-medium text-blue-600"><strong>Total Jobs:</strong> ${totalJobs}</div>
+                        <div class="font-medium text-blue-600"><strong>Total Jobs to Create:</strong> ${totalJobs}</div>
                     </div>
                 `;
                 document.getElementById('job-summary').classList.remove('hidden');
@@ -1398,19 +1313,104 @@
             }
         }
 
+        // Assignment mode toggle
+        let assignmentMode = 'market'; // 'market' | 'specific'
+        function setAssignmentMode(mode) {
+            assignmentMode = mode;
+            const marketBtn = document.getElementById('assign-market-btn');
+            const specificBtn = document.getElementById('assign-specific-btn');
+            const picker = document.getElementById('specific-shelfer-picker');
+            const hint = document.getElementById('assignment-hint');
+            if (mode === 'market') {
+                marketBtn.className = 'flex-1 px-4 py-3 text-sm font-medium bg-blue-600 text-white';
+                specificBtn.className = 'flex-1 px-4 py-3 text-sm font-medium bg-white text-gray-700 hover:bg-gray-50';
+                picker.classList.add('hidden');
+                hint.textContent = 'Job will be visible to all approved shelfers near this store.';
+            } else {
+                specificBtn.className = 'flex-1 px-4 py-3 text-sm font-medium bg-blue-600 text-white';
+                marketBtn.className = 'flex-1 px-4 py-3 text-sm font-medium bg-white text-gray-700 hover:bg-gray-50';
+                picker.classList.remove('hidden');
+                hint.textContent = 'Job will be sent directly to the selected shelfer.';
+            }
+        }
+
+        // Render selected store chips above the search input
+        function renderSelectedChips() {
+            const container = document.getElementById('selected-stores-chips');
+            if (!container) return;
+            const selected = storeSelector ? storeSelector.getSelectedStores() : [];
+            container.innerHTML = selected.map(s => `
+                <span class="inline-flex items-center gap-1 px-3 py-1 bg-green-100 text-green-800 text-sm rounded-full border border-green-300">
+                    ${s.name || s.STORE || 'Store'}
+                    <button type="button" onclick="storeSelector.toggleStore('${s.id}'); renderSelectedChips();" class="text-green-600 hover:text-green-900 font-bold">&times;</button>
+                </span>
+            `).join('');
+            updateJobSummary();
+        }
+
+        // Wire up typeahead dropdown for store search
+        function setupStoreTypeahead() {
+            const input = document.getElementById('store-search');
+            const dropdown = document.getElementById('store-search-results');
+            if (!input || !dropdown) return;
+
+            let debounceTimer;
+            input.addEventListener('input', () => {
+                clearTimeout(debounceTimer);
+                const q = input.value.trim();
+                if (q.length < 2) { dropdown.classList.add('hidden'); return; }
+                debounceTimer = setTimeout(async () => {
+                    // Use the enhanced store selector's search
+                    if (!storeSelector) return;
+                    const results = await storeSelector.searchStores(q);
+                    if (!results || results.length === 0) {
+                        dropdown.innerHTML = '<div class="px-4 py-3 text-sm text-gray-500">No stores found</div>';
+                        dropdown.classList.remove('hidden');
+                        return;
+                    }
+                    const selected = storeSelector.getSelectedStores().map(s => s.id);
+                    dropdown.innerHTML = results.slice(0, 10).map(store => {
+                        const isSelected = selected.includes(store.id);
+                        const name = store.STORE || store.name || 'Unknown Store';
+                        const city = store.city || store.CITY || '';
+                        const state = store.state || store.STATE || '';
+                        const banner = store.banner || store.BANNER || '';
+                        return `
+                            <div class="px-4 py-3 cursor-pointer hover:bg-gray-50 border-b border-gray-100 last:border-0 flex items-center justify-between"
+                                 onmousedown="event.preventDefault(); storeSelector.toggleStore('${store.id}'); renderSelectedChips(); document.getElementById('store-search').value=''; document.getElementById('store-search-results').classList.add('hidden');">
+                                <div>
+                                    <div class="text-sm font-medium text-gray-900">${name}</div>
+                                    <div class="text-xs text-gray-500">${[banner, city, state].filter(Boolean).join(' · ')}</div>
+                                </div>
+                                ${isSelected ? '<span class="text-green-600 font-bold text-lg">&#10003;</span>' : '<span class="text-gray-300 text-lg">+</span>'}
+                            </div>
+                        `;
+                    }).join('');
+                    dropdown.classList.remove('hidden');
+                }, 200);
+            });
+
+            // Close dropdown on outside click
+            document.addEventListener('click', (e) => {
+                if (!input.contains(e.target) && !dropdown.contains(e.target)) {
+                    dropdown.classList.add('hidden');
+                }
+            });
+
+            // Also hook into storeSelector selection events to keep chips in sync
+            const origToggle = storeSelector?.toggleStore?.bind(storeSelector);
+            if (origToggle && storeSelector) {
+                storeSelector.toggleStore = function(id) {
+                    origToggle(id);
+                    renderSelectedChips();
+                };
+            }
+        }
+
         // Validate form
         function validateForm() {
-            const title = document.getElementById('job-title').value.trim();
             const brand = document.getElementById('brand-name').value.trim();
-            const assignedUser = document.getElementById('assigned-user').value;
-            
-            // Get selected stores from enhanced store selector
             const selectedStores = storeSelector ? storeSelector.getSelectedStores() : [];
-            
-            if (!title || title.length < 5) {
-                alert('Job title must be at least 5 characters');
-                return false;
-            }
             
             if (!brand) {
                 alert('Brand name is required');
@@ -1423,13 +1423,16 @@
             }
             
             if (selectedSkus.length === 0) {
-                alert('Please add at least one product (SKU)');
+                alert('Please add at least one product');
                 return false;
             }
             
-            if (!assignedUser) {
-                alert('Please select an assigned user');
-                return false;
+            if (assignmentMode === 'specific') {
+                const assignedUser = document.getElementById('assigned-user').value;
+                if (!assignedUser) {
+                    alert('Please select a shelfer to assign this job to');
+                    return false;
+                }
             }
             
             return true;
@@ -1437,19 +1440,31 @@
 
         // Get form data
         function getFormData() {
-            // Get selected stores from enhanced store selector
             const selectedStores = storeSelector ? storeSelector.getSelectedStores() : [];
-            
+            const brand = document.getElementById('brand-name').value.trim();
+            const month = new Date().toLocaleString('default', { month: 'long', year: 'numeric' });
+            const productNames = selectedSkus.map(s => s.name).join(', ');
+            const storeCount = selectedStores.length;
+            // Auto-generate title: Brand — Product(s) — N Store(s) — Month Year
+            const autoTitle = `${brand} — ${productNames || 'Shelf Audit'} — ${storeCount} Store${storeCount !== 1 ? 's' : ''} — ${month}`;
+            // Set the hidden title field
+            document.getElementById('job-title').value = autoTitle;
+
+            // Assignment: null for market post, user ID for specific
+            let assignedUserId = null;
+            if (assignmentMode === 'specific') {
+                assignedUserId = document.getElementById('assigned-user').value || null;
+            }
+
             return {
-                title: document.getElementById('job-title').value.trim(),
-                description: document.getElementById('job-description').value.trim(),
-                brand: document.getElementById('brand-name').value.trim(),
-                stores: selectedStores, // Use enhanced store selector
+                title: autoTitle,
+                description: '',
+                brand,
+                stores: selectedStores,
                 skus: selectedSkus,
-                assignedUserId: document.getElementById('assigned-user').value,
-                priority: document.getElementById('priority').value,
+                assignedUserId,
+                priority: 'normal',
                 dueDate: document.getElementById('due-date').value || (() => {
-                    // Auto-calculate 48 hours from now if not set
                     const now = new Date();
                     return new Date(now.getTime() + (48 * 60 * 60 * 1000)).toISOString();
                 })(),

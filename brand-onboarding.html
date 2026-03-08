@@ -1134,6 +1134,7 @@
         for(const p of prodList){
           const { error: pErr } = await supabase.from('products').upsert({
             brand: name,
+            brand_id: brandId,
             name: p.name,
             barcode: p.barcode,
             size: p.size,
@@ -1170,6 +1171,15 @@
             }
             storeIds.push(newStore.id);
           }
+        }
+
+        // Save brand_stores associations
+        if (storeIds.length > 0) {
+          stat.textContent='Linking stores to brand...';
+          const brandStoreRows = storeIds.map(storeId => ({ brand_id: brandId, store_id: storeId }));
+          const { error: bsErr } = await supabase.from('brand_stores')
+            .upsert(brandStoreRows, { onConflict: 'brand_id,store_id', ignoreDuplicates: true });
+          if (bsErr) console.warn('brand_stores save warning:', bsErr.message);
         }
 
         ok.textContent='Saved! Brand, products, and stores created.';

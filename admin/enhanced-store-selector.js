@@ -471,10 +471,10 @@ class StoreSelector {
                     
                     case 'banner_general':
                     default:
-                        // Banner or general: query banner and STORE only, NOT address
+                        // Banner or general: query banner, STORE, and METRO (for metro area searches like "Houston")
                         const searchPattern = `%${intent.term}%`;
-                        pageQuery = pageQuery.or(`banner.ilike.${searchPattern},STORE.ilike.${searchPattern}`);
-                        console.log('🔍 Intent: Banner/General - querying banner and STORE only');
+                        pageQuery = pageQuery.or(`banner.ilike.${searchPattern},STORE.ilike.${searchPattern},METRO.ilike.${searchPattern}`);
+                        console.log('🔍 Intent: Banner/General - querying banner, STORE, and METRO');
                         break;
                 }
                 
