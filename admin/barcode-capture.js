@@ -22,6 +22,7 @@ let todayScanCount = 0;
 let pendingPhotos = {};        // { shelf: File, product: File }
 let knownBrands = [];          // Cache of brands for autocomplete
 let storeValue = '';           // Persists across scans
+let currentSkuId = null;       // SKU ID from catalog lookup, for scan_events
 
 // ─── Initialise ───────────────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', async () => {
@@ -270,8 +271,9 @@ async function processUPC(upc) {
         if (productsResult.data) {
             const p = productsResult.data;
             populateFormFromProduct(p);
+            currentSkuId = null;  // product record, not a SKU catalog entry
             lookupEl.className = 'mb-3 p-2.5 rounded-lg text-sm font-medium bg-green-50 text-green-700';
-            lookupEl.textContent = '\u2713 Found in your database \u2014 review and update if needed';
+            lookupEl.innerHTML = '\u2713 Found in your database \u2014 <strong>re-scan: update price/stock if changed</strong>';
             document.getElementById('existing-product-id').value = p.id;
             return;
         }
@@ -279,8 +281,9 @@ async function processUPC(upc) {
         if (skusResult.data) {
             const s = skusResult.data;
             populateFormFromSKU(s);
+            currentSkuId = s.id || null;  // Track for scan_event
             lookupEl.className = 'mb-3 p-2.5 rounded-lg text-sm font-medium bg-green-50 text-green-700';
-            lookupEl.textContent = '\u2713 Found in SKU catalog \u2014 saving new scan record';
+            lookupEl.innerHTML = '\u2713 Found in SKU catalog \u2014 <strong>confirm details and save</strong>';
             return;
         }
 
@@ -696,6 +699,27 @@ async function saveProduct() {
             await uploadPhotos(savedId);
         }
 
+        // Save scan_event record (gracefully handles missing table until SQL migration runs)
+        try {
+            const storeId = document.getElementById('store-id')?.value || null;
+            const scanEventData = {
+                barcode: upc || null,
+                sku_id: currentSkuId || null,
+                store_id: storeId || null,
+                shelfer_id: currentUser.id,
+                scan_type: existingId ? 'rescan' : (currentSkuId ? 'known_sku' : 'new_product'),
+                notes: notes || null,
+                scanned_at: new Date().toISOString()
+            };
+            const { error: scanEventErr } = await _supabase.from('scan_events').insert(scanEventData);
+            if (scanEventErr && !scanEventErr.message?.includes('does not exist')) {
+                console.warn('scan_event save warning:', scanEventErr.message);
+            }
+        } catch (scanEventEx) {
+            // Non-blocking — scan_events table may not exist yet
+            console.info('scan_events not saved (table may not exist yet):', scanEventEx.message);
+        }
+
         // Also upsert into skus for the SKU catalog
         if (brandId && upc) {
             await _supabase.from('skus').upsert({
@@ -731,6 +755,7 @@ function resetForm(keepStore) {
     document.getElementById('product-form-section').classList.add('hidden');
     document.getElementById('upc-value').value = '';
     document.getElementById('existing-product-id').value = '';
+    currentSkuId = null;  // Reset SKU tracking
     document.getElementById('upc-badge').textContent = '';
     document.getElementById('brand-input').value = '';
     document.getElementById('brand-id-value').value = '';

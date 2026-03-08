@@ -40,6 +40,12 @@ async function initializeDashboard() {
         const adminUserEl = document.getElementById('admin-user');
         if (adminUserEl) adminUserEl.textContent = `Welcome, ${userProfile.full_name || currentUser.email}`;
 
+        // Show Marc's personalized welcome banner
+        if (currentUser.email === 'marc@beshelfassured.com') {
+            const banner = document.getElementById('marc-welcome-banner');
+            if (banner) banner.classList.remove('hidden');
+        }
+
         await loadDashboardData();
     } catch (err) {
         console.error('Dashboard init error:', err);
