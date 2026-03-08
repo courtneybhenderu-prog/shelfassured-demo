@@ -805,9 +805,9 @@ async function loadScans() {
             const { data, error } = await supabase
                 .from('job_submissions')
                 .select(`
-                    id, job_id, submitted_at, status, data, files,
+                    id, job_id, submitted_at, status, submission_type, data, files,
                     contractor_id,
-                    jobs ( title, brands ( name ) ),
+                    jobs ( title, status, brands ( name ) ),
                     stores ( STORE, name, city, state, banner, store_chain ),
                     skus ( name, upc, category ),
                     users:contractor_id ( full_name )
@@ -840,7 +840,16 @@ async function loadScans() {
                         upc: r.skus?.upc || '',
                         category: r.skus?.category || '',
                         brand_name: r.jobs?.brands?.name || '',
-                        status: r.status,
+                        status: (() => {
+                            // Use parent job status as the source of truth for approval
+                            const jobStatus = r.jobs?.status;
+                            if (jobStatus === 'completed') return 'approved';
+                            if (jobStatus === 'exception_reported') return 'exception_reported';
+                            if (jobStatus === 'rejected') return 'rejected';
+                            // Fall back to submission status
+                            if (r.submission_type === 'exception') return 'exception_reported';
+                            return r.status || 'pending_review';
+                        })(),
                         shelf_price: price,
                         compliance_score: price ? Math.min(100, Math.round(75 + (price > 0 ? 15 : 0) + (!isOOS ? 10 : 0))) : 0,
                         shelf_tag_present: price !== null,
