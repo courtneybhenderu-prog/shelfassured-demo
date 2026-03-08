@@ -167,9 +167,22 @@
             </div>
           </div>
 
-          <div class="pt-2 flex flex-wrap gap-3">
-            <button type="submit" class="btn-red px-5 py-3 rounded-xl font-semibold">Submit for review</button>
+          <!-- Submission checklist -->
+          <div id="submitChecklist" class="rounded-xl border border-gray-200 bg-gray-50 p-4 text-sm">
+            <p class="font-semibold text-gray-700 mb-2">Before you submit:</p>
+            <ul class="space-y-1">
+              <li id="check-photo1" class="flex items-center gap-2 text-gray-400"><span class="check-icon">&#9675;</span> Photo 1: Product on shelf (close)</li>
+              <li id="check-photo2" class="flex items-center gap-2 text-gray-400"><span class="check-icon">&#9675;</span> Photo 2: Section/shelf context</li>
+              <li id="check-photo3" class="flex items-center gap-2 text-gray-400"><span class="check-icon">&#9675;</span> Photo 3: Wide-angle shelf view</li>
+              <li id="check-price" class="flex items-center gap-2 text-gray-400"><span class="check-icon">&#9675;</span> Shelf price entered</li>
+              <li id="check-stock" class="flex items-center gap-2 text-gray-400"><span class="check-icon">&#9675;</span> Stock level selected</li>
+            </ul>
+          </div>
+
+          <div class="pt-2 flex flex-wrap gap-3 items-center">
+            <button type="submit" id="submitBtn" class="btn-red px-5 py-3 rounded-xl font-semibold opacity-50 cursor-not-allowed" disabled>Submit for review</button>
             <button type="button" id="saveDraft" class="btn-gray px-5 py-3 rounded-xl font-semibold">Save draft</button>
+            <button type="button" onclick="showHelp()" class="text-sm text-blue-600 hover:underline px-2">Need help?</button>
             <span id="formMsg" class="text-sm" style="color:var(--text-600)"></span>
           </div>
         </div>
@@ -478,17 +491,76 @@
             if (resizedFile) {
               // Store resized file for later upload
               window[slot.key + 'File'] = resizedFile;
+              updateChecklist();
             }
           }
         });
       });
+
+      // Update checklist when price or stock changes
+      document.getElementById('price').addEventListener('input', updateChecklist);
+      document.getElementById('stock').addEventListener('change', updateChecklist);
 
       // Form submission
       document.getElementById('jobForm').addEventListener('submit', handleSubmit);
       
       // Save draft
       document.getElementById('saveDraft').addEventListener('click', saveDraft);
+
+      // Initial checklist state
+      updateChecklist();
     }
+
+    // Update submission checklist and enable/disable submit button
+    function updateChecklist() {
+      const checks = [
+        { id: 'check-photo1', met: !!window.product_closeupFile },
+        { id: 'check-photo2', met: !!window.section_contextFile },
+        { id: 'check-photo3', met: !!window.wide_angleFile },
+        { id: 'check-price',  met: !!(document.getElementById('price')?.value?.trim()) },
+        { id: 'check-stock',  met: !!(document.getElementById('stock')?.value) }
+      ];
+
+      checks.forEach(({ id, met }) => {
+        const el = document.getElementById(id);
+        if (!el) return;
+        const icon = el.querySelector('.check-icon');
+        if (met) {
+          el.classList.remove('text-gray-400');
+          el.classList.add('text-green-700');
+          if (icon) icon.innerHTML = '&#10003;';
+        } else {
+          el.classList.remove('text-green-700');
+          el.classList.add('text-gray-400');
+          if (icon) icon.innerHTML = '&#9675;';
+        }
+      });
+
+      const allMet = checks.every(c => c.met);
+      const btn = document.getElementById('submitBtn');
+      if (btn) {
+        btn.disabled = !allMet;
+        btn.classList.toggle('opacity-50', !allMet);
+        btn.classList.toggle('cursor-not-allowed', !allMet);
+        btn.classList.toggle('cursor-pointer', allMet);
+      }
+    }
+
+    // Show help modal
+    function showHelp() {
+      const msg = [
+        'Having trouble? Here are some tips:',
+        '',
+        '• Photos must be at least 1000×1000px. Use your phone camera in normal (not portrait) mode.',
+        '• If a photo shows \"Too small\", move closer to the shelf and retake.',
+        '• Price: enter the shelf tag price exactly as shown (e.g. 3.49).',
+        '• Stock level: choose In Stock, Low, or Out of Stock based on what you see.',
+        '',
+        'Still stuck? Email us at support@beshelfassured.com or text (832) 000-0000.'
+      ].join('\n');
+      alert(msg);
+    }
+    window.showHelp = showHelp;
 
     // Resize and compress photo
     async function resizePhoto(file, maxWidth = 2000, maxHeight = 2000, quality = 0.8) {

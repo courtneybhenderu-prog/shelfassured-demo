@@ -22,6 +22,25 @@ async function loadDashboard() {
             return;
         }
         const currentUserId = user.id;
+
+        // Load user profile for personalized greeting
+        const { data: userProfile } = await supabase
+            .from('users')
+            .select('full_name, created_at')
+            .eq('id', user.id)
+            .single();
+
+        // Update greeting with first name and 'Shelfer since' date
+        const greetingEl = document.getElementById('dashboard-greeting');
+        const subtitleEl = document.getElementById('dashboard-subtitle');
+        if (greetingEl && userProfile) {
+            const firstName = (userProfile.full_name || '').split(' ')[0] || 'Shelfer';
+            greetingEl.textContent = `Hello, ${firstName}!`;
+        }
+        if (subtitleEl && userProfile?.created_at) {
+            const sinceDate = new Date(userProfile.created_at).toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+            subtitleEl.textContent = `Shelfer since ${sinceDate}`;
+        }
         
         // Load all relevant jobs with stores and brands
         const { data: allJobs, error: jobsError } = await supabase
@@ -77,7 +96,7 @@ async function loadDashboard() {
         );
         
         const totalEarnings = completedJobs.reduce((sum, job) => {
-            return sum + parseFloat(job.payout_per_store || 0);
+            return sum + (parseFloat(job.payout_per_store || 0) * 0.6);
         }, 0);
         
         console.log('📊 Shelfer dashboard stats:', {
@@ -178,6 +197,25 @@ function renderJobsByStore(availableJobs, inProgressJobs, pendingApprovalJobs) {
         } else if (job.status === 'pending_review') {
             statusColor = 'bg-orange-100 text-orange-800';
         }
+
+        // Countdown timer for accepted jobs
+        let countdownHtml = '';
+        if ((job.status === 'assigned' || job.status === 'in_progress') && job.assigned_at) {
+            const isRush = job.priority === 'rush';
+            const limitMins = isRush ? 30 : 60;
+            const assignedMs = new Date(job.assigned_at).getTime();
+            const deadlineMs = assignedMs + limitMins * 60 * 1000;
+            const remainingMs = deadlineMs - Date.now();
+            const remainingMins = Math.max(0, Math.floor(remainingMs / 60000));
+            const remainingSecs = Math.max(0, Math.floor((remainingMs % 60000) / 1000));
+            const isUrgent = remainingMins < 10;
+            const isExpired = remainingMs <= 0;
+            const timerColor = isExpired ? 'text-red-600 font-bold' : isUrgent ? 'text-orange-600 font-semibold' : 'text-blue-700';
+            const timerText = isExpired
+                ? '⚠️ Time expired — job may be reassigned'
+                : `⏱ ${isRush ? 'Rush' : 'Standard'} job · ${remainingMins}m ${remainingSecs.toString().padStart(2,'0')}s remaining`;
+            countdownHtml = `<p class="text-xs mt-2 ${timerColor}" id="timer-${job.id}" data-deadline="${deadlineMs}" data-rush="${isRush}">${timerText}</p>`;
+        }
         
         return `
             <div class="sa-card p-4 cursor-pointer hover:shadow-md transition-shadow mb-3" onclick="viewJob('${job.id}')">
@@ -197,10 +235,29 @@ function renderJobsByStore(availableJobs, inProgressJobs, pendingApprovalJobs) {
                         <p class="text-xs text-gray-500 mb-2">${escapeHtml(storeAddress)}</p>
                     ` : ''}
                 ` : '<p class="text-sm text-gray-500 italic">Store information not available</p>'}
-                <p class="text-sm font-semibold text-blue-600 mt-2">$${parseFloat(job.payout_per_store || 0).toFixed(2)} per store</p>
+                <p class="text-sm font-semibold text-blue-600 mt-2">Earn $${(parseFloat(job.payout_per_store || 0) * 0.6).toFixed(2)} per store</p>
+                ${countdownHtml}
             </div>
         `;
     };
+
+    // Live countdown ticker — updates all visible timers every second
+    if (window._countdownInterval) clearInterval(window._countdownInterval);
+    window._countdownInterval = setInterval(() => {
+        document.querySelectorAll('[id^="timer-"][data-deadline]').forEach(el => {
+            const deadlineMs = parseInt(el.dataset.deadline, 10);
+            const isRush = el.dataset.rush === 'true';
+            const remainingMs = deadlineMs - Date.now();
+            const remainingMins = Math.max(0, Math.floor(remainingMs / 60000));
+            const remainingSecs = Math.max(0, Math.floor((remainingMs % 60000) / 1000));
+            const isUrgent = remainingMins < 10;
+            const isExpired = remainingMs <= 0;
+            el.className = 'text-xs mt-2 ' + (isExpired ? 'text-red-600 font-bold' : isUrgent ? 'text-orange-600 font-semibold' : 'text-blue-700');
+            el.textContent = isExpired
+                ? '⚠️ Time expired — job may be reassigned'
+                : `⏱ ${isRush ? 'Rush' : 'Standard'} job · ${remainingMins}m ${remainingSecs.toString().padStart(2,'0')}s remaining`;
+        });
+    }, 1000);
     
     // Build HTML for a store group
     const renderStoreGroup = (store, jobs, sectionTitle) => {

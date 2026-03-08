@@ -216,7 +216,7 @@
                             <div class="text-right">
                                 ${isBrandView ? 
                                     `<div class="text-sm font-medium text-gray-900">${job.status === 'completed' ? '✅ Complete' : '⏳ In Progress'}</div>` :
-                                    `<div class="text-sm font-medium text-gray-900">$${job.payout_per_store || 0}/store</div>
+                                    `<div class="text-sm font-medium text-gray-900">Earn $${(parseFloat(job.payout_per_store || 0) * 0.6).toFixed(2)}/store</div>
                                      <div class="mt-2 space-x-2">
                                          <button class="btn-gray text-sm" onclick="viewJobDetails('${job.id}')">View Details</button>
                                          ${canAccept ? '<button class="btn-red text-sm" onclick="acceptJob(\'' + job.id + '\')">Accept Job</button>' : ''}

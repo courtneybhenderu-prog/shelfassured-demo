@@ -149,7 +149,7 @@
             sc.from('users').select('id, full_name, email, role, is_active, created_at, company_name').eq('role', 'brand_client').order('created_at', { ascending: false }),
             sc.from('jobs').select('id, title, status, created_at, client_id, total_payout').order('created_at', { ascending: false }),
             sc.from('audit_requests').select('id, title, audit_type, status, created_at, client_id, preferred_contact').order('created_at', { ascending: false }),
-            sc.from('brands').select('id, name, website, created_at, logo_url, is_shadow').order('created_at', { ascending: false })
+            sc.from('brands').select('id, name, website, created_at, logo_url, is_shadow, pipeline_stage').order('created_at', { ascending: false })
         ]);
 
         allBrandUsers = users    || [];
@@ -298,6 +298,25 @@
                 } else {
                     logoHtml = `<div class="w-10 h-10 flex items-center justify-center bg-gray-100 rounded border border-gray-200 text-gray-400 text-xs">No Logo</div>`;
                 }
+                const stageColors = {
+                    'scanned':          'bg-gray-100 text-gray-600',
+                    'prospect':         'bg-blue-100 text-blue-700',
+                    'pitched':          'bg-yellow-100 text-yellow-700',
+                    'demo_scheduled':   'bg-orange-100 text-orange-700',
+                    'converted':        'bg-green-100 text-green-700',
+                    'active_client':    'bg-red-100 text-red-700'
+                };
+                const stageLabels = {
+                    'scanned':          'Scanned',
+                    'prospect':         'Prospect',
+                    'pitched':          'Pitched',
+                    'demo_scheduled':   'Demo Scheduled',
+                    'converted':        'Converted',
+                    'active_client':    'Active Client'
+                };
+                const stage = b.pipeline_stage || (b.is_shadow ? 'scanned' : 'prospect');
+                const stageColor = stageColors[stage] || 'bg-gray-100 text-gray-600';
+                const stageLabel = stageLabels[stage] || stage;
                 return `
                 <div class="px-4 py-3 row-hover">
                     <div class="flex items-center gap-3">
@@ -307,7 +326,18 @@
                             ${b.website ? `<p class="text-xs text-gray-500 truncate">${esc(b.website)}</p>` : ''}
                             <p class="text-xs text-gray-400">Added ${timeAgo(b.created_at)}</p>
                         </div>
-                        <a href="brands-detail.html?id=${b.id}" class="text-xs text-[#C62828] hover:underline shrink-0">View</a>
+                        <div class="flex flex-col items-end gap-1 shrink-0">
+                            <select onchange="updatePipelineStage('${b.id}', this.value)"
+                                class="text-xs border border-gray-200 rounded px-1.5 py-0.5 ${stageColor} font-medium cursor-pointer focus:outline-none focus:ring-1 focus:ring-red-300">
+                                <option value="scanned"         ${stage === 'scanned'         ? 'selected' : ''}>Scanned</option>
+                                <option value="prospect"        ${stage === 'prospect'        ? 'selected' : ''}>Prospect</option>
+                                <option value="pitched"         ${stage === 'pitched'         ? 'selected' : ''}>Pitched</option>
+                                <option value="demo_scheduled"  ${stage === 'demo_scheduled'  ? 'selected' : ''}>Demo Scheduled</option>
+                                <option value="converted"       ${stage === 'converted'       ? 'selected' : ''}>Converted</option>
+                                <option value="active_client"   ${stage === 'active_client'   ? 'selected' : ''}>Active Client</option>
+                            </select>
+                            <a href="brands-detail.html?id=${b.id}" class="text-xs text-[#C62828] hover:underline">View</a>
+                        </div>
                     </div>
                 </div>`;
             }).join('');
@@ -320,6 +350,20 @@
         if (error) { alert('Error updating status: ' + error.message); return; }
         await loadBrandData();
     }
+
+    async function updatePipelineStage(brandId, stage) {
+        const sc = window.saClient || supabase;
+        const { error } = await sc.from('brands').update({ pipeline_stage: stage }).eq('id', brandId);
+        if (error) {
+            alert('Could not save pipeline stage: ' + error.message + '\n\nNote: Run the SQL migration to add the pipeline_stage column if you haven\'t yet.');
+            await loadBrandData(); // revert UI
+        }
+        // Update local cache silently (no full reload needed)
+        const brand = allBrands.find(b => b.id === brandId);
+        if (brand) brand.pipeline_stage = stage;
+    }
+
+    window.updatePipelineStage = updatePipelineStage;
 
     function setText(id, val) { const el = document.getElementById(id); if (el) el.textContent = val; }
     function esc(t) { if (t == null) return ''; const d = document.createElement('div'); d.textContent = String(t); return d.innerHTML; }
