@@ -180,6 +180,18 @@ function buildFlags(jobs, users, auditRequests, helpRequests) {
         });
     }
 
+    // 5b. Exception-reported jobs
+    const exceptionJobs = jobs.filter(j => j.status === 'exception_reported');
+    if (exceptionJobs.length > 0) {
+        flags.push({
+            level: 'warning',
+            label: 'Exception reports',
+            detail: `${exceptionJobs.length} job${exceptionJobs.length > 1 ? 's' : ''} flagged by shelfers as unable to complete — product not found, wrong item, or out of stock`,
+            action: 'manage-jobs.html',
+            actionLabel: 'Review Exceptions'
+        });
+    }
+
     // 6. New brand signups (last 7 days)
     const newBrands = users.filter(u => {
         if (u.role !== 'brand_client') return false;
@@ -238,11 +250,21 @@ function buildRecentJobs(jobs) {
 
     container.innerHTML = jobs.map(job => {
         const statusColor = {
-            completed: 'text-green-600',
-            assigned:  'text-blue-600',
-            pending:   'text-orange-500',
-            cancelled: 'text-red-500'
+            completed:          'text-green-600',
+            assigned:           'text-blue-600',
+            pending:            'text-orange-500',
+            pending_review:     'text-blue-600',
+            exception_reported: 'text-amber-600',
+            cancelled:          'text-red-500'
         }[job.status] || 'text-gray-500';
+        const statusLabel = {
+            pending_review:     'Pending Review',
+            exception_reported: '⚠️ Exception Reported',
+            completed:          'Completed',
+            assigned:           'Assigned',
+            pending:            'Pending',
+            cancelled:          'Cancelled'
+        }[job.status] || capitalize(job.status || 'unknown');
 
         return `
         <div class="px-4 py-3 hover:bg-gray-50 cursor-pointer" onclick="goToPage('../dashboard/job-details.html?job_id=${job.id}')">
@@ -250,7 +272,7 @@ function buildRecentJobs(jobs) {
                 <div class="flex-1 min-w-0">
                     <p class="text-sm font-medium text-gray-900 truncate">${escapeHtml(job.title || 'Untitled Job')}</p>
                     <p class="text-xs mt-0.5">
-                        <span class="font-medium ${statusColor}">${capitalize(job.status || 'unknown')}</span>
+                        <span class="font-medium ${statusColor}">${statusLabel}</span>
                         <span class="text-gray-400 ml-2">${timeAgo(job.created_at)}</span>
                     </p>
                 </div>

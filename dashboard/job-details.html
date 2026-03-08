@@ -36,6 +36,17 @@
     .brand-input:focus{outline:none;border-color:var(--brand-red);box-shadow:0 0 0 3px rgba(198,40,40,.15)}
     .badge{background:var(--card);border:1px solid var(--border);border-radius:9999px;padding:.25rem .6rem}
     .dropzone{border:2px dashed var(--border);border-radius:.75rem;background:#fff}
+    /* Barcode scan step */
+    .scan-step{border:2px solid var(--border);border-radius:.75rem;background:#fff;padding:1.25rem}
+    .scan-step.scan-verified{border-color:#059669;background:#f0fdf4}
+    .scan-step.scan-exception{border-color:#F59E0B;background:#fffbeb}
+    .scan-btn{display:inline-flex;align-items:center;gap:.5rem;background:var(--brand-red);color:#fff;border:none;border-radius:.5rem;padding:.6rem 1.2rem;font-size:.9rem;font-weight:600;cursor:pointer;transition:background .15s}
+    .scan-btn:hover{background:var(--brand-red-hover)}
+    .scan-btn:disabled{background:#9CA3AF;cursor:not-allowed}
+    .scan-badge-ok{display:inline-flex;align-items:center;gap:.4rem;background:#dcfce7;color:#166534;border-radius:9999px;padding:.3rem .8rem;font-size:.85rem;font-weight:600}
+    .scan-badge-fail{display:inline-flex;align-items:center;gap:.4rem;background:#fee2e2;color:#991b1b;border-radius:9999px;padding:.3rem .8rem;font-size:.85rem;font-weight:600}
+    #scanVideo{width:100%;max-height:220px;object-fit:cover;border-radius:.5rem;background:#000}
+    .exception-panel{margin-top:1rem;padding:1rem;background:#fffbeb;border:1px solid #F59E0B;border-radius:.75rem}
   </style>
 </head>
 <body class="font-sans antialiased">
@@ -85,6 +96,71 @@
             <p id="upc-display" class="mt-1 text-base font-mono font-bold text-gray-900">—</p>
           </div>
         </div>
+      </div>
+    </section>
+
+    <!-- ===== STEP 0: Barcode Verification ===== -->
+    <section id="barcodeSection" class="brand-card p-5 sm:p-6 mb-6">
+      <div class="flex items-center gap-3 mb-3">
+        <span class="text-2xl">🔍</span>
+        <div>
+          <h2 class="text-xl font-semibold">Step 1 — Verify Product</h2>
+          <p class="text-sm" style="color:var(--text-600)">Scan the barcode on the product to confirm you've found the correct item.</p>
+        </div>
+      </div>
+
+      <!-- Scan UI -->
+      <div id="scanUI" class="scan-step">
+        <div id="scanIdle" class="flex flex-col gap-3">
+          <p class="text-sm font-medium text-gray-700">Product UPC: <span id="expectedUpc" class="font-mono font-bold">—</span></p>
+          <div class="flex flex-wrap gap-3 items-center">
+            <button type="button" id="startScanBtn" class="scan-btn" onclick="startBarcodeScanner()">
+              📷 Scan Barcode
+            </button>
+            <span class="text-sm text-gray-500">Point your camera at the product barcode</span>
+          </div>
+          <p id="scanAttemptMsg" class="text-xs text-gray-400 hidden">Attempt <span id="scanAttemptCount">1</span> of 3</p>
+        </div>
+
+        <!-- Camera view -->
+        <div id="scanCamera" class="hidden">
+          <video id="scanVideo" autoplay playsinline muted></video>
+          <div class="mt-2 flex gap-2">
+            <button type="button" class="scan-btn" onclick="captureAndDecode()">📸 Capture &amp; Read</button>
+            <button type="button" class="btn-gray px-3 py-2 rounded-lg text-sm" onclick="stopScanner()">Cancel</button>
+          </div>
+          <canvas id="scanCanvas" class="hidden"></canvas>
+          <p id="scanCameraMsg" class="mt-2 text-sm text-gray-500"></p>
+        </div>
+
+        <!-- Result states -->
+        <div id="scanVerified" class="hidden">
+          <span class="scan-badge-ok">✓ Barcode verified — correct product found</span>
+        </div>
+        <div id="scanMismatch" class="hidden">
+          <span class="scan-badge-fail">✗ Barcode does not match — scanned: <span id="scannedUpcDisplay"></span></span>
+        </div>
+
+        <!-- Can't scan link (appears after 2 failures) -->
+        <div id="cantScanLink" class="hidden mt-3">
+          <button type="button" class="text-sm text-amber-700 font-semibold underline" onclick="showExceptionPanel()">
+            Can't scan the barcode? Report an issue instead →
+          </button>
+        </div>
+      </div>
+
+      <!-- Exception panel -->
+      <div id="exceptionPanel" class="exception-panel hidden">
+        <p class="text-sm font-semibold text-amber-800 mb-2">Why can't you complete this job as required?</p>
+        <select id="exceptionReason" class="brand-input w-full px-3 py-2 mb-3" onchange="handleExceptionChange()">
+          <option value="" disabled selected>Select a reason…</option>
+          <option value="product_not_found">Product not found</option>
+          <option value="wrong_item_on_shelf">Wrong item on shelf</option>
+          <option value="out_of_stock">Out of stock</option>
+          <option value="other">Other</option>
+        </select>
+        <p class="text-xs text-amber-700">You can still take photos of what you see and submit — photos are optional but helpful. Notes are required.</p>
+        <p class="text-xs text-amber-700 mt-1">Price is not required for exception submissions.</p>
       </div>
     </section>
 
@@ -171,11 +247,13 @@
           <div id="submitChecklist" class="rounded-xl border border-gray-200 bg-gray-50 p-4 text-sm">
             <p class="font-semibold text-gray-700 mb-2">Before you submit:</p>
             <ul class="space-y-1">
+              <li id="check-barcode" class="flex items-center gap-2 text-gray-400"><span class="check-icon">&#9675;</span> Barcode verified or exception reported</li>
               <li id="check-photo1" class="flex items-center gap-2 text-gray-400"><span class="check-icon">&#9675;</span> Photo 1: Product on shelf (close)</li>
               <li id="check-photo2" class="flex items-center gap-2 text-gray-400"><span class="check-icon">&#9675;</span> Photo 2: Section/shelf context</li>
               <li id="check-photo3" class="flex items-center gap-2 text-gray-400"><span class="check-icon">&#9675;</span> Photo 3: Wide-angle shelf view</li>
               <li id="check-price" class="flex items-center gap-2 text-gray-400"><span class="check-icon">&#9675;</span> Shelf price entered</li>
               <li id="check-stock" class="flex items-center gap-2 text-gray-400"><span class="check-icon">&#9675;</span> Stock level selected</li>
+              <li id="check-notes" class="flex items-center gap-2 text-gray-400 hidden"><span class="check-icon">&#9675;</span> Notes required for exception</li>
             </ul>
           </div>
 
@@ -463,6 +541,12 @@
           }
         }
 
+        // Store first assignment for barcode comparison
+        window.currentAssignment = first;
+        
+        // Initialize barcode verification step
+        initBarcodeStep(first?.sku_code || '');
+
         console.log('✅ Job loaded with assignments:', assignments);
         
       } catch (error) {
@@ -511,14 +595,201 @@
       updateChecklist();
     }
 
+    // ===== BARCODE SCANNER STATE =====
+    let scanStream = null;
+    let scanAttempts = 0;
+    const MAX_SCAN_ATTEMPTS = 3;
+    // barcodeState: 'pending' | 'verified' | 'exception'
+    window.barcodeState = 'pending';
+    window.exceptionReasonValue = '';
+
+    // Called after job loads — populate expected UPC
+    function initBarcodeStep(upc) {
+      const el = document.getElementById('expectedUpc');
+      if (el) el.textContent = upc || 'Not specified';
+      // If no UPC on file, auto-verify so flow isn't blocked
+      if (!upc) {
+        window.barcodeState = 'verified';
+        document.getElementById('scanIdle').innerHTML =
+          '<span class="scan-badge-ok">&#10003; No UPC on file — proceed to photos</span>';
+        document.getElementById('scanUI').classList.add('scan-verified');
+        updateChecklist();
+      }
+    }
+
+    // Start camera for barcode scanning
+    async function startBarcodeScanner() {
+      try {
+        scanAttempts++;
+        document.getElementById('scanAttemptMsg').classList.remove('hidden');
+        document.getElementById('scanAttemptCount').textContent = scanAttempts;
+        document.getElementById('scanIdle').classList.add('hidden');
+        document.getElementById('scanCamera').classList.remove('hidden');
+        document.getElementById('scanMismatch').classList.add('hidden');
+        document.getElementById('scanVerified').classList.add('hidden');
+
+        scanStream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, height: { ideal: 720 } }
+        });
+        document.getElementById('scanVideo').srcObject = scanStream;
+        document.getElementById('scanCameraMsg').textContent = 'Camera ready — position barcode in view, then tap Capture & Read.';
+      } catch (err) {
+        console.error('Camera error:', err);
+        document.getElementById('scanCamera').classList.add('hidden');
+        document.getElementById('scanIdle').classList.remove('hidden');
+        document.getElementById('scanCameraMsg').textContent = '';
+        // Camera not available — show exception path immediately
+        document.getElementById('cantScanLink').classList.remove('hidden');
+        alert('Camera access denied or not available. Please use the exception option below.');
+      }
+    }
+
+    // Stop camera stream
+    function stopScanner() {
+      if (scanStream) {
+        scanStream.getTracks().forEach(t => t.stop());
+        scanStream = null;
+      }
+      document.getElementById('scanCamera').classList.add('hidden');
+      document.getElementById('scanIdle').classList.remove('hidden');
+      if (scanAttempts >= 2) {
+        document.getElementById('cantScanLink').classList.remove('hidden');
+      }
+    }
+
+    // Capture frame and attempt barcode decode
+    async function captureAndDecode() {
+      const video = document.getElementById('scanVideo');
+      const canvas = document.getElementById('scanCanvas');
+      const msg = document.getElementById('scanCameraMsg');
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(video, 0, 0);
+
+      msg.textContent = 'Reading barcode…';
+
+      let decoded = null;
+
+      // Try BarcodeDetector API (Chrome/Android)
+      if ('BarcodeDetector' in window) {
+        try {
+          const detector = new BarcodeDetector({ formats: ['ean_13', 'ean_8', 'upc_a', 'upc_e', 'code_128', 'code_39', 'qr_code'] });
+          const barcodes = await detector.detect(canvas);
+          if (barcodes.length > 0) decoded = barcodes[0].rawValue;
+        } catch (e) { console.warn('BarcodeDetector failed:', e); }
+      }
+
+      // Fallback: ZXing via CDN (lazy load)
+      if (!decoded) {
+        try {
+          if (!window.ZXing) {
+            msg.textContent = 'Loading barcode library…';
+            await loadScript('https://unpkg.com/@zxing/library@0.21.3/umd/index.min.js');
+          }
+          const imgData = canvas.toDataURL('image/jpeg', 0.9);
+          const img = new Image();
+          img.src = imgData;
+          await new Promise(r => img.onload = r);
+          const reader = new window.ZXing.BrowserMultiFormatReader();
+          const result = await reader.decodeFromImageElement(img);
+          decoded = result?.text;
+        } catch (e) { console.warn('ZXing fallback failed:', e); }
+      }
+
+      stopScanner();
+
+      if (decoded) {
+        handleScanResult(decoded);
+      } else {
+        msg.textContent = '';
+        document.getElementById('scanMismatch').classList.remove('hidden');
+        document.getElementById('scannedUpcDisplay').textContent = 'could not read barcode';
+        if (scanAttempts >= MAX_SCAN_ATTEMPTS) {
+          document.getElementById('cantScanLink').classList.remove('hidden');
+          document.getElementById('startScanBtn').disabled = true;
+          document.getElementById('startScanBtn').textContent = 'Max attempts reached';
+        } else {
+          // Allow retry
+          document.getElementById('scanIdle').classList.remove('hidden');
+        }
+      }
+    }
+
+    // Compare scanned UPC to expected
+    function handleScanResult(scanned) {
+      const expected = (currentAssignment?.sku_code || '').replace(/\D/g, '');
+      const scannedClean = scanned.replace(/\D/g, '');
+      document.getElementById('scannedUpcDisplay').textContent = scanned;
+
+      const match = expected && scannedClean === expected;
+
+      if (match) {
+        // Verified!
+        window.barcodeState = 'verified';
+        document.getElementById('scanUI').classList.add('scan-verified');
+        document.getElementById('scanVerified').classList.remove('hidden');
+        document.getElementById('scanMismatch').classList.add('hidden');
+        document.getElementById('scanIdle').classList.add('hidden');
+        document.getElementById('cantScanLink').classList.add('hidden');
+        updateChecklist();
+      } else {
+        // Mismatch
+        document.getElementById('scanMismatch').classList.remove('hidden');
+        document.getElementById('scanIdle').classList.remove('hidden');
+        if (scanAttempts >= MAX_SCAN_ATTEMPTS) {
+          document.getElementById('cantScanLink').classList.remove('hidden');
+          document.getElementById('startScanBtn').disabled = true;
+          document.getElementById('startScanBtn').textContent = 'Max attempts reached';
+        }
+      }
+    }
+
+    // Show exception panel
+    function showExceptionPanel() {
+      document.getElementById('exceptionPanel').classList.remove('hidden');
+      document.getElementById('scanUI').classList.add('scan-exception');
+      document.getElementById('cantScanLink').classList.add('hidden');
+    }
+
+    // Handle exception reason selection
+    function handleExceptionChange() {
+      const reason = document.getElementById('exceptionReason').value;
+      window.exceptionReasonValue = reason;
+      if (reason) {
+        window.barcodeState = 'exception';
+        // Relax photo/price requirements
+        document.getElementById('check-photo1').querySelector('span').textContent = '(optional)';
+        document.getElementById('check-photo2').querySelector('span').textContent = '(optional)';
+        document.getElementById('check-photo3').querySelector('span').textContent = '(optional)';
+        document.getElementById('check-price').classList.add('hidden');
+        document.getElementById('check-notes').classList.remove('hidden');
+      }
+      updateChecklist();
+    }
+
+    // Lazy script loader
+    function loadScript(src) {
+      return new Promise((resolve, reject) => {
+        const s = document.createElement('script');
+        s.src = src;
+        s.onload = resolve;
+        s.onerror = reject;
+        document.head.appendChild(s);
+      });
+    }
+
     // Update submission checklist and enable/disable submit button
     function updateChecklist() {
+      const isException = window.barcodeState === 'exception';
       const checks = [
-        { id: 'check-photo1', met: !!window.product_closeupFile },
-        { id: 'check-photo2', met: !!window.section_contextFile },
-        { id: 'check-photo3', met: !!window.wide_angleFile },
-        { id: 'check-price',  met: !!(document.getElementById('price')?.value?.trim()) },
-        { id: 'check-stock',  met: !!(document.getElementById('stock')?.value) }
+        { id: 'check-barcode', met: window.barcodeState === 'verified' || window.barcodeState === 'exception' },
+        { id: 'check-photo1', met: isException ? true : !!window.product_closeupFile },
+        { id: 'check-photo2', met: isException ? true : !!window.section_contextFile },
+        { id: 'check-photo3', met: isException ? true : !!window.wide_angleFile },
+        { id: 'check-price',  met: isException ? true : !!(document.getElementById('price')?.value?.trim()) },
+        { id: 'check-stock',  met: isException ? true : !!(document.getElementById('stock')?.value) },
+        { id: 'check-notes',  met: isException ? !!(document.getElementById('notes')?.value?.trim()) : true }
       ];
 
       checks.forEach(({ id, met }) => {
@@ -670,20 +941,39 @@
           }
         }
 
-        // Validate required photos
-        const requiredPhotos = ['product_closeup', 'section_context', 'wide_angle'];
-        const missingPhotos = requiredPhotos.filter(key => !window[key + 'File']);
-        
-        if (missingPhotos.length > 0) {
-          showError(`Please upload all required photos: ${missingPhotos.join(', ')}`);
+        // Validate barcode step
+        if (window.barcodeState === 'pending') {
+          showError('Please scan the product barcode or report an issue before submitting.');
+          document.getElementById('barcodeSection').scrollIntoView({ behavior: 'smooth' });
           return;
         }
 
-        // Validate stock level
-        const stock = document.getElementById('stock').value;
-        if (!stock) {
-          showError('Please select stock level');
-          return;
+        const isException = window.barcodeState === 'exception';
+
+        if (isException) {
+          // Exception path: notes required, photos optional, price optional
+          const notes = document.getElementById('notes').value?.trim();
+          if (!notes) {
+            showError('Please add notes explaining the issue before submitting.');
+            document.getElementById('notes').focus();
+            return;
+          }
+        } else {
+          // Normal path: all photos and price required
+          const requiredPhotos = ['product_closeup', 'section_context', 'wide_angle'];
+          const missingPhotos = requiredPhotos.filter(key => !window[key + 'File']);
+          
+          if (missingPhotos.length > 0) {
+            showError(`Please upload all required photos: ${missingPhotos.join(', ')}`);
+            return;
+          }
+
+          // Validate stock level
+          const stock = document.getElementById('stock').value;
+          if (!stock) {
+            showError('Please select stock level');
+            return;
+          }
         }
 
         // Show loading
@@ -693,16 +983,19 @@
         const photoUrls = await uploadPhotos();
 
         // Create job submission
+        const stockVal = isException ? (document.getElementById('stock').value || null) : document.getElementById('stock').value;
         const submissionData = {
           job_id: currentJob.id,
           contractor_id: currentUser.id,
-          submission_type: 'photo',
+          submission_type: isException ? 'exception' : 'photo',
           data: {
             price: document.getElementById('price').value ? parseFloat(document.getElementById('price').value) : null,
-            stock_level: stock,
+            stock_level: stockVal,
             notes: document.getElementById('notes').value || null,
             captured_at: document.getElementById('capturedAt').value,
-            device: document.getElementById('device').value
+            device: document.getElementById('device').value,
+            barcode_verified: window.barcodeState === 'verified',
+            exception_reason: isException ? (window.exceptionReasonValue || null) : null
           },
           files: photoUrls
         };
@@ -721,10 +1014,11 @@
         console.log('✅ Job submission record created:', submission);
 
         // Update job status - CRITICAL: must happen after submission is saved
+        const newJobStatus = isException ? 'exception_reported' : 'pending_review';
         const { data: updatedJobs, error: updateError } = await supabase
           .from('jobs')
           .update({ 
-            status: 'pending_review',
+            status: newJobStatus,
             updated_at: new Date().toISOString()
           })
           .eq('id', currentJob.id)
@@ -760,7 +1054,9 @@
 
         // Show success with storage info
         const hasStorageIssues = photoUrls.some(photo => photo.error);
-        if (hasStorageIssues) {
+        if (isException) {
+          showSuccess('Exception reported successfully. Thank you for letting us know — we will follow up.');
+        } else if (hasStorageIssues) {
           showSuccess('Job submitted successfully! Photos saved locally (storage bucket needs setup).');
         } else {
           showSuccess('Job submitted successfully! Thank you for your work.');

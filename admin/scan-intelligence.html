@@ -178,9 +178,10 @@
             text-transform: uppercase;
             letter-spacing: 0.04em;
         }
-        .badge-approved       { background: #d1fae5; color: #065f46; }
-        .badge-pending_review { background: #fef3c7; color: #92400e; }
-        .badge-rejected       { background: #fee2e2; color: #991b1b; }
+        .badge-approved            { background: #d1fae5; color: #065f46; }
+        .badge-pending_review      { background: #fef3c7; color: #92400e; }
+        .badge-rejected            { background: #fee2e2; color: #991b1b; }
+        .badge-exception_reported  { background: #fef3c7; color: #92400e; border: 1px solid #f59e0b; }
 
         /* ── Compliance score bar ── */
         .score-bar-wrap { width: 80px; }
@@ -1177,7 +1178,12 @@ function switchView(view) {
 // HELPERS
 // ────────────────────────────────────────────────────────────
 function badgeHTML(status) {
-    const labels = { approved:'Approved', pending_review:'Pending', rejected:'Rejected' };
+    const labels = {
+        approved:           'Approved',
+        pending_review:     'Pending Review',
+        rejected:           'Rejected',
+        exception_reported: '⚠ Exception'
+    };
     return `<span class="badge badge-${status}">${labels[status] || status}</span>`;
 }
 
