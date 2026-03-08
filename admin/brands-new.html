@@ -6,7 +6,7 @@
   <title>ShelfAssured • Brand Onboarding (Admin)</title>
   <link rel="preconnect" href="https://cdn.jsdelivr.net" />
   <style>
-    body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Inter,sans-serif;margin:24px;background:#f6f7f9}
+    body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Inter,sans-serif;margin:16px;background:#f6f7f9}
     .wrap{max-width:1000px;margin:0 auto}
     .card{background:#fff;border:1px solid #e5e7eb;border-radius:16px;box-shadow:0 1px 2px rgba(0,0,0,.04);padding:16px;margin-bottom:16px}
     h1{font-size:22px;margin:0 0 8px}
@@ -15,10 +15,10 @@
     .grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
     .full{grid-column:1 / -1}
     label{font-size:12px;font-weight:600;margin-bottom:6px;display:block}
-    input,select,textarea{width:100%;padding:10px 12px;border:1px solid #d1d5db;border-radius:12px}
+    input,select,textarea{width:100%;padding:10px 12px;border:1px solid #d1d5db;border-radius:12px;box-sizing:border-box;font-size:16px}
     textarea{min-height:84px}
     .row{display:flex;gap:8px;align-items:center}
-    .btn{background:#111827;color:#fff;border:0;border-radius:12px;padding:10px 14px;cursor:pointer}
+    .btn{background:#111827;color:#fff;border:0;border-radius:12px;padding:10px 14px;cursor:pointer;font-size:14px;white-space:nowrap}
     .btn.alt{background:#374151}
     .btn.ghost{background:#fff;color:#111827;border:1px solid #e5e7eb}
     .pill{border:1px dashed #e5e7eb;border-radius:12px;padding:12px}
@@ -29,6 +29,19 @@
     code.small{font-size:11px;color:#6b7280}
     .back-link{display:inline-flex;align-items:center;color:#2563eb;text-decoration:none;font-size:14px;font-weight:500;transition:color 0.2s}
     .back-link:hover{color:#1d4ed8}
+    /* ── Mobile responsive ── */
+    @media (max-width: 640px) {
+      body { margin: 12px; }
+      .grid { grid-template-columns: 1fr; }
+      .full { grid-column: 1; }
+      .row { flex-wrap: wrap; }
+      .section-header { flex-direction: column; align-items: flex-start !important; gap: 10px; }
+      .section-header .row { width: 100%; }
+      .section-header .row button { flex: 1; text-align: center; }
+      .logo-upload-row { flex-direction: column; align-items: flex-start !important; }
+      .logo-upload-row input[type=text] { width: 100%; }
+      .kpi button { flex: 1 1 auto; }
+    }
   </style>
 </head>
 <body>
@@ -73,15 +86,15 @@
         </div>
         <div class="full">
           <label>Brand Logo</label>
-          <div class="flex items-center space-x-4">
-            <input type="file" id="brand_logo_file" accept="image/*" class="hidden" />
+          <div class="logo-upload-row" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+            <input type="file" id="brand_logo_file" accept="image/*" style="display:none" />
             <button type="button" onclick="document.getElementById('brand_logo_file').click()" 
-                    class="px-4 py-2 bg-gray-200 rounded-lg hover:bg-gray-300 text-sm">
+                    class="btn ghost" style="flex-shrink:0">
               Upload Logo
             </button>
-            <input type="text" id="brand_logo_url" placeholder="Or paste logo URL" class="flex-1" />
-            <div id="brand_logo_preview" class="w-16 h-16 border border-gray-300 rounded-lg flex items-center justify-center bg-gray-50 hidden">
-              <img id="brand_logo_preview_img" src="" alt="Logo preview" class="max-w-full max-h-full object-contain" />
+            <input type="text" id="brand_logo_url" placeholder="Or paste logo URL" style="flex:1;min-width:160px" />
+            <div id="brand_logo_preview" style="width:48px;height:48px;border:1px solid #d1d5db;border-radius:8px;display:none;align-items:center;justify-content:center;background:#f9fafb;overflow:hidden;flex-shrink:0">
+              <img id="brand_logo_preview_img" src="" alt="Logo preview" style="max-width:100%;max-height:100%;object-fit:contain" />
             </div>
           </div>
           <p class="hint" style="font-size:11px;margin-top:4px;">Upload image or paste URL (JPG, PNG, SVG)</p>
@@ -94,12 +107,12 @@
     </form>
 
     <div class="card">
-      <div class="row" style="justify-content:space-between">
+      <div class="row section-header" style="justify-content:space-between;align-items:flex-start">
         <div>
           <h2>Products We'll Monitor</h2>
           <p class="hint">Tell us which products need our eyes on the shelf. We'll track OOS, compliance, pricing, and competitive moves for each one.</p>
         </div>
-        <div class="row">
+        <div class="row" style="flex-wrap:wrap">
           <input type="file" id="productsCsv" accept=".csv" style="display:none" />
           <button class="btn ghost" id="uploadProducts">📁 Upload CSV</button>
           <button class="btn ghost" id="downloadProductsTemplate">📥 Template</button>
@@ -127,12 +140,12 @@
     </div>
 
     <div class="card">
-      <div class="row" style="justify-content:space-between">
+      <div class="row section-header" style="justify-content:space-between;align-items:flex-start">
         <div>
           <h2>Retail Locations</h2>
           <p class="hint">Point us to your battleground stores. We'll deploy our field team to monitor execution, compliance, and competitive activity.</p>
         </div>
-        <div class="row">
+        <div class="row" style="flex-wrap:wrap">
           <input type="file" id="storesCsv" accept=".csv" style="display:none" />
           <button class="btn ghost" id="uploadStores">📁 Upload CSV</button>
           <button class="btn ghost" id="downloadStoresTemplate">📥 Template</button>
