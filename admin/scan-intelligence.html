@@ -456,6 +456,10 @@
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
                     Excel
                 </button>
+                <button onclick="openPitchModal()" class="btn-export" style="background:#fef3c7;color:#92400e;border-color:#fde68a;">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+                    Generate Pitch Report
+                </button>
             </div>
         </div>
 
@@ -672,6 +676,63 @@
     <img id="lightbox-img" src="" alt="Scan photo">
     <div id="lightbox-caption"></div>
     <button id="lightbox-next" onclick="lightboxNav(1); event.stopPropagation();">&#8250;</button>
+</div>
+
+<!-- ═══════════════════════════════════════════════════
+     PITCH REPORT MODAL
+═══════════════════════════════════════════════════ -->
+<div id="pitch-modal" style="display:none;position:fixed;inset:0;z-index:10000;background:rgba(0,0,0,0.6);align-items:center;justify-content:center;padding:1rem;">
+    <div style="background:white;border-radius:1rem;max-width:560px;width:100%;max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,0.3);">
+        <!-- Header -->
+        <div style="padding:1.5rem 1.5rem 1rem;border-bottom:1px solid #f3f4f6;">
+            <div style="display:flex;align-items:center;justify-content:space-between;">
+                <div>
+                    <h2 style="font-size:1.1rem;font-weight:700;color:#111827;margin:0;">Generate Pitch Report</h2>
+                    <p style="font-size:0.8rem;color:#6b7280;margin:0.25rem 0 0;" id="pitch-scan-count">Based on current filters</p>
+                </div>
+                <button onclick="closePitchModal()" style="background:none;border:none;font-size:1.5rem;color:#9ca3af;cursor:pointer;line-height:1;">&times;</button>
+            </div>
+        </div>
+
+        <!-- Body -->
+        <div style="padding:1.25rem 1.5rem;">
+
+            <!-- Brand name -->
+            <div style="margin-bottom:1rem;">
+                <label style="display:block;font-size:0.75rem;font-weight:600;color:#6b7280;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:0.4rem;">Brand Name</label>
+                <input id="pitch-brand" type="text" placeholder="e.g. DJ's Boudain" style="width:100%;padding:0.5rem 0.75rem;border:1px solid #d1d5db;border-radius:0.5rem;font-size:0.9rem;">
+            </div>
+
+            <!-- Product name -->
+            <div style="margin-bottom:1rem;">
+                <label style="display:block;font-size:0.75rem;font-weight:600;color:#6b7280;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:0.4rem;">Product / SKU</label>
+                <input id="pitch-product" type="text" placeholder="e.g. Original Boudain 16oz" style="width:100%;padding:0.5rem 0.75rem;border:1px solid #d1d5db;border-radius:0.5rem;font-size:0.9rem;">
+            </div>
+
+            <!-- Key finding -->
+            <div style="margin-bottom:1rem;">
+                <label style="display:block;font-size:0.75rem;font-weight:600;color:#6b7280;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:0.4rem;">Key Finding (one sentence)</label>
+                <input id="pitch-finding" type="text" placeholder="e.g. Shelf tag missing in 3 of 5 HEB locations" style="width:100%;padding:0.5rem 0.75rem;border:1px solid #d1d5db;border-radius:0.5rem;font-size:0.9rem;">
+            </div>
+
+            <!-- Scan summary (auto-filled) -->
+            <div style="background:#f9fafb;border-radius:0.75rem;padding:1rem;margin-bottom:1rem;border:1px solid #e5e7eb;">
+                <p style="font-size:0.75rem;font-weight:600;color:#6b7280;text-transform:uppercase;letter-spacing:0.05em;margin:0 0 0.5rem;">Scan Summary (auto-filled from filters)</p>
+                <div id="pitch-summary-content" style="font-size:0.85rem;color:#374151;line-height:1.6;"></div>
+            </div>
+
+            <!-- Action buttons -->
+            <div style="display:flex;gap:0.75rem;flex-wrap:wrap;">
+                <button onclick="generatePitchPDF()" style="flex:1;min-width:140px;padding:0.65rem 1rem;background:#C62828;color:white;border:none;border-radius:0.5rem;font-size:0.875rem;font-weight:600;cursor:pointer;">
+                    Download PDF Report
+                </button>
+                <button onclick="copyPitchEmail()" style="flex:1;min-width:140px;padding:0.65rem 1rem;background:#1d4ed8;color:white;border:none;border-radius:0.5rem;font-size:0.875rem;font-weight:600;cursor:pointer;">
+                    Copy Email Draft
+                </button>
+            </div>
+            <p id="pitch-copy-confirm" style="display:none;font-size:0.8rem;color:#059669;margin-top:0.5rem;text-align:center;">Email draft copied to clipboard!</p>
+        </div>
+    </div>
 </div>
 
 <!-- ═══════════════════════════════════════════════════
@@ -1264,6 +1325,217 @@ function exportExcel() {
     XLSX.utils.book_append_sheet(wb, wsSummary, 'Summary');
 
     XLSX.writeFile(wb, `scan-intelligence-${today()}.xlsx`);
+}
+
+// ────────────────────────────────────────────────────────────
+// PITCH REPORT MODAL
+// ────────────────────────────────────────────────────────────
+function openPitchModal() {
+    const modal = document.getElementById('pitch-modal');
+    modal.style.display = 'flex';
+
+    // Auto-fill brand/product from current filters
+    const brandFilter = document.getElementById('filter-brand');
+    const brandText = brandFilter && brandFilter.selectedOptions[0]
+        ? brandFilter.selectedOptions[0].text.replace(' (all)', '')
+        : '';
+    if (brandText && brandText !== 'All Brands') {
+        document.getElementById('pitch-brand').value = brandText;
+    }
+
+    // Build scan summary
+    const scans = filteredScans;
+    const stores = [...new Set(scans.map(s => s.store_name))].filter(Boolean);
+    const banners = [...new Set(scans.map(s => s.banner))].filter(Boolean);
+    const skus = [...new Set(scans.map(s => s.sku_name))].filter(Boolean);
+    const prices = scans.map(s => s.shelf_price).filter(p => p && p > 0);
+    const avgPrice = prices.length > 0
+        ? '$' + (prices.reduce((a,b) => a+b, 0) / prices.length).toFixed(2)
+        : 'N/A';
+    const oosCount = scans.filter(s => s.out_of_stock).length;
+    const dateRange = scans.length > 0 ? (() => {
+        const dates = scans.map(s => new Date(s.submitted_at)).sort((a,b) => a-b);
+        const fmt = d => d.toLocaleDateString('en-US', {month:'short', day:'numeric', year:'numeric'});
+        return dates.length === 1 ? fmt(dates[0]) : `${fmt(dates[0])} – ${fmt(dates[dates.length-1])}`;
+    })() : 'N/A';
+
+    if (skus.length === 1) document.getElementById('pitch-product').value = skus[0];
+
+    document.getElementById('pitch-scan-count').textContent =
+        `${scans.length} scan${scans.length !== 1 ? 's' : ''} selected from current filters`;
+
+    document.getElementById('pitch-summary-content').innerHTML = `
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.4rem 1.5rem;">
+            <div><span style="color:#9ca3af;">Scans:</span> <strong>${scans.length}</strong></div>
+            <div><span style="color:#9ca3af;">Stores:</span> <strong>${stores.length}</strong></div>
+            <div><span style="color:#9ca3af;">Banners:</span> <strong>${banners.slice(0,3).join(', ')}${banners.length > 3 ? '…' : ''}</strong></div>
+            <div><span style="color:#9ca3af;">Avg Price:</span> <strong>${avgPrice}</strong></div>
+            <div><span style="color:#9ca3af;">Out of Stock:</span> <strong style="color:${oosCount > 0 ? '#ef4444' : '#10b981'}">${oosCount}</strong></div>
+            <div><span style="color:#9ca3af;">Date Range:</span> <strong>${dateRange}</strong></div>
+        </div>
+    `;
+}
+
+function closePitchModal() {
+    document.getElementById('pitch-modal').style.display = 'none';
+    document.getElementById('pitch-copy-confirm').style.display = 'none';
+}
+
+function generatePitchPDF() {
+    const brand   = document.getElementById('pitch-brand').value.trim() || 'Your Brand';
+    const product = document.getElementById('pitch-product').value.trim() || 'Your Product';
+    const finding = document.getElementById('pitch-finding').value.trim();
+    const scans   = filteredScans;
+
+    const stores  = [...new Set(scans.map(s => s.store_name))].filter(Boolean);
+    const banners = [...new Set(scans.map(s => s.banner))].filter(Boolean);
+    const prices  = scans.map(s => s.shelf_price).filter(p => p && p > 0);
+    const avgPrice = prices.length > 0
+        ? '$' + (prices.reduce((a,b) => a+b, 0) / prices.length).toFixed(2)
+        : 'N/A';
+    const minPrice = prices.length > 0 ? '$' + Math.min(...prices).toFixed(2) : 'N/A';
+    const maxPrice = prices.length > 0 ? '$' + Math.max(...prices).toFixed(2) : 'N/A';
+    const oosCount = scans.filter(s => s.out_of_stock).length;
+    const avgScore = scans.length > 0
+        ? Math.round(scans.reduce((a,s) => a + (s.compliance_score||0), 0) / scans.length)
+        : 0;
+    const today = new Date().toLocaleDateString('en-US', {month:'long', day:'numeric', year:'numeric'});
+    const dateRange = scans.length > 0 ? (() => {
+        const dates = scans.map(s => new Date(s.submitted_at)).sort((a,b) => a-b);
+        const fmt = d => d.toLocaleDateString('en-US', {month:'short', day:'numeric', year:'numeric'});
+        return dates.length === 1 ? fmt(dates[0]) : `${fmt(dates[0])} – ${fmt(dates[dates.length-1])}`;
+    })() : 'N/A';
+
+    const storeRows = stores.slice(0, 12).map(store => {
+        const storeScan = scans.find(s => s.store_name === store);
+        const price = storeScan && storeScan.shelf_price ? '$' + parseFloat(storeScan.shelf_price).toFixed(2) : '—';
+        const oos = storeScan && storeScan.out_of_stock ? '⚠ Out of Stock' : 'In Stock';
+        const oosColor = storeScan && storeScan.out_of_stock ? '#ef4444' : '#10b981';
+        return `<tr style="border-bottom:1px solid #f3f4f6;">
+            <td style="padding:0.5rem 0.75rem;font-size:0.85rem;">${store}</td>
+            <td style="padding:0.5rem 0.75rem;font-size:0.85rem;color:#6b7280;">${storeScan ? storeScan.banner : '—'}</td>
+            <td style="padding:0.5rem 0.75rem;font-size:0.85rem;">${price}</td>
+            <td style="padding:0.5rem 0.75rem;font-size:0.85rem;color:${oosColor};">${oos}</td>
+        </tr>`;
+    }).join('');
+
+    const html = `<!DOCTYPE html><html><head><meta charset="UTF-8">
+    <title>ShelfAssured — ${brand} Pitch Report</title>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; margin:0; padding:0; color:#111827; }
+        .header { background:#C62828; color:white; padding:2rem 2.5rem; }
+        .header h1 { margin:0 0 0.25rem; font-size:1.5rem; }
+        .header p { margin:0; opacity:0.85; font-size:0.9rem; }
+        .badge { display:inline-block; background:rgba(255,255,255,0.2); border-radius:999px; padding:0.2rem 0.75rem; font-size:0.75rem; margin-top:0.5rem; }
+        .section { padding:1.5rem 2.5rem; }
+        .section h2 { font-size:1rem; font-weight:700; color:#C62828; text-transform:uppercase; letter-spacing:0.05em; margin:0 0 1rem; border-bottom:2px solid #fee2e2; padding-bottom:0.5rem; }
+        .kpi-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:1rem; margin-bottom:1.5rem; }
+        .kpi { background:#f9fafb; border-radius:0.75rem; padding:1rem; text-align:center; border:1px solid #e5e7eb; }
+        .kpi .num { font-size:1.75rem; font-weight:800; color:#C62828; }
+        .kpi .lbl { font-size:0.7rem; color:#6b7280; text-transform:uppercase; letter-spacing:0.05em; margin-top:0.25rem; }
+        table { width:100%; border-collapse:collapse; }
+        th { background:#f9fafb; padding:0.5rem 0.75rem; font-size:0.75rem; font-weight:600; color:#6b7280; text-align:left; text-transform:uppercase; letter-spacing:0.05em; }
+        .finding { background:#fef3c7; border-left:4px solid #f59e0b; padding:1rem 1.25rem; border-radius:0 0.5rem 0.5rem 0; margin-bottom:1rem; font-size:0.9rem; color:#92400e; }
+        .footer { background:#f9fafb; padding:1rem 2.5rem; font-size:0.75rem; color:#9ca3af; border-top:1px solid #e5e7eb; display:flex; justify-content:space-between; }
+        .cta { background:#C62828; color:white; padding:1rem 1.5rem; border-radius:0.75rem; text-align:center; margin:1rem 0; }
+        .cta p { margin:0; font-size:0.9rem; }
+        .cta strong { font-size:1rem; display:block; margin-bottom:0.25rem; }
+    </style>
+    </head><body>
+    <div class="header">
+        <h1>ShelfAssured — We Found This</h1>
+        <p>${brand} · ${product}</p>
+        <span class="badge">Confidential Shelf Intelligence Report</span>
+    </div>
+
+    <div class="section">
+        <h2>What We Found</h2>
+        ${finding ? `<div class="finding"><strong>Key Finding:</strong> ${finding}</div>` : ''}
+        <div class="kpi-grid">
+            <div class="kpi"><div class="num">${scans.length}</div><div class="lbl">Scans</div></div>
+            <div class="kpi"><div class="num">${stores.length}</div><div class="lbl">Stores</div></div>
+            <div class="kpi"><div class="num">${avgScore}</div><div class="lbl">Avg Compliance</div></div>
+            <div class="kpi"><div class="num">${avgPrice}</div><div class="lbl">Avg Shelf Price</div></div>
+            <div class="kpi"><div class="num" style="color:${oosCount > 0 ? '#ef4444' : '#10b981'}">${oosCount}</div><div class="lbl">Out of Stock</div></div>
+            <div class="kpi"><div class="num">${banners.length}</div><div class="lbl">Retail Banners</div></div>
+        </div>
+        <p style="font-size:0.8rem;color:#6b7280;margin:0;">Data collected: ${dateRange} · Banners: ${banners.join(', ')}</p>
+    </div>
+
+    <div class="section">
+        <h2>Store-Level Detail</h2>
+        <table>
+            <thead><tr>
+                <th>Store</th><th>Banner</th><th>Price</th><th>Stock</th>
+            </tr></thead>
+            <tbody>${storeRows}</tbody>
+        </table>
+        ${stores.length > 12 ? `<p style="font-size:0.75rem;color:#9ca3af;margin-top:0.5rem;">Showing 12 of ${stores.length} stores. Export to Excel for full list.</p>` : ''}
+    </div>
+
+    <div class="section">
+        <h2>Why ShelfAssured</h2>
+        <p style="font-size:0.9rem;color:#374151;line-height:1.7;">ShelfAssured is a human-verified shelf intelligence network built for emerging CPG brands. Our trusted network of Shelfers visits your retail locations and captures real-time data — pricing, stock levels, shelf placement, and photos — so you know exactly what's happening between the distributor's truck and the shopper's cart.</p>
+        <div class="cta">
+            <strong>Ready to turn shelf data into brand growth?</strong>
+            <p>Contact us to set up your first audit. <span style="opacity:0.85;">beshelfassured.com</span></p>
+        </div>
+    </div>
+
+    <div class="footer">
+        <span>ShelfAssured · beshelfassured.com</span>
+        <span>Generated ${today} · Confidential</span>
+    </div>
+    </body></html>`;
+
+    const blob = new Blob([html], { type: 'text/html' });
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement('a');
+    a.href     = url;
+    a.download = `ShelfAssured-Pitch-${brand.replace(/\s+/g,'-')}-${new Date().toISOString().split('T')[0]}.html`;
+    a.click();
+    URL.revokeObjectURL(url);
+}
+
+function copyPitchEmail() {
+    const brand   = document.getElementById('pitch-brand').value.trim() || '[Brand Name]';
+    const product = document.getElementById('pitch-product').value.trim() || '[Product Name]';
+    const finding = document.getElementById('pitch-finding').value.trim();
+    const scans   = filteredScans;
+    const stores  = [...new Set(scans.map(s => s.store_name))].filter(Boolean);
+    const banners = [...new Set(scans.map(s => s.banner))].filter(Boolean);
+    const oosCount = scans.filter(s => s.out_of_stock).length;
+
+    const email = `Subject: We found ${brand} on the shelf — and have data you'll want to see
+
+Hi [Name],
+
+I hope this note finds you well. My name is [Your Name] and I'm the founder of ShelfAssured, a shelf intelligence service built for emerging CPG brands.
+
+I wanted to reach out because our team recently came across ${brand}'s ${product} in the wild — and we captured some data we think you'd find valuable.
+
+Here's a quick snapshot of what we found:
+• ${scans.length} store location${scans.length !== 1 ? 's' : ''} scanned across ${banners.join(', ')}
+• ${stores.length} unique store${stores.length !== 1 ? 's' : ''} visited${oosCount > 0 ? `
+• ${oosCount} out-of-stock instance${oosCount !== 1 ? 's' : ''} identified` : ''}${finding ? `
+• ${finding}` : ''}
+
+I'd love to share the full report with you and talk about how ShelfAssured can give your team ongoing visibility into what's happening at shelf — pricing, stock levels, placement, and photos — without requiring you to send your own team into stores.
+
+Would you have 20 minutes this week for a quick call?
+
+Best,
+[Your Name]
+ShelfAssured
+beshelfassured.com`;
+
+    navigator.clipboard.writeText(email).then(() => {
+        const confirm = document.getElementById('pitch-copy-confirm');
+        confirm.style.display = 'block';
+        setTimeout(() => { confirm.style.display = 'none'; }, 3000);
+    }).catch(() => {
+        alert('Could not copy to clipboard. Please copy manually.');
+    });
 }
 
 // Sign out
