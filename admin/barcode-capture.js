@@ -51,6 +51,11 @@ document.addEventListener('DOMContentLoaded', async () => {
         setupStoreInput();
         setupBrandAutocomplete();
         setupFormSubmit();
+        // Populate category dropdown from shared categories.js if available
+        const catSelect = document.getElementById('product-category');
+        if (catSelect && typeof generateCategoryDropdownHTML === 'function') {
+            catSelect.innerHTML = generateCategoryDropdownHTML(true);
+        }
 
     } catch (err) {
         console.error('Init error:', err);
@@ -446,12 +451,23 @@ function clearBrandSelection() {
 
 async function checkBrandShadowStatus(brandName) {
     if (!brandName) return;
-    const found = knownBrands.find(b => b.name.toLowerCase() === brandName.toLowerCase());
+    const nameLower = brandName.toLowerCase().trim();
+    // Try exact match first, then partial match (handles 'Oh Sugar' vs 'Oh Sugar!')
+    let found = knownBrands.find(b => b.name.toLowerCase() === nameLower);
+    if (!found) {
+        // Try partial match: brand name contains query or query contains brand name
+        found = knownBrands.find(b => {
+            const bLower = b.name.toLowerCase();
+            return bLower.includes(nameLower) || nameLower.includes(bLower);
+        });
+    }
     if (found) {
         document.getElementById('brand-id-value').value = found.id;
         document.getElementById('brand-is-shadow').value = found.is_shadow ? 'true' : 'false';
         if (found.is_shadow) {
             document.getElementById('shadow-brand-notice').classList.remove('hidden');
+        } else {
+            document.getElementById('shadow-brand-notice').classList.add('hidden');
         }
     } else {
         document.getElementById('brand-id-value').value = '';
@@ -489,7 +505,7 @@ function captureGPSLocation() {
                 );
                 const geo = await resp.json();
                 const addr = geo.address || {};
-                const storeName = addr.shop || addr.amenity || addr.building || addr.road || '';
+                const storeName = addr.shop || addr.amenity || addr.building || '';
                 const city = addr.city || addr.town || addr.village || '';
                 const state = addr.state || '';
                 const suggestion = [storeName, city, state].filter(Boolean).join(', ');
@@ -499,6 +515,8 @@ function captureGPSLocation() {
                 }
                 status.textContent = `GPS locked: ${lat.toFixed(5)}, ${lng.toFixed(5)}`;
                 document.getElementById('store-locked-badge').classList.remove('hidden');
+                // Auto-search stores database using city from GPS
+                if (city) { searchStoresTypeahead(city); }
             } catch {
                 status.textContent = `GPS: ${lat.toFixed(5)}, ${lng.toFixed(5)}`;
             }
@@ -518,6 +536,8 @@ function captureGPSLocation() {
 
 function setupStoreInput() {
     const input = document.getElementById('store-input');
+    let storeSearchTimer = null;
+
     input.addEventListener('input', () => {
         storeValue = input.value;
         if (storeValue) {
@@ -525,7 +545,61 @@ function setupStoreInput() {
         } else {
             document.getElementById('store-locked-badge').classList.add('hidden');
         }
+        // Debounced typeahead search
+        clearTimeout(storeSearchTimer);
+        if (storeValue.length >= 2) {
+            storeSearchTimer = setTimeout(() => searchStoresTypeahead(storeValue), 300);
+        } else {
+            hideStoreSuggestions();
+        }
     });
+
+    input.addEventListener('blur', () => {
+        setTimeout(hideStoreSuggestions, 200);
+    });
+}
+
+async function searchStoresTypeahead(query) {
+    if (!query || query.length < 2) { hideStoreSuggestions(); return; }
+    try {
+        const { data: stores } = await _supabase
+            .from('stores')
+            .select('id, STORE, city, state, banner')
+            .or(`STORE.ilike.%${query}%,city.ilike.%${query}%,banner.ilike.%${query}%`)
+            .limit(8);
+        renderStoreSuggestions(stores || []);
+    } catch (e) {
+        console.warn('Store search error:', e);
+    }
+}
+
+function renderStoreSuggestions(stores) {
+    const suggestions = document.getElementById('store-suggestions');
+    if (!suggestions) return;
+    if (stores.length === 0) { hideStoreSuggestions(); return; }
+    suggestions.innerHTML = stores.map(s => {
+        const label = s.STORE || `${s.banner || ''} – ${s.city || ''}, ${s.state || ''}`;
+        return `<div class="px-3 py-2 hover:bg-gray-50 cursor-pointer text-sm"
+            onclick="selectStoreSuggestion('${escapeAttr(label)}', '${s.id}')"
+        ><span class="font-medium">${escapeHtml(label)}</span></div>`;
+    }).join('');
+    suggestions.classList.remove('hidden');
+}
+
+function selectStoreSuggestion(label, storeId) {
+    const input = document.getElementById('store-input');
+    input.value = label;
+    storeValue = label;
+    // Store the store ID for the scan event
+    const storeIdField = document.getElementById('store-id');
+    if (storeIdField) storeIdField.value = storeId;
+    document.getElementById('store-locked-badge').classList.remove('hidden');
+    hideStoreSuggestions();
+}
+
+function hideStoreSuggestions() {
+    const suggestions = document.getElementById('store-suggestions');
+    if (suggestions) suggestions.classList.add('hidden');
 }
 
 // ─── Photos ────────────────────────────────────────────────────────────────────

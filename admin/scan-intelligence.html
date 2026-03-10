@@ -821,10 +821,16 @@ async function loadScans() {
                     const price = d.price ? parseFloat(d.price) : null;
                     const stockLevel = d.stock_level || 'in_stock';
                     const isOOS = stockLevel === 'oos' || stockLevel === 'out_of_stock';
-                    // Extract photo URLs from files array
-                    const photos = Array.isArray(r.files)
-                        ? r.files.map(f => f.url || f).filter(Boolean)
-                        : [];
+                    // Extract photo URLs — handles array, JSON string, or keyed object
+                    let rawFiles = r.files;
+                    if (typeof rawFiles === 'string') {
+                        try { rawFiles = JSON.parse(rawFiles); } catch { rawFiles = []; }
+                    }
+                    const photos = Array.isArray(rawFiles)
+                        ? rawFiles.map(f => (typeof f === 'object' ? (f.url || f.publicUrl || f.path || '') : f)).filter(u => u && u.startsWith('http'))
+                        : (rawFiles && typeof rawFiles === 'object'
+                            ? Object.values(rawFiles).filter(v => typeof v === 'string' && v.startsWith('http'))
+                            : []);
                     return {
                         id: r.id,
                         job_id: r.job_id,

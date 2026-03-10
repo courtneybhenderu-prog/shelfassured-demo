@@ -247,30 +247,24 @@
                 
                 return `
                 <div class="py-4 border-b border-gray-200 last:border-b-0 hover:bg-gray-50 transition-colors">
-                    <div class="flex items-center justify-between">
-                        <div class="flex items-center space-x-4 flex-1">
-                            ${logoHtml}
-                            <div class="flex-1">
-                                <a href="../dashboard/brand-client.html?brand_id=${brand.id}" class="font-medium text-blue-600 hover:text-blue-800 hover:underline text-lg">
-                                    ${escapeHtml(brand.name || 'Unnamed Brand')} ${brand.name === 'Rambler' ? '⭐' : ''}
+                    <div class="flex items-start gap-3">
+                        <div class="flex-shrink-0">${logoHtml}</div>
+                        <div class="flex-1 min-w-0">
+                            <a href="brands-detail.html?id=${brand.id}" class="font-semibold text-gray-900 hover:text-blue-700 text-base leading-tight block truncate">
+                                ${escapeHtml(brand.name || 'Unnamed Brand')} ${brand.name === 'Rambler' ? '⭐' : ''}
+                            </a>
+                            ${brand.website ? `<div class="text-xs text-gray-500 mt-0.5 truncate">${escapeHtml(brand.website)}</div>` : ''}
+                            <div class="text-xs text-gray-400 mt-0.5">Created: ${brand.created_at ? new Date(brand.created_at).toLocaleDateString() : 'N/A'}</div>
+                            <div class="flex gap-2 mt-2">
+                                <a href="brands-detail.html?id=${brand.id}" 
+                                   class="px-3 py-1.5 bg-gray-600 text-white rounded-lg hover:bg-gray-700 font-medium text-xs">
+                                    Edit
                                 </a>
-                                ${brand.website ? `<div class="text-sm text-gray-500 mt-1">${escapeHtml(brand.website)}</div>` : ''}
-                                <div class="text-xs text-gray-400 mt-1">Created: ${brand.created_at ? new Date(brand.created_at).toLocaleDateString() : 'N/A'}</div>
+                                <a href="../dashboard/brand-client.html?brand_id=${brand.id}" target="_blank" rel="noopener" 
+                                   class="px-3 py-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium text-xs">
+                                    Brand View ↗
+                                </a>
                             </div>
-                        </div>
-                        <div class="flex items-center space-x-2">
-                            <a href="brands-detail.html?id=${brand.id}" 
-                               class="px-3 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 font-medium text-sm">
-                                Edit
-                            </a>
-                            <a href="../dashboard/brand-client.html?brand_id=${brand.id}" target="_blank" rel="noopener" 
-                               class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium text-sm">
-                                View Dashboard
-                            </a>
-                            <a href="../dashboard/brand-client.html?brand_id=${brand.id}" target="_blank" rel="noopener" 
-                               class="text-gray-400 hover:text-gray-600 text-lg" title="Open in new tab">
-                                ↗
-                            </a>
                         </div>
                     </div>
                 </div>

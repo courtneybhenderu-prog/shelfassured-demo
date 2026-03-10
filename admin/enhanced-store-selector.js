@@ -528,9 +528,11 @@ class StoreSelector {
             this.renderStoreList();
             this.updateCounts();
             this.renderFilterChips();
+            return this.filteredStores;
         } catch (error) {
             console.error('❌ Search failed:', error);
             this.showError('Search failed. Please try again.');
+            return [];
         }
     }
 

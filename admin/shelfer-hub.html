@@ -79,8 +79,8 @@
 <div class="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 z-50">
     <div class="flex justify-around py-3 text-xs sm:text-sm">
         <button onclick="goToPage('dashboard.html')" class="text-gray-500 hover:text-gray-700">Admin</button>
-        <button onclick="goToPage('shelfer-hub.html')" class="font-bold text-[#C62828]">Shelfers</button>
-        <button onclick="goToPage('brand-hub.html')" class="text-gray-500 hover:text-gray-700">Brands</button>
+        <button onclick="goToPage('shelfer-hub.html')" class="font-bold text-[#C62828]">Shelfer Hub</button>
+        <button onclick="goToPage('brand-hub.html')" class="text-gray-500 hover:text-gray-700">Brand Hub</button>
         <button onclick="goToPage('../dashboard/profile.html')" class="text-gray-500 hover:text-gray-700">Profile</button>
     </div>
 </div>
@@ -115,12 +115,22 @@
 
     async function loadShelferData() {
         const sc = window.saClient || supabase;
-        const [{ data: users }, { data: jobs }] = await Promise.all([
-            sc.from('users').select('id, full_name, email, role, is_active, approval_status, city, state, created_at').eq('role', 'shelfer').order('created_at', { ascending: false }),
+        // Query users with role 'shelfer' OR 'contractor' (some accounts may use either value)
+        const [{ data: users, error: usersError }, { data: jobs }] = await Promise.all([
+            sc.from('users').select('id, full_name, email, role, is_active, approval_status, city, state, created_at')
+              .or('role.eq.shelfer,role.eq.contractor')
+              .order('created_at', { ascending: false }),
             sc.from('jobs').select('id, title, status, created_at, shelfer_id').order('created_at', { ascending: false })
         ]);
 
-        allShelfers = users || [];
+        if (usersError) {
+            console.error('Error loading shelfers:', usersError);
+            // Fallback: load ALL users and filter client-side
+            const { data: allUsers } = await sc.from('users').select('id, full_name, email, role, is_active, approval_status, city, state, created_at').order('created_at', { ascending: false });
+            allShelfers = (allUsers || []).filter(u => u.role !== 'admin' && u.role !== 'brand_client');
+        } else {
+            allShelfers = users || [];
+        }
         allJobs     = jobs  || [];
 
         const today = new Date(); today.setHours(0,0,0,0);

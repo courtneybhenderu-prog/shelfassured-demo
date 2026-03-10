@@ -37,9 +37,10 @@
 
     <!-- Stats Row -->
     <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
-        <div class="bg-white rounded-lg shadow-sm p-4">
+        <div class="bg-white rounded-lg shadow-sm p-4 cursor-pointer hover:bg-gray-50 transition-colors" onclick="goToPage('brands.html')" title="View all brands">
             <p class="text-xs font-semibold text-gray-500 uppercase tracking-wide">Total Brands</p>
             <p class="text-3xl font-bold text-gray-900 mt-1" id="br-total">—</p>
+            <p class="text-xs text-[#C62828] mt-1">View all →</p>
         </div>
         <div class="bg-white rounded-lg shadow-sm p-4">
             <p class="text-xs font-semibold text-gray-500 uppercase tracking-wide">New This Week</p>
@@ -71,11 +72,11 @@
             <div class="flex items-center gap-3">
                 <label class="flex items-center gap-2 cursor-pointer select-none">
                     <div class="relative">
-                        <input type="checkbox" id="show-shadow-toggle" class="sr-only">
-                        <div id="toggle-track" class="w-9 h-5 bg-gray-300 rounded-full transition-colors"></div>
-                        <div id="toggle-thumb" class="absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform"></div>
+                        <input type="checkbox" id="show-shadow-toggle" class="sr-only" checked>
+                        <div id="toggle-track" class="w-9 h-5 bg-red-500 rounded-full transition-colors"></div>
+                        <div id="toggle-thumb" class="absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform" style="transform:translateX(16px)"></div>
                     </div>
-                    <span class="text-xs text-gray-500" id="toggle-label">Client brands only</span>
+                    <span class="text-xs text-gray-500" id="toggle-label">Showing all brands (incl. intelligence)</span>
                 </label>
             </div>
         </div>
@@ -92,8 +93,8 @@
 <div class="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 z-50">
     <div class="flex justify-around py-3 text-xs sm:text-sm">
         <button onclick="goToPage('dashboard.html')" class="text-gray-500 hover:text-gray-700">Admin</button>
-        <button onclick="goToPage('shelfer-hub.html')" class="text-gray-500 hover:text-gray-700">Shelfers</button>
-        <button onclick="goToPage('brand-hub.html')" class="font-bold text-[#C62828]">Brands</button>
+        <button onclick="goToPage('shelfer-hub.html')" class="text-gray-500 hover:text-gray-700">Shelfer Hub</button>
+        <button onclick="goToPage('brand-hub.html')" class="font-bold text-[#C62828]">Brand Hub</button>
         <button onclick="goToPage('../dashboard/profile.html')" class="text-gray-500 hover:text-gray-700">Profile</button>
     </div>
 </div>
@@ -148,12 +149,23 @@
 
     async function loadBrandData() {
         const sc = window.saClient || supabase;
-        const [{ data: users }, { data: jobs }, { data: auditReqs }, { data: brands }] = await Promise.all([
+        const [
+            { data: users,     error: usersErr },
+            { data: jobs,      error: jobsErr },
+            { data: auditReqs, error: auditErr },
+            { data: brands,    error: brandsErr }
+        ] = await Promise.all([
             sc.from('users').select('id, full_name, email, role, is_active, created_at, company_name').eq('role', 'brand_client').order('created_at', { ascending: false }),
             sc.from('jobs').select('id, title, status, created_at, client_id, total_payout').order('created_at', { ascending: false }),
             sc.from('audit_requests').select('id, title, audit_type, status, created_at, client_id, preferred_contact').order('created_at', { ascending: false }),
             sc.from('brands').select('id, name, website, created_at, logo_url, is_shadow, pipeline_stage').order('created_at', { ascending: false })
         ]);
+
+        if (usersErr)  console.error('Brand Hub: users query error', usersErr);
+        if (jobsErr)   console.error('Brand Hub: jobs query error', jobsErr);
+        if (auditErr)  console.error('Brand Hub: audit_requests query error', auditErr);
+        if (brandsErr) console.error('Brand Hub: brands query error', brandsErr);
+        console.log('Brand Hub data:', { users: users?.length, jobs: jobs?.length, brands: brands?.length });
 
         allBrandUsers = users    || [];
         allJobs       = jobs     || [];
@@ -167,14 +179,15 @@
         const pendingAudit = allAuditReqs.filter(r => r.status === 'pending_review').length;
         const clientBrands = allBrands.filter(b => !b.is_shadow).length;
         const shadowBrands = allBrands.filter(b => b.is_shadow).length;
+        const totalBrands  = allBrands.length;
 
-        setText('br-total',      clientBrands);
+        setText('br-total',      totalBrands);
         setText('br-new',        newThisWeek);
         setText('br-open-jobs',  openJobs);
         setText('br-audit-reqs', pendingAudit);
 
         const el = document.getElementById('brand-summary');
-        if (el) el.textContent = `${clientBrands} client brand${clientBrands !== 1 ? 's' : ''} &middot; ${shadowBrands} scanned (intelligence)`;
+        if (el) el.innerHTML = `${clientBrands} client brand${clientBrands !== 1 ? 's' : ''} &middot; ${shadowBrands} scanned (intelligence)`;
 
         renderActiveTab();
     }
