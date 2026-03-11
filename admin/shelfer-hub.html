@@ -115,21 +115,20 @@
 
     async function loadShelferData() {
         const sc = window.saClient || supabase;
-        // Query users with role 'shelfer' OR 'contractor' (some accounts may use either value)
-        const [{ data: users, error: usersError }, { data: jobs }] = await Promise.all([
+        // Fetch ALL users and filter client-side (consistent with Command Center approach)
+        // Server-side role filters can be blocked by RLS; client-side filtering is reliable
+        const [{ data: allUsers, error: usersError }, { data: jobs }] = await Promise.all([
             sc.from('users').select('id, full_name, email, role, is_active, approval_status, city, state, created_at')
-              .or('role.eq.shelfer,role.eq.contractor')
               .order('created_at', { ascending: false }),
             sc.from('jobs').select('id, title, status, created_at, shelfer_id').order('created_at', { ascending: false })
         ]);
 
         if (usersError) {
             console.error('Error loading shelfers:', usersError);
-            // Fallback: load ALL users and filter client-side
-            const { data: allUsers } = await sc.from('users').select('id, full_name, email, role, is_active, approval_status, city, state, created_at').order('created_at', { ascending: false });
-            allShelfers = (allUsers || []).filter(u => u.role !== 'admin' && u.role !== 'brand_client');
+            allShelfers = [];
         } else {
-            allShelfers = users || [];
+            // Filter client-side for shelfer and contractor roles
+            allShelfers = (allUsers || []).filter(u => u.role === 'shelfer' || u.role === 'contractor');
         }
         allJobs     = jobs  || [];
 
