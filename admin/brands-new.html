@@ -1156,13 +1156,24 @@
           const productUPC = rawBarcode;
           const barcodeValue = rawBarcode; // Required field in products table
           
-          // Step 1: Check if product exists by SKU (globally unique)
-          // Select fields
-          const { data: existingProduct } = await supabase
+          // Step 1: Check if product exists by barcode OR sku (both are unique constraints)
+          // Must check barcode first since that's the actual unique constraint that was throwing errors
+          let existingProduct = null;
+          const { data: byBarcode } = await supabase
             .from('products')
             .select('id, name, upc, sku, suggested_retail_price, size')
-            .eq('sku', sku)
+            .eq('barcode', barcodeValue)
             .maybeSingle();
+          if (byBarcode) {
+            existingProduct = byBarcode;
+          } else {
+            const { data: bySku } = await supabase
+              .from('products')
+              .select('id, name, upc, sku, suggested_retail_price, size')
+              .eq('sku', sku)
+              .maybeSingle();
+            existingProduct = bySku || null;
+          }
           
           let productId;
           
