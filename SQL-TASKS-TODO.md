@@ -170,6 +170,50 @@ WHERE id = 'a29d005d-e3c1-435c-b3d8-bfb79c433900';
 
 ---
 
+## TASK 9 — Fix SECURITY DEFINER on v_job_assignments view (Supabase Advisor CRITICAL)
+
+**Why:** Supabase flagged `public.v_job_assignments` as CRITICAL because it was created with `SECURITY DEFINER`. This means the view runs with the creator's permissions (bypassing RLS), so any authenticated user who queries it could potentially see all job assignments — not just their own.
+
+**The fix:** Recreate the view with `security_invoker = true` so it respects each user's RLS policies.
+
+```sql
+-- Drop and recreate v_job_assignments with SECURITY INVOKER (safe)
+DROP VIEW IF EXISTS public.v_job_assignments;
+
+CREATE VIEW public.v_job_assignments
+WITH (security_invoker = true)
+AS
+SELECT
+  j.id                AS job_id,
+  j.title             AS job_title,
+  s.id                AS store_id,
+  s.store_chain       AS store_chain,
+  s.name              AS store_name,
+  k.id                AS sku_id,
+  k.name              AS sku_name,
+  k.upc               AS sku_code,
+  b.id                AS brand_id,
+  b.name              AS brand_name,
+  j.created_at
+FROM public.job_store_skus jss
+JOIN public.jobs        j ON j.id = jss.job_id
+JOIN public.stores      s ON s.id = jss.store_id
+JOIN public.skus        k ON k.id = jss.sku_id
+LEFT JOIN public.brands b ON b.id = k.brand_id;
+
+-- Restore read access for authenticated users
+GRANT SELECT ON public.v_job_assignments TO authenticated;
+
+-- Refresh PostgREST schema cache
+NOTIFY pgrst, 'reload schema';
+```
+
+**Important:** Run TASK 1 (`session3-rls-migration.sql`) **before** this task. The view now respects RLS — so if RLS policies aren't set up correctly first, admins may not be able to see all job assignments through the view. Run TASK 1 first, then this.
+
+**Risk level:** Low for the demo (only you and a few known users are in the system), but fix before onboarding real brand clients.
+
+---
+
 ## Summary Checklist
 
 | # | Task | Priority | Status |
@@ -182,6 +226,7 @@ WHERE id = 'a29d005d-e3c1-435c-b3d8-bfb79c433900';
 | 6 | Verify `scan_events` table structure | 🟢 Low | Pending |
 | 7 | Create `product-photos` storage bucket | 🟡 High | Pending |
 | 8 | Flip Oh Sugar! to `is_shadow = false` for demo | 🟡 High | Pending |
+| 9 | Fix `v_job_assignments` SECURITY DEFINER (Supabase Advisor) | 🔴 Critical | Pending |
 
 ---
 
