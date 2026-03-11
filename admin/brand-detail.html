@@ -40,7 +40,7 @@
 </head>
 <body>
   <div class="wrap">
-    <a href="brand-onboarding.html" class="back-link">← Back to Brand Onboarding</a>
+    <a href="brands.html" class="back-link">← Back to Brands</a>
     
     <div id="loading" class="loading">
       Loading brand details...
@@ -149,22 +149,32 @@
             return;
           }
 
-          // Load products
-          const { data: products, error: productsErr } = await supabase
-            .from('products')
-            .select('*')
-            .eq('brand_id', brandId)
-            .order('created_at', { ascending: false });
+          // Load products — check both junction table (brand_id UUID) and products table (brand name text)
+          // This handles both scan-captured brands and manually onboarded brands
+          const [junctionProductsRes, nameProductsRes] = await Promise.all([
+            supabase.from('brand_products').select('product_id').eq('brand_id', brandId),
+            supabase.from('products').select('*').ilike('brand', brand.name).order('created_at', { ascending: false })
+          ]);
 
-          if (productsErr) console.warn('Products error:', productsErr);
+          let products = [];
+          if (nameProductsRes.data && nameProductsRes.data.length > 0) {
+            // Products linked by brand name (scan-captured or manually entered)
+            products = nameProductsRes.data;
+          } else if (junctionProductsRes.data && junctionProductsRes.data.length > 0) {
+            // Products linked via junction table — fetch full product details
+            const productIds = junctionProductsRes.data.map(r => r.product_id);
+            const { data: junctionProducts } = await supabase
+              .from('products').select('*').in('id', productIds);
+            products = junctionProducts || [];
+          }
 
-          // Load stores
-          const { data: stores, error: storesErr } = await supabase
-            .from('stores')
-            .select('*, retailers(name)')
-            .eq('id', brandId) // Note: This might need adjustment based on your store-brand relationship
-            .order('created_at', { ascending: false });
+          // Load stores via brand_stores junction table
+          const { data: brandStores, error: storesErr } = await supabase
+            .from('brand_stores')
+            .select('store_id, stores(id, name, address, city, state, status)')
+            .eq('brand_id', brandId);
 
+          const stores = (brandStores || []).map(bs => bs.stores).filter(Boolean);
           if (storesErr) console.warn('Stores error:', storesErr);
 
           // Populate brand info
@@ -188,7 +198,7 @@
               <div class="product-item">
                 <div style="font-weight:600;margin-bottom:4px">${p.name}</div>
                 <div style="font-size:12px;color:#6b7280">
-                  UPC/SKU: ${p.identifier} ${p.size ? '• ' + p.size : ''} ${p.suggested_retail_price ? '• $' + p.suggested_retail_price : ''}
+                  ${p.barcode ? 'UPC: ' + p.barcode : p.sku ? 'SKU: ' + p.sku : ''} ${p.size ? '• ' + p.size : ''} ${p.price ? '• $' + p.price : ''}
                   ${p.category ? '• ' + p.category : ''}
                 </div>
               </div>
@@ -204,9 +214,9 @@
               <div class="store-item">
                 <div style="font-weight:600;margin-bottom:4px">${s.name || 'Unnamed Store'}</div>
                 <div style="font-size:12px;color:#6b7280">
-                  ${s.address || 'No address'} ${s.retailers?.name ? '• ' + s.retailers.name : ''}
+                  ${[s.address, s.city, s.state].filter(Boolean).join(', ') || 'No address'}
                 </div>
-                <span class="status-badge status-${s.status}">${s.status}</span>
+                ${s.status ? `<span class="status-badge status-${s.status}">${s.status}</span>` : ''}
               </div>
             `).join('');
           } else {

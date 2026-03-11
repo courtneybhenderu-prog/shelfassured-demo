@@ -140,7 +140,7 @@
       </div>
     </div>
 
-    <div class="card">
+    <div class="card" id="retail-locations-section">
       <div class="row section-header" style="justify-content:space-between;align-items:flex-start">
         <div>
           <h2>Retail Locations</h2>
@@ -1794,9 +1794,53 @@
           stat.textContent = `Loaded ${addedCount} product${addedCount !== 1 ? 's' : ''} for this brand`;
           setTimeout(() => { stat.textContent = ''; }, 3000);
         } else {
-          console.log('ℹ️ No products found for this brand');
-          stat.textContent = 'No products found for this brand';
-          setTimeout(() => { stat.textContent = ''; }, 3000);
+          // Fallback: query products table by brand name (handles scan-captured brands
+          // where products.brand is a text field, not linked via brand_products junction table)
+          const brandName = brandNameInput.value || document.getElementById('brand_name').value || '';
+          console.log('ℹ️ No junction table products found, trying fallback by brand name:', brandName);
+          
+          if (brandName) {
+            const { data: nameProducts, error: nameError } = await supabase
+              .from('products')
+              .select('id, name, sku, upc, barcode, size, price, suggested_retail_price, category, brand')
+              .ilike('brand', brandName)
+              .order('created_at', { ascending: false });
+            
+            if (!nameError && nameProducts && nameProducts.length > 0) {
+              console.log(`✅ Found ${nameProducts.length} products by brand name fallback`);
+              products.innerHTML = '';
+              let addedCount = 0;
+              nameProducts.forEach((product, index) => {
+                addProductRow();
+                const lastRow = products.lastElementChild;
+                if (lastRow) {
+                  const nameInput = lastRow.querySelector('[data-k="name"]');
+                  const barcodeInput = lastRow.querySelector('[data-k="barcode"]');
+                  const sizeInput = lastRow.querySelector('[data-k="size"]');
+                  const priceInput = lastRow.querySelector('[data-k="suggested_retail_price"]');
+                  const categorySelect = lastRow.querySelector('[data-k="category"]');
+                  
+                  if (nameInput) nameInput.value = product.name || '';
+                  if (barcodeInput) barcodeInput.value = product.barcode || product.sku || product.upc || '';
+                  if (sizeInput) sizeInput.value = product.size || '';
+                  if (priceInput) priceInput.value = product.price || product.suggested_retail_price || '';
+                  if (categorySelect && product.category) categorySelect.value = product.category;
+                  
+                  addedCount++;
+                }
+              });
+              stat.textContent = `Loaded ${addedCount} product${addedCount !== 1 ? 's' : ''} for this brand`;
+              setTimeout(() => { stat.textContent = ''; }, 3000);
+            } else {
+              console.log('ℹ️ No products found by brand name either');
+              stat.textContent = 'No products found for this brand';
+              setTimeout(() => { stat.textContent = ''; }, 3000);
+            }
+          } else {
+            console.log('ℹ️ No products found for this brand');
+            stat.textContent = 'No products found for this brand';
+            setTimeout(() => { stat.textContent = ''; }, 3000);
+          }
         }
       }
       
@@ -2096,6 +2140,17 @@
               console.error('❌ Error loading brand from URL:', error);
             }
           });
+      }
+      
+      // Handle focus parameter — scroll to specific section
+      const focusParam = urlParams.get('focus');
+      if (focusParam === 'stores') {
+        setTimeout(() => {
+          const storesSection = document.getElementById('retail-locations-section');
+          if (storesSection) {
+            storesSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          }
+        }, 600); // Wait for brand data to load first
       }
       
       // Initialize button text on page load

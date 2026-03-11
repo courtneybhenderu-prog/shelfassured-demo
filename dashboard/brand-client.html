@@ -890,7 +890,7 @@
             const urlParams = new URLSearchParams(window.location.search);
             const brandId = urlParams.get('brand_id');
             if (brandId) {
-                window.location.href = `../admin/brands-detail.html?id=${brandId}`;
+                window.location.href = `../admin/brands-new.html?id=${brandId}&focus=stores`;
             } else {
                 alert('Please contact admin to add retail locations.');
             }
