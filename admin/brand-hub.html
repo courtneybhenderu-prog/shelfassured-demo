@@ -413,40 +413,52 @@
     window.switchTab            = switchTab;
     window.markAuditInProgress  = markAuditInProgress;
 
-    // ── Outreach helpers ──────────────────────────────────────────────────────
+        // ── Outreach helpers ─────────────────────────────────────────────────────────────────────────────
     function copyBrandEmail(brandId, brandName, brandWebsite) {
-        const today = new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
-        const domain = brandWebsite ? brandWebsite.replace(/https?:\/\//,'').replace(/\/.*$/,'') : '[brand website]';
-        const emailDraft =
-`Subject: We found your product on the shelf — and we have data
+        // $5 store check request form — swap in real Stripe Payment Link when ready
+        const STORE_CHECK_FORM_URL = 'https://courtneybhenderu-prog.github.io/shelfassured-demo/store-check-request.html';
 
-Hi [Name],
-
-I'm Courtney, founder of ShelfAssured. We're a shelf intelligence platform that sends verified humans into grocery stores to audit product placement, pricing, and availability on behalf of CPG brands.
-
-I wanted to reach out because we've been tracking ${brandName} products in the wild — and we have real shelf data from your retail locations that I think you'd find valuable.
-
-Here's what we found:
-• [Store name] — [product] priced at $[X], [in stock / out of stock / misplaced]
-• [Store name] — [product] priced at $[X], [in stock / out of stock / misplaced]
-
-We can turn this kind of insight into a regular cadence — weekly or monthly shelf audits, delivered as a clean report directly to you or your broker.
-
-Would you be open to a 20-minute call this week to walk through what we found?
-
-Best,
-Courtney Henderson
-ShelfAssured | beshelfassured.com`;
+        const lines = [
+            'Subject: We spotted your product in Houston today',
+            '',
+            'Hi [Name],',
+            '',
+            'We were in [Store Name] in Houston/Austin today and noticed your product on the shelf. Thought you might want to see what we found.',
+            '',
+            'Quick shelf snapshot',
+            '',
+            '\u2022 [Store Name] \u2014 [Product] priced at $[X] \u2014 [in stock / out of stock / misplaced / low stock]',
+            '\u2022 [Store Name] \u2014 [Product] priced at $[X] \u2014 [note]',
+            '',
+            '[Photos]',
+            '',
+            'ShelfAssured is a small team that captures real shelf data directly from stores so brands like ' + brandName + ' can see what\u2019s actually happening on the shelf.',
+            '',
+            'If you\u2019d like to try it out, we can run another $5 store check and send you a one-page report with pricing, placement, and availability at any store you choose in the Houston or Austin market.',
+            '',
+            'Tell us which store to check next:',
+            STORE_CHECK_FORM_URL,
+            '',
+            'If the report is useful and you\u2019d like to learn more, we\u2019d be happy to give you the full introduction.',
+            '',
+            'Best,',
+            'Marc Pittenger',
+            'Co-Founder, ShelfAssured',
+            'beshelfassured.com',
+            '',
+            'Watch a quick 60-second overview: [link]',
+            'Book a quick call: [link]'
+        ];
+        const emailDraft = lines.join('\n');
 
         navigator.clipboard.writeText(emailDraft).then(() => {
-            // Show brief toast
             const toast = document.createElement('div');
-            toast.textContent = '✓ Email draft copied to clipboard';
+            toast.textContent = '\u2713 Email draft copied to clipboard';
             toast.style.cssText = 'position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:#111827;color:#fff;padding:10px 20px;border-radius:8px;font-size:13px;z-index:9999;pointer-events:none';
             document.body.appendChild(toast);
             setTimeout(() => toast.remove(), 2500);
         }).catch(() => {
-            alert('Copy failed — please allow clipboard access in your browser settings.');
+            alert('Copy failed \u2014 please allow clipboard access in your browser settings.');
         });
     }
     window.copyBrandEmail = copyBrandEmail;

@@ -1539,28 +1539,51 @@ function copyPitchEmail() {
     const banners = [...new Set(scans.map(s => s.banner))].filter(Boolean);
     const oosCount = scans.filter(s => s.out_of_stock).length;
 
-    const email = `Subject: We found ${brand} on the shelf — and have data you'll want to see
+    // Build bullet points from actual scan data
+    const storeBullets = stores.slice(0, 3).map(storeName => {
+        const storeScan = scans.find(s => s.store_name === storeName);
+        const price = storeScan && storeScan.price ? '$' + storeScan.price : '$[X]';
+        const status = storeScan && storeScan.out_of_stock ? 'out of stock' : storeScan && storeScan.stock_status ? storeScan.stock_status : 'in stock';
+        return '\u2022 ' + storeName + ' \u2014 ' + product + ' priced at ' + price + ' \u2014 ' + status;
+    });
+    if (storeBullets.length === 0) {
+        storeBullets.push('\u2022 [Store Name] \u2014 ' + product + ' priced at $[X] \u2014 [in stock / out of stock / misplaced / low stock]');
+        storeBullets.push('\u2022 [Store Name] \u2014 ' + product + ' priced at $[X] \u2014 [note]');
+    }
 
-Hi [Name],
+    const STORE_CHECK_FORM_URL = 'https://courtneybhenderu-prog.github.io/shelfassured-demo/store-check-request.html';
 
-I hope this note finds you well. My name is [Your Name] and I'm the founder of ShelfAssured, a shelf intelligence service built for emerging CPG brands.
-
-I wanted to reach out because our team recently came across ${brand}'s ${product} in the wild — and we captured some data we think you'd find valuable.
-
-Here's a quick snapshot of what we found:
-• ${scans.length} store location${scans.length !== 1 ? 's' : ''} scanned across ${banners.join(', ')}
-• ${stores.length} unique store${stores.length !== 1 ? 's' : ''} visited${oosCount > 0 ? `
-• ${oosCount} out-of-stock instance${oosCount !== 1 ? 's' : ''} identified` : ''}${finding ? `
-• ${finding}` : ''}
-
-I'd love to share the full report with you and talk about how ShelfAssured can give your team ongoing visibility into what's happening at shelf — pricing, stock levels, placement, and photos — without requiring you to send your own team into stores.
-
-Would you have 20 minutes this week for a quick call?
-
-Best,
-[Your Name]
-ShelfAssured
-beshelfassured.com`;
+    const lines = [
+        'Subject: We spotted your product in Houston today',
+        '',
+        'Hi [Name],',
+        '',
+        'We were in ' + (stores[0] || '[Store Name]') + ' in Houston/Austin today and noticed your product on the shelf. Thought you might want to see what we found.',
+        '',
+        'Quick shelf snapshot',
+        '',
+        ...storeBullets,
+        '',
+        '[Photos]',
+        '',
+        'ShelfAssured is a small team that captures real shelf data directly from stores so brands like ' + brand + ' can see what\u2019s actually happening on the shelf.',
+        '',
+        'If you\u2019d like to try it out, we can run another $5 store check and send you a one-page report with pricing, placement, and availability at any store you choose in the Houston or Austin market.',
+        '',
+        'Tell us which store to check next:',
+        STORE_CHECK_FORM_URL,
+        '',
+        'If the report is useful and you\u2019d like to learn more, we\u2019d be happy to give you the full introduction.',
+        '',
+        'Best,',
+        'Marc Pittenger',
+        'Co-Founder, ShelfAssured',
+        'beshelfassured.com',
+        '',
+        'Watch a quick 60-second overview: [link]',
+        'Book a quick call: [link]'
+    ];
+    const email = lines.join('\n');
 
     navigator.clipboard.writeText(email).then(() => {
         const confirm = document.getElementById('pitch-copy-confirm');

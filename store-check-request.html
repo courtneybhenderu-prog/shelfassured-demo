@@ -1,0 +1,550 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Request a $5 Store Check — ShelfAssured</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Inter, sans-serif;
+      background: #f6f7f9;
+      color: #111827;
+      min-height: 100vh;
+      padding: 32px 16px 64px;
+    }
+
+    .page-wrap {
+      max-width: 560px;
+      margin: 0 auto;
+    }
+
+    /* Header */
+    .brand-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 32px;
+    }
+    .brand-logo-text {
+      font-size: 18px;
+      font-weight: 700;
+      color: #111827;
+      letter-spacing: -0.3px;
+    }
+    .brand-logo-text span {
+      color: #16a34a;
+    }
+
+    /* Hero */
+    .hero {
+      background: #111827;
+      color: #fff;
+      border-radius: 16px;
+      padding: 28px 28px 24px;
+      margin-bottom: 24px;
+    }
+    .hero-badge {
+      display: inline-block;
+      background: #16a34a;
+      color: #fff;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+      padding: 4px 10px;
+      border-radius: 20px;
+      margin-bottom: 14px;
+    }
+    .hero h1 {
+      font-size: 22px;
+      font-weight: 700;
+      line-height: 1.3;
+      margin-bottom: 10px;
+    }
+    .hero p {
+      font-size: 14px;
+      color: #d1d5db;
+      line-height: 1.6;
+    }
+    .hero-price {
+      margin-top: 16px;
+      display: flex;
+      align-items: baseline;
+      gap: 6px;
+    }
+    .hero-price .amount {
+      font-size: 32px;
+      font-weight: 800;
+      color: #fff;
+    }
+    .hero-price .desc {
+      font-size: 13px;
+      color: #9ca3af;
+    }
+
+    /* What you get */
+    .what-you-get {
+      background: #fff;
+      border: 1px solid #e5e7eb;
+      border-radius: 12px;
+      padding: 20px 24px;
+      margin-bottom: 24px;
+    }
+    .what-you-get h2 {
+      font-size: 13px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: #6b7280;
+      margin-bottom: 12px;
+    }
+    .what-you-get ul {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .what-you-get li {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      font-size: 14px;
+      color: #374151;
+      line-height: 1.5;
+    }
+    .what-you-get li::before {
+      content: "✓";
+      color: #16a34a;
+      font-weight: 700;
+      flex-shrink: 0;
+      margin-top: 1px;
+    }
+
+    /* Form card */
+    .form-card {
+      background: #fff;
+      border: 1px solid #e5e7eb;
+      border-radius: 16px;
+      padding: 28px 28px 24px;
+    }
+    .form-card h2 {
+      font-size: 17px;
+      font-weight: 700;
+      margin-bottom: 20px;
+      color: #111827;
+    }
+
+    .form-section-label {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: #9ca3af;
+      margin: 20px 0 10px;
+    }
+    .form-section-label:first-of-type {
+      margin-top: 0;
+    }
+
+    .field {
+      margin-bottom: 14px;
+    }
+    label {
+      display: block;
+      font-size: 13px;
+      font-weight: 600;
+      color: #374151;
+      margin-bottom: 5px;
+    }
+    label .req {
+      color: #ef4444;
+      margin-left: 2px;
+    }
+    input[type="text"],
+    input[type="email"],
+    textarea,
+    select {
+      width: 100%;
+      padding: 10px 12px;
+      border: 1px solid #d1d5db;
+      border-radius: 8px;
+      font-size: 14px;
+      color: #111827;
+      background: #fff;
+      transition: border-color 0.15s;
+      font-family: inherit;
+      appearance: none;
+    }
+    input:focus, textarea:focus, select:focus {
+      outline: none;
+      border-color: #16a34a;
+      box-shadow: 0 0 0 3px rgba(22, 163, 74, 0.12);
+    }
+    textarea {
+      resize: vertical;
+      min-height: 80px;
+    }
+    .field-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+
+    /* Submit area */
+    .submit-area {
+      margin-top: 24px;
+      border-top: 1px solid #f3f4f6;
+      padding-top: 20px;
+    }
+    .price-summary {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 14px;
+      font-size: 14px;
+      color: #374151;
+    }
+    .price-summary .total {
+      font-size: 18px;
+      font-weight: 800;
+      color: #111827;
+    }
+    .submit-btn {
+      width: 100%;
+      background: #16a34a;
+      color: #fff;
+      border: none;
+      border-radius: 10px;
+      padding: 14px 20px;
+      font-size: 15px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: background 0.15s, transform 0.1s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+    .submit-btn:hover { background: #15803d; }
+    .submit-btn:active { transform: scale(0.99); }
+    .submit-btn:disabled {
+      background: #9ca3af;
+      cursor: not-allowed;
+    }
+    .payment-note {
+      margin-top: 10px;
+      text-align: center;
+      font-size: 12px;
+      color: #9ca3af;
+    }
+    .payment-note a { color: #6b7280; }
+
+    /* Success state */
+    .success-state {
+      display: none;
+      text-align: center;
+      padding: 40px 20px;
+    }
+    .success-icon {
+      width: 60px;
+      height: 60px;
+      background: #dcfce7;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 16px;
+      font-size: 28px;
+    }
+    .success-state h2 {
+      font-size: 20px;
+      font-weight: 700;
+      margin-bottom: 8px;
+    }
+    .success-state p {
+      font-size: 14px;
+      color: #6b7280;
+      line-height: 1.6;
+      max-width: 380px;
+      margin: 0 auto;
+    }
+
+    /* Error messages */
+    .field-error {
+      font-size: 12px;
+      color: #ef4444;
+      margin-top: 4px;
+      display: none;
+    }
+    input.invalid, textarea.invalid {
+      border-color: #ef4444;
+    }
+
+    /* Footer */
+    .page-footer {
+      margin-top: 32px;
+      text-align: center;
+      font-size: 12px;
+      color: #9ca3af;
+    }
+    .page-footer a {
+      color: #6b7280;
+      text-decoration: none;
+    }
+    .page-footer a:hover { text-decoration: underline; }
+
+    @media (max-width: 480px) {
+      .field-row { grid-template-columns: 1fr; }
+      .hero { padding: 22px 20px 18px; }
+      .form-card { padding: 22px 20px 18px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="page-wrap">
+
+    <!-- Brand header -->
+    <div class="brand-header">
+      <div class="brand-logo-text">Shelf<span>Assured</span></div>
+    </div>
+
+    <!-- Hero -->
+    <div class="hero">
+      <div class="hero-badge">$5 Store Check</div>
+      <h1>Tell us which store to check next</h1>
+      <p>We'll send a verified Shelfer to your chosen store in Houston or Austin, capture real shelf data, and deliver a one-page report with pricing, placement, and availability.</p>
+      <div class="hero-price">
+        <span class="amount">$5</span>
+        <span class="desc">one-time · results within 48 hours</span>
+      </div>
+    </div>
+
+    <!-- What you get -->
+    <div class="what-you-get">
+      <h2>What's included</h2>
+      <ul>
+        <li>In-person shelf visit at the store you choose</li>
+        <li>Pricing, stock status, and placement notes for your product</li>
+        <li>At least one shelf photo</li>
+        <li>One-page PDF report delivered to your email</li>
+        <li>Available in Houston and Austin markets</li>
+      </ul>
+    </div>
+
+    <!-- Form -->
+    <div class="form-card">
+      <h2>Request your store check</h2>
+
+      <form id="store-check-form" novalidate>
+
+        <!-- Your info -->
+        <div class="form-section-label">Your Information</div>
+
+        <div class="field-row">
+          <div class="field">
+            <label for="contact_name">Your Name <span class="req">*</span></label>
+            <input type="text" id="contact_name" name="contact_name" placeholder="Jane Smith" autocomplete="name" />
+            <div class="field-error" id="err_contact_name">Please enter your name.</div>
+          </div>
+          <div class="field">
+            <label for="contact_title">Title / Role</label>
+            <input type="text" id="contact_title" name="contact_title" placeholder="Founder, Brand Manager…" />
+          </div>
+        </div>
+
+        <div class="field">
+          <label for="contact_email">Email Address <span class="req">*</span></label>
+          <input type="email" id="contact_email" name="contact_email" placeholder="jane@yourbrand.com" autocomplete="email" />
+          <div class="field-error" id="err_contact_email">Please enter a valid email address.</div>
+        </div>
+
+        <!-- Brand & product -->
+        <div class="form-section-label">Your Brand &amp; Product</div>
+
+        <div class="field">
+          <label for="brand_name">Brand Name <span class="req">*</span></label>
+          <input type="text" id="brand_name" name="brand_name" placeholder="Oh, Sugar! A Sweet Co." />
+          <div class="field-error" id="err_brand_name">Please enter your brand name.</div>
+        </div>
+
+        <div class="field-row">
+          <div class="field">
+            <label for="product_name">Product Name <span class="req">*</span></label>
+            <input type="text" id="product_name" name="product_name" placeholder="Chocolate Chip Cookies" />
+            <div class="field-error" id="err_product_name">Please enter a product name.</div>
+          </div>
+          <div class="field">
+            <label for="product_sku">SKU / UPC</label>
+            <input type="text" id="product_sku" name="product_sku" placeholder="012345678901" />
+          </div>
+        </div>
+
+        <!-- Store to check -->
+        <div class="form-section-label">Store to Check</div>
+
+        <div class="field">
+          <label for="store_name">Store Name <span class="req">*</span></label>
+          <input type="text" id="store_name" name="store_name" placeholder="H-E-B #123 — Westheimer" />
+          <div class="field-error" id="err_store_name">Please enter the store name.</div>
+        </div>
+
+        <div class="field">
+          <label for="store_address">Store Address <span class="req">*</span></label>
+          <input type="text" id="store_address" name="store_address" placeholder="5225 Westheimer Rd" />
+          <div class="field-error" id="err_store_address">Please enter the store address.</div>
+        </div>
+
+        <div class="field-row">
+          <div class="field">
+            <label for="store_city">City <span class="req">*</span></label>
+            <select id="store_city" name="store_city">
+              <option value="">Select city…</option>
+              <option value="Houston">Houston</option>
+              <option value="Austin">Austin</option>
+            </select>
+            <div class="field-error" id="err_store_city">Please select a city.</div>
+          </div>
+          <div class="field">
+            <label for="store_state">State</label>
+            <input type="text" id="store_state" name="store_state" value="TX" readonly style="background:#f9fafb;color:#6b7280;" />
+          </div>
+        </div>
+
+        <!-- Any notes -->
+        <div class="form-section-label">Anything Else? <span style="font-weight:400;text-transform:none;font-size:11px;color:#9ca3af;">(optional)</span></div>
+
+        <div class="field">
+          <label for="notes">Notes for the Shelfer</label>
+          <textarea id="notes" name="notes" placeholder="e.g. Product is usually in the natural foods aisle, top shelf. Let me know if you can't find it."></textarea>
+        </div>
+
+        <!-- Submit -->
+        <div class="submit-area">
+          <div class="price-summary">
+            <span>Store check fee</span>
+            <span class="total">$5.00</span>
+          </div>
+          <button type="submit" class="submit-btn" id="submit-btn">
+            <!-- Lock icon -->
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+            Pay $5 &amp; Submit Request
+          </button>
+          <p class="payment-note">
+            Secure payment powered by Stripe &nbsp;·&nbsp; Results within 48 hours &nbsp;·&nbsp; <a href="mailto:hello@beshelfassured.com">Questions?</a>
+          </p>
+        </div>
+
+      </form>
+
+      <!-- Success state (shown after submission) -->
+      <div class="success-state" id="success-state">
+        <div class="success-icon">✓</div>
+        <h2>You're all set!</h2>
+        <p>We received your store check request. A ShelfAssured Shelfer will visit <strong id="success-store"></strong> within 48 hours and send your one-page report to <strong id="success-email"></strong>.</p>
+        <p style="margin-top:12px;">Questions? Email us at <a href="mailto:hello@beshelfassured.com" style="color:#16a34a;">hello@beshelfassured.com</a></p>
+      </div>
+
+    </div>
+
+    <!-- Footer -->
+    <div class="page-footer">
+      <a href="https://www.beshelfassured.com" target="_blank" rel="noopener">beshelfassured.com</a>
+      &nbsp;·&nbsp; ShelfAssured &copy; 2026
+    </div>
+
+  </div>
+
+  <script>
+    const form = document.getElementById('store-check-form');
+    const submitBtn = document.getElementById('submit-btn');
+    const successState = document.getElementById('success-state');
+
+    // Required fields config: [id, errorId, validator]
+    const requiredFields = [
+      { id: 'contact_name',  errId: 'err_contact_name',  validate: v => v.trim().length > 0 },
+      { id: 'contact_email', errId: 'err_contact_email',  validate: v => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v.trim()) },
+      { id: 'brand_name',    errId: 'err_brand_name',    validate: v => v.trim().length > 0 },
+      { id: 'product_name',  errId: 'err_product_name',  validate: v => v.trim().length > 0 },
+      { id: 'store_name',    errId: 'err_store_name',    validate: v => v.trim().length > 0 },
+      { id: 'store_address', errId: 'err_store_address', validate: v => v.trim().length > 0 },
+      { id: 'store_city',    errId: 'err_store_city',    validate: v => v !== '' },
+    ];
+
+    function validateField(field) {
+      const el = document.getElementById(field.id);
+      const errEl = document.getElementById(field.errId);
+      const valid = field.validate(el.value);
+      el.classList.toggle('invalid', !valid);
+      if (errEl) errEl.style.display = valid ? 'none' : 'block';
+      return valid;
+    }
+
+    // Live validation on blur
+    requiredFields.forEach(field => {
+      const el = document.getElementById(field.id);
+      if (el) {
+        el.addEventListener('blur', () => validateField(field));
+        el.addEventListener('input', () => {
+          if (el.classList.contains('invalid')) validateField(field);
+        });
+      }
+    });
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      // Validate all required fields
+      let allValid = true;
+      requiredFields.forEach(field => {
+        if (!validateField(field)) allValid = false;
+      });
+      if (!allValid) return;
+
+      // Collect form data
+      const data = {
+        contact_name:  document.getElementById('contact_name').value.trim(),
+        contact_title: document.getElementById('contact_title').value.trim(),
+        contact_email: document.getElementById('contact_email').value.trim(),
+        brand_name:    document.getElementById('brand_name').value.trim(),
+        product_name:  document.getElementById('product_name').value.trim(),
+        product_sku:   document.getElementById('product_sku').value.trim(),
+        store_name:    document.getElementById('store_name').value.trim(),
+        store_address: document.getElementById('store_address').value.trim(),
+        store_city:    document.getElementById('store_city').value,
+        store_state:   'TX',
+        notes:         document.getElementById('notes').value.trim(),
+        submitted_at:  new Date().toISOString(),
+      };
+
+      // Disable button while processing
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'Processing…';
+
+      // ── PAYMENT PLACEHOLDER ──────────────────────────────────────────────
+      // TODO: Replace this block with a Stripe Payment Link redirect or
+      //       Stripe.js Checkout session creation.
+      //
+      // Option A (simplest): Create a Stripe Payment Link in the Stripe
+      //   Dashboard, then redirect here:
+      //   window.location.href = 'https://buy.stripe.com/YOUR_PAYMENT_LINK?prefilled_email=' + encodeURIComponent(data.contact_email);
+      //
+      // Option B: Use Stripe Checkout via your backend/Supabase Edge Function.
+      // ─────────────────────────────────────────────────────────────────────
+
+      // Simulate a short processing delay, then show success
+      await new Promise(resolve => setTimeout(resolve, 800));
+
+      // Show success state
+      document.getElementById('success-store').textContent = data.store_name + ' (' + data.store_city + ')';
+      document.getElementById('success-email').textContent = data.contact_email;
+      form.style.display = 'none';
+      successState.style.display = 'block';
+
+      // Log submission to console (replace with Supabase insert or email webhook)
+      console.log('📋 Store check request submitted:', data);
+    });
+  </script>
+</body>
+</html>
