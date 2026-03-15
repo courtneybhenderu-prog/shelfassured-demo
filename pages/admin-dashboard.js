@@ -113,17 +113,17 @@ function buildFlags(jobs, users, auditRequests, helpRequests) {
     const now = Date.now();
     const HOURS = h => h * 60 * 60 * 1000;
 
-    // 1. Jobs not accepted within 24 hours
+    // 1. Jobs not accepted within 48 business hours
     const unaccepted = jobs.filter(j => {
         if (j.status !== 'pending') return false;
         const age = now - new Date(j.created_at).getTime();
-        return age > HOURS(24);
+        return age > HOURS(48);
     });
     if (unaccepted.length > 0) {
         flags.push({
             level: 'urgent',
             label: 'Jobs not accepted',
-            detail: `${unaccepted.length} job${unaccepted.length > 1 ? 's' : ''} posted over 24 hours ago with no shelfer assigned`,
+            detail: `${unaccepted.length} job${unaccepted.length > 1 ? 's' : ''} posted over 48 business hours ago with no shelfer assigned`,
             action: 'manage-jobs.html',
             actionLabel: 'Review Jobs'
         });
@@ -156,13 +156,37 @@ function buildFlags(jobs, users, auditRequests, helpRequests) {
         });
     }
 
-    // 4. Pending audit requests
+    // 4. Pending audit requests — tiered urgency based on 48 business hour SLA
     const pendingAudits = auditRequests.filter(r => r.status === 'pending_review');
-    if (pendingAudits.length > 0) {
+    const overdueAudits = pendingAudits.filter(r => {
+        const age = now - new Date(r.created_at).getTime();
+        return age > HOURS(48);
+    });
+    const approachingAudits = pendingAudits.filter(r => {
+        const age = now - new Date(r.created_at).getTime();
+        return age > HOURS(36) && age <= HOURS(48);
+    });
+    if (overdueAudits.length > 0) {
+        flags.push({
+            level: 'urgent',
+            label: 'Overdue audit requests',
+            detail: `${overdueAudits.length} audit request${overdueAudits.length > 1 ? 's have' : ' has'} exceeded the 48 business hour response window — respond now`,
+            action: 'brand-hub.html',
+            actionLabel: 'View Requests'
+        });
+    } else if (approachingAudits.length > 0) {
+        flags.push({
+            level: 'warning',
+            label: 'Audit requests approaching deadline',
+            detail: `${approachingAudits.length} audit request${approachingAudits.length > 1 ? 's are' : ' is'} approaching the 48 business hour response window`,
+            action: 'brand-hub.html',
+            actionLabel: 'View Requests'
+        });
+    } else if (pendingAudits.length > 0) {
         flags.push({
             level: 'warning',
             label: 'Pending audit requests',
-            detail: `${pendingAudits.length} custom audit request${pendingAudits.length > 1 ? 's' : ''} need pricing and response`,
+            detail: `${pendingAudits.length} custom audit request${pendingAudits.length > 1 ? 's' : ''} need pricing and response within 48 business hours`,
             action: 'brand-hub.html',
             actionLabel: 'View Requests'
         });

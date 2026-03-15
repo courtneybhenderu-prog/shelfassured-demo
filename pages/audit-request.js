@@ -199,7 +199,9 @@ async function handleFormSubmit(event) {
         }
         
         console.log('✅ Audit request saved:', data);
-        showMessage(messageEl, 'Audit request submitted successfully! Our team will review it within 24 hours and reach out with custom pricing.', 'success');
+        // Auto-generate confirmation message based on timeline and audit type
+        const confirmationMsg = generateConfirmationMessage(auditType, timeline, preferredContact);
+        showMessage(messageEl, confirmationMsg, 'success');
         
         // Clear form and redirect
         event.target.reset();
@@ -213,6 +215,34 @@ async function handleFormSubmit(event) {
     } catch (error) {
         console.error('Error submitting audit request:', error);
         showMessage(messageEl, 'Error submitting audit request: ' + error.message, 'error');
+    }
+}
+
+// Auto-generate a personalized confirmation message based on request details
+function generateConfirmationMessage(auditType, timeline, preferredContact) {
+    const auditTypeLabels = {
+        'launch-day': 'Launch Day Monitoring',
+        'competitive-analysis': 'Competitive Analysis',
+        'store-sampling': 'Store Sampling',
+        'compliance': 'Compliance Audit',
+        'market-research': 'Market Research',
+        'shelf-presence': 'Shelf Presence Analysis',
+        'pricing-analysis': 'Pricing Analysis',
+        'other': 'Custom Audit'
+    };
+    const contactMethodLabels = {
+        'email': 'email',
+        'phone': 'phone call',
+        'text': 'text message'
+    };
+    const auditLabel = auditTypeLabels[auditType] || 'Custom Audit';
+    const contactLabel = contactMethodLabels[preferredContact] || 'email';
+    const isUrgent = timeline === 'urgent';
+
+    if (isUrgent) {
+        return `✅ Urgent ${auditLabel} request received! Your request has been flagged as high priority. A member of our team will reach out via ${contactLabel} within 48 business hours with custom pricing and next steps. We appreciate your business!`;
+    } else {
+        return `✅ Your ${auditLabel} request has been submitted successfully! Our team will review it within 48 business hours and reach out via ${contactLabel} with custom pricing and a proposed timeline. Thank you for choosing ShelfAssured!`;
     }
 }
 
