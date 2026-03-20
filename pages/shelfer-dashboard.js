@@ -53,6 +53,7 @@ async function loadDashboard() {
                 ),
                 job_store_skus (
                     store_id,
+                    sku_id,
                     stores (
                         id,
                         STORE,
@@ -61,6 +62,11 @@ async function loadDashboard() {
                         city,
                         state,
                         zip_code
+                    ),
+                    skus (
+                        id,
+                        name,
+                        category
                     )
                 )
             `)
@@ -189,13 +195,27 @@ function renderJobsByStore(availableJobs, inProgressJobs, pendingApprovalJobs) {
         const storeName = getStoreDisplay(storeDisplay);
         const storeAddress = getStoreAddress(storeDisplay);
         const multipleStores = stores.length > 1;
+
+        // Collect unique SKUs for this job
+        const skuMap = {};
+        jobStores.forEach(jss => { if (jss.skus?.id) skuMap[jss.skus.id] = jss.skus; });
+        const uniqueSkus = Object.values(skuMap);
+        const skuCount = uniqueSkus.length;
+        // Get category from first SKU that has one
+        const category = uniqueSkus.find(s => s.category)?.category || '';
         
-        // Status badge color
-        let statusColor = 'bg-yellow-100 text-yellow-800';
+        // Status badge — use friendly labels
+        let statusLabel = 'Available';
+        let statusColor = 'bg-green-100 text-green-800';
         if (job.status === 'assigned' || job.status === 'in_progress') {
+            statusLabel = 'In Progress';
             statusColor = 'bg-blue-100 text-blue-800';
         } else if (job.status === 'pending_review') {
+            statusLabel = 'Pending Review';
             statusColor = 'bg-orange-100 text-orange-800';
+        } else if (job.status === 'pending') {
+            statusLabel = 'Available';
+            statusColor = 'bg-green-100 text-green-800';
         }
 
         // Countdown timer for accepted jobs
@@ -217,25 +237,32 @@ function renderJobsByStore(availableJobs, inProgressJobs, pendingApprovalJobs) {
             countdownHtml = `<p class="text-xs mt-2 ${timerColor}" id="timer-${job.id}" data-deadline="${deadlineMs}" data-rush="${isRush}">${timerText}</p>`;
         }
         
+        // Build headline: "Brand · Category · N SKUs"
+        const brandName = job.brands?.name || 'Unknown Brand';
+        const headlineParts = [brandName];
+        if (category) headlineParts.push(category);
+        if (skuCount > 0) headlineParts.push(`${skuCount} SKU${skuCount !== 1 ? 's' : ''}`);
+        const cardHeadline = headlineParts.join(' · ');
+
         return `
             <div class="sa-card p-4 cursor-pointer hover:shadow-md transition-shadow mb-3" onclick="viewJob('${job.id}')">
                 <div class="flex justify-between items-start mb-2">
-                    <h4 class="font-semibold text-gray-900">${escapeHtml(job.title || 'Untitled Job')}</h4>
-                    <span class="inline-block px-2 py-1 ${statusColor} rounded text-xs ml-2">${escapeHtml(job.status)}</span>
+                    <div class="flex-1 min-w-0 pr-2">
+                        <h4 class="font-semibold text-gray-900 leading-snug">${escapeHtml(cardHeadline)}</h4>
+                        ${job.title && job.title !== brandName ? `<p class="text-xs text-gray-500 mt-0.5">${escapeHtml(job.title)}</p>` : ''}
+                    </div>
+                    <span class="inline-block px-2 py-1 ${statusColor} rounded-full text-xs font-medium flex-shrink-0">${escapeHtml(statusLabel)}</span>
                 </div>
-                <p class="text-sm text-gray-600 mb-1">
-                    <strong>Brand:</strong> ${escapeHtml(job.brands?.name || 'Unknown Brand')}
-                </p>
                 ${storeName ? `
-                    <p class="text-sm text-gray-700 font-medium mt-2 mb-1">
+                    <p class="text-sm text-gray-700 font-medium mt-2 mb-0.5">
                         📍 ${escapeHtml(storeName)}
                         ${multipleStores ? ` <span class="text-xs text-gray-500">(+${stores.length - 1} more)</span>` : ''}
                     </p>
                     ${storeAddress ? `
                         <p class="text-xs text-gray-500 mb-2">${escapeHtml(storeAddress)}</p>
                     ` : ''}
-                ` : '<p class="text-sm text-gray-500 italic">Store information not available</p>'}
-                <p class="text-sm font-semibold text-blue-600 mt-2">Earn $${(parseFloat(job.payout_per_store || 0) * 0.6).toFixed(2)} per store</p>
+                ` : '<p class="text-sm text-gray-500 italic mt-2">Store information not available</p>'}
+                <p class="text-sm font-semibold mt-2" style="color:#C62828">Earn $${(parseFloat(job.payout_per_store || 0) * 0.6).toFixed(2)}</p>
                 ${countdownHtml}
             </div>
         `;

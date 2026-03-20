@@ -1,10 +1,9 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>ShelfAssured · Job Details</title>
-  <meta name="description" content="Shelfer job details: upload photos, verify price, record stock level, and submit." />
+  <title>ShelfAssured · Job</title>
   <meta name="color-scheme" content="light" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -15,7 +14,6 @@
       theme: {
         extend: {
           fontFamily: { sans: ['Inter','system-ui','sans-serif'] },
-          boxShadow: { brand:'0 4px 6px -1px rgba(0,0,0,.10)'}
         }
       }
     }
@@ -27,628 +25,472 @@
       --bg:#F7F3F0; --card:#FCFBF9; --text-900:#111827; --text-600:#6B7280; --border:#E5E7EB;
     }
     html,body{background:var(--bg);color:var(--text-900);-webkit-text-size-adjust:100%}
-    /* Safe area padding for iPhone notch/home bar */
-    body{padding-bottom:env(safe-area-inset-bottom,0px)}
+    body{padding-bottom:env(safe-area-inset-bottom,24px)}
     /* Prevent zoom on input focus on iOS */
     input,select,textarea{font-size:16px!important}
     @media(prefers-color-scheme:dark){html,body{background:var(--bg)!important;color:var(--text-900)!important}}
-    .btn-red{background:var(--brand-red);color:#fff;transition:transform .12s ease}
-    .btn-red:hover{background:var(--brand-red-hover);transform:translateY(-1px)}
-    .btn-gray{background:#6B7280;color:#fff}
-    .brand-card{background:var(--card);box-shadow:0 4px 6px -1px rgba(0,0,0,.10);border-radius:.75rem}
-    .brand-input{background:#fff;border:1px solid var(--border);border-radius:.5rem}
-    .brand-input:focus{outline:none;border-color:var(--brand-red);box-shadow:0 0 0 3px rgba(198,40,40,.15)}
-    .badge{background:var(--card);border:1px solid var(--border);border-radius:9999px;padding:.25rem .6rem}
-    .dropzone{border:2px dashed var(--border);border-radius:.75rem;background:#fff}
-    /* Barcode scan step */
-    .scan-step{border:2px solid var(--border);border-radius:.75rem;background:#fff;padding:1.25rem}
-    .scan-step.scan-verified{border-color:#059669;background:#f0fdf4}
-    .scan-step.scan-exception{border-color:#F59E0B;background:#fffbeb}
-    .scan-btn{display:inline-flex;align-items:center;gap:.5rem;background:var(--brand-red);color:#fff;border:none;border-radius:.5rem;padding:.6rem 1.2rem;font-size:.9rem;font-weight:600;cursor:pointer;transition:background .15s}
-    .scan-btn:hover{background:var(--brand-red-hover)}
-    .scan-btn:disabled{background:#9CA3AF;cursor:not-allowed}
-    .scan-badge-ok{display:inline-flex;align-items:center;gap:.4rem;background:#dcfce7;color:#166534;border-radius:9999px;padding:.3rem .8rem;font-size:.85rem;font-weight:600}
-    .scan-badge-fail{display:inline-flex;align-items:center;gap:.4rem;background:#fee2e2;color:#991b1b;border-radius:9999px;padding:.3rem .8rem;font-size:.85rem;font-weight:600}
+
+    /* Cards */
+    .sa-card{background:var(--card);border-radius:.875rem;box-shadow:0 2px 8px rgba(0,0,0,.08)}
+
+    /* Buttons */
+    .btn-primary{background:var(--brand-red);color:#fff;border:none;border-radius:.625rem;padding:.75rem 1.5rem;font-size:1rem;font-weight:600;cursor:pointer;transition:background .15s,transform .1s}
+    .btn-primary:hover{background:var(--brand-red-hover);transform:translateY(-1px)}
+    .btn-primary:disabled{background:#9CA3AF;cursor:not-allowed;transform:none}
+    .btn-secondary{background:#fff;color:var(--text-900);border:1.5px solid var(--border);border-radius:.625rem;padding:.65rem 1.25rem;font-size:.9rem;font-weight:500;cursor:pointer}
+    .btn-secondary:hover{border-color:#9CA3AF}
+    .btn-scan{display:inline-flex;align-items:center;gap:.5rem;background:var(--brand-red);color:#fff;border:none;border-radius:.5rem;padding:.6rem 1.2rem;font-size:.9rem;font-weight:600;cursor:pointer}
+    .btn-scan:hover{background:var(--brand-red-hover)}
+    .btn-scan:disabled{background:#9CA3AF;cursor:not-allowed}
+
+    /* Form inputs */
+    .sa-input{background:#fff;border:1.5px solid var(--border);border-radius:.5rem;padding:.65rem .875rem;width:100%;transition:border-color .15s}
+    .sa-input:focus{outline:none;border-color:var(--brand-red);box-shadow:0 0 0 3px rgba(198,40,40,.12)}
+
+    /* Checklist items */
+    .sku-item{display:flex;align-items:center;gap:.75rem;padding:.75rem 1rem;border-radius:.625rem;background:#fff;border:1.5px solid var(--border);cursor:pointer;transition:border-color .15s,background .15s;-webkit-tap-highlight-color:transparent}
+    .sku-item:hover{border-color:#9CA3AF}
+    .sku-item.checked{border-color:#059669;background:#f0fdf4}
+    .sku-item input[type="checkbox"]{width:1.25rem;height:1.25rem;accent-color:#059669;cursor:pointer;flex-shrink:0}
+    .sku-item label{flex:1;cursor:pointer;font-size:.95rem;font-weight:500}
+    .sku-item.checked label{color:#166534}
+
+    /* Scan states */
+    .scan-box{border:2px solid var(--border);border-radius:.75rem;background:#fff;padding:1.25rem}
+    .scan-box.scan-ok{border-color:#059669;background:#f0fdf4}
+    .scan-box.scan-warn{border-color:#F59E0B;background:#fffbeb}
     #scanVideo{width:100%;max-height:220px;object-fit:cover;border-radius:.5rem;background:#000}
-    .exception-panel{margin-top:1rem;padding:1rem;background:#fffbeb;border:1px solid #F59E0B;border-radius:.75rem}
+
+    /* Photo dropzone */
+    .dropzone{border:2px dashed var(--border);border-radius:.75rem;background:#fff;padding:1rem;display:flex;align-items:center;gap:.75rem}
+    .dropzone:hover{border-color:#9CA3AF}
+
+    /* Section headings */
+    .section-num{display:inline-flex;align-items:center;justify-content:center;width:1.75rem;height:1.75rem;background:var(--brand-red);color:#fff;border-radius:9999px;font-size:.8rem;font-weight:700;flex-shrink:0}
+
+    /* Progress bar */
+    #progressBar{height:4px;background:var(--brand-red);border-radius:2px;transition:width .3s ease}
   </style>
 </head>
 <body class="font-sans antialiased">
-  <!-- Top bar / crumbs -->
-  <header class="border-b" style="border-color:var(--border)">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex items-center justify-between">
-      <a href="javascript:history.back()" class="flex items-center gap-2" aria-label="Back to Dashboard">
-        <span class="text-2xl font-extrabold tracking-tight"><span style="color:var(--brand-brown)">Shelf</span><span style="color:var(--brand-gold)">Assured</span></span>
+
+  <!-- Top bar -->
+  <header class="sticky top-0 z-10 bg-white border-b" style="border-color:var(--border)">
+    <div class="max-w-2xl mx-auto px-4 py-3 flex items-center gap-3">
+      <a href="javascript:history.back()" class="text-gray-500 hover:text-gray-800 p-1 -ml-1" aria-label="Back">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7" />
+        </svg>
       </a>
-      <div class="text-sm text-gray-600">Shelfer Dashboard</div>
+      <span class="text-lg font-extrabold tracking-tight"><span style="color:var(--brand-brown)">Shelf</span><span style="color:var(--brand-gold)">Assured</span></span>
+      <div class="flex-1"></div>
+      <span id="headerStatus" class="text-xs text-gray-500 font-medium"></span>
+    </div>
+    <!-- Progress bar -->
+    <div class="h-1 bg-gray-100">
+      <div id="progressBar" style="width:0%"></div>
     </div>
   </header>
 
-  <main class="max-w-2xl mx-auto px-4 sm:px-6 py-4 sm:py-6">
-    <!-- Job header -->
-    <section class="brand-card p-5 sm:p-6 mb-6">
-      <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-        <div class="flex-1">
-          <h1 class="text-2xl sm:text-3xl font-bold">Job · <span id="jobId">Loading...</span></h1>
-          <p class="mt-1 text-sm" style="color:var(--text-600)">Brand: <span id="brand">Loading...</span></p>
-          <!-- Multiple assignments list (hidden by default) -->
-          <div id="multiple-assignments" class="mt-3 hidden">
-            <p class="text-sm font-medium" style="color:var(--text-600)">All Assignments:</p>
-            <ul id="assignment-list" class="mt-1 text-sm space-y-1" style="color:var(--text-500)"></ul>
-          </div>
-        </div>
-        <div class="flex flex-wrap items-center gap-2">
-          <span class="badge">⏱ 48h standard</span>
-          <span class="badge">📷 3 photos</span>
-          <span class="badge">🧾 Price &amp; stock check</span>
-        </div>
-      </div>
+  <main class="max-w-2xl mx-auto px-4 py-5 space-y-5">
 
-      <!-- Prominent product/store info box -->
-      <div id="job-info-box" class="mt-4 rounded-xl border-2 p-4" style="border-color:var(--brand-red);background:#fff8f8">
-        <div class="grid sm:grid-cols-2 gap-3">
-          <div>
-            <p class="text-xs font-semibold uppercase tracking-wide" style="color:var(--brand-red)">Store</p>
-            <p id="store" class="mt-1 text-base font-semibold text-gray-900">Loading...</p>
-          </div>
-          <div>
-            <p class="text-xs font-semibold uppercase tracking-wide" style="color:var(--brand-red)">Product / SKU</p>
-            <p id="sku" class="mt-1 text-base font-semibold text-gray-900">Loading...</p>
-          </div>
-          <div id="upc-row" class="hidden">
-            <p class="text-xs font-semibold uppercase tracking-wide" style="color:var(--brand-red)">UPC / Barcode</p>
-            <p id="upc-display" class="mt-1 text-base font-mono font-bold text-gray-900">—</p>
-          </div>
-        </div>
+    <!-- ── JOB HEADER ── -->
+    <section id="jobHeader" class="sa-card p-5">
+      <div id="headerLoading" class="animate-pulse space-y-2">
+        <div class="h-5 bg-gray-200 rounded w-3/4"></div>
+        <div class="h-4 bg-gray-100 rounded w-1/2"></div>
+      </div>
+      <div id="headerContent" class="hidden">
+        <!-- e.g. "Rambler · 6 SKUs · HEB College Station" -->
+        <h1 id="jobHeadline" class="text-xl font-bold text-gray-900 leading-snug"></h1>
+        <!-- Full address -->
+        <p id="jobAddress" class="mt-1 text-sm" style="color:var(--text-600)"></p>
+        <!-- Category hint -->
+        <p id="jobCategory" class="mt-2 inline-flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-full bg-amber-50 text-amber-800 border border-amber-200 hidden">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+          <span id="jobCategoryText"></span>
+        </p>
+        <!-- Payout badge -->
+        <p id="jobPayout" class="mt-3 text-sm font-semibold" style="color:var(--brand-red)"></p>
       </div>
     </section>
 
-    <!-- ===== STEP 0: Barcode Verification ===== -->
-    <section id="barcodeSection" class="brand-card p-5 sm:p-6 mb-6">
-      <div class="flex items-center gap-3 mb-3">
-        <span class="text-2xl">🔍</span>
+    <!-- ── SECTION 1: SHELF CHECK ── -->
+    <section class="sa-card p-5">
+      <div class="flex items-center gap-3 mb-4">
+        <span class="section-num">1</span>
         <div>
-          <h2 class="text-xl font-semibold">Step 1 — Verify Product</h2>
-          <p class="text-sm" style="color:var(--text-600)">Scan the barcode on the product to confirm you've found the correct item.</p>
+          <h2 class="text-base font-semibold text-gray-900">Shelf Check</h2>
+          <p class="text-sm" style="color:var(--text-600)">Check off every flavor you see on the shelf.</p>
+        </div>
+      </div>
+      <div id="skuChecklist" class="space-y-2">
+        <!-- Populated by JS -->
+        <div class="animate-pulse space-y-2">
+          <div class="h-12 bg-gray-100 rounded-xl"></div>
+          <div class="h-12 bg-gray-100 rounded-xl"></div>
+          <div class="h-12 bg-gray-100 rounded-xl"></div>
+        </div>
+      </div>
+      <p id="checklistProgress" class="mt-3 text-xs font-medium text-gray-500 hidden"></p>
+    </section>
+
+    <!-- ── SECTION 2: VERIFY LOCATION ── -->
+    <section class="sa-card p-5">
+      <div class="flex items-center gap-3 mb-4">
+        <span class="section-num">2</span>
+        <div>
+          <h2 class="text-base font-semibold text-gray-900">Verify Location</h2>
+          <p class="text-sm" style="color:var(--text-600)">Scan any item from this set to confirm you're in the right spot.</p>
         </div>
       </div>
 
-      <!-- Scan UI -->
-      <div id="scanUI" class="scan-step">
-        <div id="scanIdle" class="flex flex-col gap-3">
-          <p class="text-sm font-medium text-gray-700">Product UPC: <span id="expectedUpc" class="font-mono font-bold">—</span></p>
+      <div id="scanBox" class="scan-box">
+        <!-- Idle state -->
+        <div id="scanIdle">
           <div class="flex flex-wrap gap-3 items-center">
-            <button type="button" id="startScanBtn" class="scan-btn" onclick="startBarcodeScanner()">
-              📷 Scan Barcode
+            <button type="button" id="startScanBtn" class="btn-scan" onclick="startBarcodeScanner()">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3 9V6a1 1 0 011-1h3M3 15v3a1 1 0 001 1h3m11-4v3a1 1 0 01-1 1h-3m4-11h-3a1 1 0 00-1 1v3"/></svg>
+              Scan a barcode
             </button>
-            <span class="text-sm text-gray-500">Point your camera at the product barcode</span>
+            <button type="button" onclick="skipScan()" class="text-sm text-gray-500 underline">Skip — I'm in the right spot</button>
           </div>
-          <p id="scanAttemptMsg" class="text-xs text-gray-400 hidden">Attempt <span id="scanAttemptCount">1</span> of 3</p>
         </div>
 
         <!-- Camera view -->
         <div id="scanCamera" class="hidden">
           <video id="scanVideo" autoplay playsinline muted></video>
-          <div class="mt-2 flex gap-2">
-            <button type="button" class="scan-btn" onclick="captureAndDecode()">📸 Capture &amp; Read</button>
-            <button type="button" class="btn-gray px-3 py-2 rounded-lg text-sm" onclick="stopScanner()">Cancel</button>
-          </div>
           <canvas id="scanCanvas" class="hidden"></canvas>
+          <div class="mt-2 flex gap-2">
+            <button type="button" class="btn-scan" onclick="captureAndDecode()">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/><path stroke-linecap="round" stroke-linejoin="round" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+              Capture &amp; Read
+            </button>
+            <button type="button" class="btn-secondary" onclick="stopScanner()">Cancel</button>
+          </div>
           <p id="scanCameraMsg" class="mt-2 text-sm text-gray-500"></p>
         </div>
 
-        <!-- Result states -->
+        <!-- Verified state -->
         <div id="scanVerified" class="hidden">
-          <span class="scan-badge-ok">✓ Barcode verified — correct product found</span>
-        </div>
-        <div id="scanMismatch" class="hidden">
-          <span class="scan-badge-fail">✗ Barcode does not match — scanned: <span id="scannedUpcDisplay"></span></span>
-          <!-- UPC override: appears when a real barcode was scanned but doesn't match -->
-          <div id="upcOverrideRow" class="hidden mt-2">
-            <button type="button"
-                    onclick="overrideUpc()"
-                    class="text-xs font-semibold px-3 py-1.5 rounded-lg bg-amber-100 text-amber-800 border border-amber-300 hover:bg-amber-200">
-              Update SKU to scanned UPC &amp; continue
-            </button>
+          <div class="flex items-center gap-2 text-green-700 font-semibold">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
+            <span id="scanVerifiedMsg">Location confirmed</span>
           </div>
         </div>
 
-        <!-- Skip barcode step (appears after 1+ failure to read OR after mismatch with no override) -->
-        <div id="skipScanRow" class="hidden mt-3">
-          <button type="button"
-                  onclick="skipBarcodeStep()"
-                  class="text-sm font-semibold px-4 py-2 rounded-lg bg-green-100 text-green-800 border border-green-300 hover:bg-green-200">
-            ✓ I'm at the right product — skip barcode &amp; continue
-          </button>
+        <!-- Mismatch state -->
+        <div id="scanMismatch" class="hidden mt-2">
+          <div class="flex items-start gap-2 p-3 rounded-lg bg-amber-50 border border-amber-200">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-amber-600 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+            <div>
+              <p class="text-sm font-semibold text-amber-800">Hmm, that barcode doesn't match our records.</p>
+              <p class="text-sm text-amber-700 mt-1">Can you tell us exactly which product you are scanning, flavor and SKU so we can look it up later?</p>
+              <textarea id="mismatchNote" rows="2" class="sa-input mt-2 text-sm" placeholder="e.g. 'Rambler Blackberry 12oz, UPC 012345678901'"></textarea>
+              <div class="mt-2 flex gap-2 flex-wrap">
+                <button type="button" onclick="confirmMismatch()" class="text-sm font-semibold px-3 py-1.5 rounded-lg bg-amber-100 text-amber-800 border border-amber-300">Save note &amp; continue</button>
+                <button type="button" onclick="retryScan()" class="text-sm text-gray-500 underline">Try again</button>
+              </div>
+            </div>
+          </div>
         </div>
-
-        <!-- Can't scan link (appears after 2 failures) -->
-        <div id="cantScanLink" class="hidden mt-3">
-          <button type="button" class="text-sm text-amber-700 font-semibold underline" onclick="showExceptionPanel()">
-            Can't scan the barcode? Report an issue instead →
-          </button>
-        </div>
-      </div>
-
-      <!-- Exception panel -->
-      <div id="exceptionPanel" class="exception-panel hidden">
-        <p class="text-sm font-semibold text-amber-800 mb-2">Why can't you complete this job as required?</p>
-        <select id="exceptionReason" class="brand-input w-full px-3 py-2 mb-2" onchange="handleExceptionChange()">
-          <option value="" disabled selected>Select a reason…</option>
-          <option value="product_not_found">Product not found</option>
-          <option value="wrong_item_on_shelf">Wrong item on shelf</option>
-          <option value="out_of_stock">Out of stock</option>
-          <option value="barcode_scanner_issue">Barcode scanner not working</option>
-          <option value="other">Other</option>
-        </select>
-        <!-- Free-text box shown when Other is selected -->
-        <textarea id="exceptionOtherText" class="brand-input w-full px-3 py-2 mb-3 hidden" rows="2"
-          placeholder="Describe the issue briefly…"
-          oninput="handleExceptionOtherInput()"></textarea>
-        <p class="text-xs text-amber-700">You can still take photos of what you see and submit — photos are optional but helpful. Notes are required.</p>
-        <p class="text-xs text-amber-700 mt-1">Price is not required for exception submissions.</p>
       </div>
     </section>
 
-    <form id="jobForm" class="grid gap-4 sm:gap-6">
-      <!-- Left: Photo uploads -->
-      <section class="brand-card p-5 sm:p-6">
-        <h2 class="text-xl font-semibold">Upload Photos</h2>
-        <p class="mt-1 text-sm" style="color:var(--text-600)">Upload clear, readable photos. Photos will be automatically resized and compressed for optimal quality.</p>
+    <!-- ── SECTION 3: PHOTOS ── -->
+    <section class="sa-card p-5">
+      <div class="flex items-center gap-3 mb-4">
+        <span class="section-num">3</span>
+        <div>
+          <h2 class="text-base font-semibold text-gray-900">Photos</h2>
+          <p class="text-sm" style="color:var(--text-600)">3 shots: close-up, shelf context, wide angle.</p>
+        </div>
+      </div>
 
-        <div class="mt-4 grid gap-4">
-          <!-- Product closeup -->
-          <div>
-            <label class="block text-sm font-medium">1) Product on shelf (close)</label>
-            <p class="mt-1 text-xs" style="color:var(--text-600)">Close photo of the product on the shelf with label readable.</p>
-            <div class="mt-2 dropzone p-4 flex items-center gap-4">
-              <input id="photoItemSet" type="file" accept="image/*" class="hidden" />
-              <button type="button" class="btn-gray px-3 py-2 rounded-lg" onclick="document.getElementById('photoItemSet').click()">Choose file</button>
-              <div id="previewItemSet" class="text-sm text-gray-600">No file chosen</div>
-            </div>
-          </div>
-          <!-- Section view -->
-          <div>
-            <label class="block text-sm font-medium">2) Section/shelf context</label>
-            <p class="mt-1 text-xs" style="color:var(--text-600)">Further back shot showing the section/shelf context around the product.</p>
-            <div class="mt-2 dropzone p-4 flex items-center gap-4">
-              <input id="photoSection" type="file" accept="image/*" class="hidden" />
-              <button type="button" class="btn-gray px-3 py-2 rounded-lg" onclick="document.getElementById('photoSection').click()">Choose file</button>
-              <div id="previewSection" class="text-sm text-gray-600">No file chosen</div>
-            </div>
-          </div>
-          <!-- Wide angle -->
-          <div>
-            <label class="block text-sm font-medium">3) Wide-angle shelf view</label>
-            <p class="mt-1 text-xs" style="color:var(--text-600)">Wide-angle shot showing the broader shelf context around the section.</p>
-            <div class="mt-2 dropzone p-4 flex items-center gap-4">
-              <input id="photoWide" type="file" accept="image/*" class="hidden" />
-              <button type="button" class="btn-gray px-3 py-2 rounded-lg" onclick="document.getElementById('photoWide').click()">Choose file</button>
-              <div id="previewWide" class="text-sm text-gray-600">No file chosen</div>
-            </div>
+      <div class="space-y-3">
+        <div>
+          <label class="block text-sm font-medium mb-1.5">1) Product close-up</label>
+          <div class="dropzone">
+            <input id="photoItemSet" type="file" accept="image/*" class="hidden" />
+            <button type="button" class="btn-secondary text-sm py-2 px-3" onclick="document.getElementById('photoItemSet').click()">Choose photo</button>
+            <div id="previewItemSet" class="text-sm text-gray-500 flex-1">No file chosen</div>
           </div>
         </div>
-      </section>
-
-      <!-- Right: Data capture -->
-      <section class="brand-card p-5 sm:p-6">
-        <h2 class="text-xl font-semibold">Record Findings</h2>
-        <div class="mt-4 grid gap-4">
-          <div>
-            <label class="block text-sm font-medium">Shelf price</label>
-            <div class="mt-1 relative">
-              <span class="absolute left-3 top-2.5 text-gray-500">$</span>
-              <input id="price" type="number" step="0.01" min="0" class="brand-input w-full pl-7 pr-3 py-2" placeholder="e.g. 3.49" />
-            </div>
-            <p class="text-xs mt-1" style="color:var(--text-600)">Enter price shown on tag; note promos in comments.</p>
-          </div>
-
-          <div>
-            <label class="block text-sm font-medium">Stock level</label>
-            <select id="stock" class="brand-input w-full px-3 py-2">
-              <option value="" disabled selected>Select</option>
-              <option value="in_stock">In stock</option>
-              <option value="low">Low</option>
-              <option value="oos">Out of stock</option>
-            </select>
-          </div>
-
-          <div>
-            <label class="block text-sm font-medium">Notes</label>
-            <textarea id="notes" rows="4" class="brand-input w-full px-3 py-2" placeholder="Anything unusual (promo sign, missing tag, moved location, etc.)"></textarea>
-          </div>
-
-          <div class="grid grid-cols-2 gap-3">
-            <div>
-              <label class="block text-xs font-medium text-gray-500">Captured at</label>
-              <input id="capturedAt" type="text" class="brand-input w-full px-3 py-2 text-sm" readonly />
-            </div>
-            <div>
-              <label class="block text-xs font-medium text-gray-500">Device</label>
-              <input id="device" type="text" class="brand-input w-full px-3 py-2 text-sm" readonly />
-            </div>
-          </div>
-
-          <!-- Submission checklist -->
-          <div id="submitChecklist" class="rounded-xl border border-gray-200 bg-gray-50 p-4 text-sm">
-            <p class="font-semibold text-gray-700 mb-2">Before you submit:</p>
-            <ul class="space-y-1">
-              <li id="check-barcode" class="flex items-center gap-2 text-gray-400"><span class="check-icon">&#9675;</span> Barcode verified or exception reported</li>
-              <li id="check-photo1" class="flex items-center gap-2 text-gray-400"><span class="check-icon">&#9675;</span> Photo 1: Product on shelf (close)</li>
-              <li id="check-photo2" class="flex items-center gap-2 text-gray-400"><span class="check-icon">&#9675;</span> Photo 2: Section/shelf context</li>
-              <li id="check-photo3" class="flex items-center gap-2 text-gray-400"><span class="check-icon">&#9675;</span> Photo 3: Wide-angle shelf view</li>
-              <li id="check-price" class="flex items-center gap-2 text-gray-400"><span class="check-icon">&#9675;</span> Shelf price entered</li>
-              <li id="check-stock" class="flex items-center gap-2 text-gray-400"><span class="check-icon">&#9675;</span> Stock level selected</li>
-              <li id="check-notes" class="flex items-center gap-2 text-gray-400 hidden"><span class="check-icon">&#9675;</span> Notes required for exception</li>
-            </ul>
-          </div>
-
-          <div class="pt-2 flex flex-col sm:flex-row gap-3 items-stretch sm:items-center">
-            <button type="submit" id="submitBtn" class="btn-red px-5 py-4 sm:py-3 rounded-xl font-semibold opacity-50 cursor-not-allowed text-base w-full sm:w-auto" disabled>Submit for review</button>
-            <button type="button" id="saveDraft" class="btn-gray px-5 py-4 sm:py-3 rounded-xl font-semibold text-base w-full sm:w-auto">Save draft</button>
-            <button type="button" onclick="showHelp()" class="text-sm text-blue-600 hover:underline px-2">Need help?</button>
-            <span id="formMsg" class="text-sm" style="color:var(--text-600)"></span>
+        <div>
+          <label class="block text-sm font-medium mb-1.5">2) Shelf context</label>
+          <div class="dropzone">
+            <input id="photoSection" type="file" accept="image/*" class="hidden" />
+            <button type="button" class="btn-secondary text-sm py-2 px-3" onclick="document.getElementById('photoSection').click()">Choose photo</button>
+            <div id="previewSection" class="text-sm text-gray-500 flex-1">No file chosen</div>
           </div>
         </div>
-      </section>
-    </form>
-
-    <!-- Definition of Done -->
-    <section class="brand-card p-5 sm:p-6 mt-6">
-      <h2 class="text-xl font-semibold">Definition of Done</h2>
-      <ul class="mt-3 list-disc pl-6 text-sm" style="color:var(--text-600)">
-        <li>3 photos uploaded: product on shelf (close), section/shelf context, wide-angle shelf view (sharp & legible)</li>
-        <li>Price entered; promos noted in comments</li>
-        <li>Stock level recorded (in stock / low / OOS)</li>
-      </ul>
+        <div>
+          <label class="block text-sm font-medium mb-1.5">3) Wide-angle view</label>
+          <div class="dropzone">
+            <input id="photoWide" type="file" accept="image/*" class="hidden" />
+            <button type="button" class="btn-secondary text-sm py-2 px-3" onclick="document.getElementById('photoWide').click()">Choose photo</button>
+            <div id="previewWide" class="text-sm text-gray-500 flex-1">No file chosen</div>
+          </div>
+        </div>
+      </div>
     </section>
+
+    <!-- ── SECTION 4: NOTES ── -->
+    <section class="sa-card p-5">
+      <div class="flex items-center gap-3 mb-4">
+        <span class="section-num">4</span>
+        <div>
+          <h2 class="text-base font-semibold text-gray-900">Notes</h2>
+          <p class="text-sm" style="color:var(--text-600)">Anything the brand team should know.</p>
+        </div>
+      </div>
+      <textarea id="notes" rows="4" class="sa-input" placeholder="e.g. 'Blackberry not carried at this location. Facings looked full. End cap display present.'"></textarea>
+    </section>
+
+    <!-- ── SUBMIT ── -->
+    <section class="sa-card p-5">
+      <!-- Checklist summary -->
+      <div id="submitChecklist" class="space-y-2 mb-5">
+        <p class="text-sm font-semibold text-gray-700 mb-3">Before you submit:</p>
+        <div id="check-shelf" class="flex items-center gap-2 text-sm text-gray-400">
+          <span class="check-icon w-5 h-5 flex items-center justify-center rounded-full border-2 border-gray-300 text-xs flex-shrink-0">○</span>
+          <span>Shelf check complete</span>
+        </div>
+        <div id="check-scan" class="flex items-center gap-2 text-sm text-gray-400">
+          <span class="check-icon w-5 h-5 flex items-center justify-center rounded-full border-2 border-gray-300 text-xs flex-shrink-0">○</span>
+          <span>Location verified</span>
+        </div>
+        <div id="check-photo1" class="flex items-center gap-2 text-sm text-gray-400">
+          <span class="check-icon w-5 h-5 flex items-center justify-center rounded-full border-2 border-gray-300 text-xs flex-shrink-0">○</span>
+          <span>Photo 1: Product close-up</span>
+        </div>
+        <div id="check-photo2" class="flex items-center gap-2 text-sm text-gray-400">
+          <span class="check-icon w-5 h-5 flex items-center justify-center rounded-full border-2 border-gray-300 text-xs flex-shrink-0">○</span>
+          <span>Photo 2: Shelf context</span>
+        </div>
+        <div id="check-photo3" class="flex items-center gap-2 text-sm text-gray-400">
+          <span class="check-icon w-5 h-5 flex items-center justify-center rounded-full border-2 border-gray-300 text-xs flex-shrink-0">○</span>
+          <span>Photo 3: Wide-angle view</span>
+        </div>
+      </div>
+
+      <div class="flex flex-col gap-3">
+        <button type="button" id="submitBtn" class="btn-primary w-full py-4 opacity-50 cursor-not-allowed" disabled onclick="handleSubmit()">
+          Submit Job
+        </button>
+        <button type="button" id="saveDraftBtn" class="btn-secondary w-full py-3" onclick="saveDraft()">
+          Save Draft
+        </button>
+        <p id="formMsg" class="text-sm text-center hidden"></p>
+      </div>
+    </section>
+
+    <!-- Bottom spacer for safe area -->
+    <div class="h-6"></div>
   </main>
 
   <!-- Supabase SDK -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.47.5/dist/umd/supabase.min.js"></script>
   <script src="../config.js"></script>
-    <script src="../shared/api.js"></script>
+  <script src="../shared/api.js"></script>
   <script>
-    // Supabase is initialized in shared/api.js
-
-    // Global variables
+    // ═══════════════════════════════════════════════════════
+    //  GLOBAL STATE
+    // ═══════════════════════════════════════════════════════
     let currentJob = null;
     let currentUser = null;
+    let currentAssignment = null;   // first store/SKU assignment
+    let allSkus = [];               // all SKUs for this job (for flexible scan match)
+    let checkedSkuIds = new Set();  // which SKU checkboxes are ticked
+    let scanState = 'pending';      // 'pending' | 'verified' | 'skipped'
+    let scanStream = null;
 
-    // Initialize page
+    // ═══════════════════════════════════════════════════════
+    //  INIT
+    // ═══════════════════════════════════════════════════════
     document.addEventListener('DOMContentLoaded', async function() {
       try {
-        // Get job ID from URL
         const urlParams = new URLSearchParams(window.location.search);
         const jobId = urlParams.get('job_id');
-        
-        // Get current user
+
         const { data: { user } } = await supabase.auth.getUser();
-        if (!user) {
-          window.location.href = '../auth/signin.html';
-          return;
-        }
+        if (!user) { window.location.href = '../auth/signin.html'; return; }
         currentUser = user;
-        
+
         if (!jobId) {
-          console.error('❌ No job ID provided');
-          // Redirect based on user role
-          const { data: profile } = await supabase
-            .from('users')
-            .select('role')
-            .eq('id', user.id)
-            .single();
-          
-          if (profile?.role === 'admin') {
-            window.location.href = '../admin/dashboard.html';
-          } else {
-            window.location.href = 'shelfer.html';
-          }
+          const { data: profile } = await supabase.from('users').select('role').eq('id', user.id).single();
+          window.location.href = profile?.role === 'admin' ? '../admin/dashboard.html' : 'shelfer.html';
           return;
         }
 
-        // Load job details
         await loadJobDetails(jobId);
-        
-        // Setup form
-        setupFormHandlers();
-        
-        // Auto-capture metadata
-        updateMetadata();
-        
-      } catch (error) {
-        console.error('❌ Error initializing job details:', error);
-        showError('Failed to load job details. Please try again.');
+        setupPhotoHandlers();
+        updateChecklist();
+        updateProgress();
+        loadDraft(jobId);
+
+      } catch (err) {
+        console.error('❌ Init error:', err);
+        showMsg('Failed to load job. Please try again.', 'error');
       }
     });
 
-    // Load job details using direct job_store_skus query (bypasses view to get STORE display name)
+    // ═══════════════════════════════════════════════════════
+    //  LOAD JOB
+    // ═══════════════════════════════════════════════════════
     async function loadJobDetails(jobId) {
-      try {
-        // Load the job itself
-        const { data: jobData, error: jobError } = await supabase
-          .from('jobs')
-          .select(`
-            id, title, description, payout_per_store, status,
-            brands ( id, name )
-          `)
-          .eq('id', jobId)
-          .single();
+      // Fetch job + brand
+      const { data: jobData, error: jobErr } = await supabase
+        .from('jobs')
+        .select('id, title, description, payout_per_store, status, brands(id, name)')
+        .eq('id', jobId)
+        .single();
+      if (jobErr) throw jobErr;
 
-        if (jobError) throw jobError;
-        if (!jobData) throw new Error('Job not found');
+      // Fetch store/SKU assignments (include skus.category)
+      const { data: jssData, error: jssErr } = await supabase
+        .from('job_store_skus')
+        .select(`
+          id, job_id, store_id, sku_id,
+          stores(id, store_chain, name, "STORE", address, city, state, zip_code),
+          skus(id, name, upc, size, category)
+        `)
+        .eq('job_id', jobId);
+      if (jssErr) throw jssErr;
 
-        // Load store/SKU assignments
-        const { data: jssData, error: jssError } = await supabase
-          .from('job_store_skus')
-          .select(`
-            id, job_id, store_id, sku_id,
-            stores (
-              id, store_chain, name,
-              "STORE",
-              address, city, state, zip_code
-            ),
-            skus (
-              id, name, upc, size
-            )
-          `)
-          .eq('job_id', jobId);
+      const assignments = (jssData || []).map(row => ({
+        jss_id: row.id,
+        job_id: jobData.id,
+        store_id: row.store_id,
+        sku_id: row.sku_id,
+        store: row.stores || {},
+        sku: row.skus || {},
+        brand_name: jobData.brands?.name || ''
+      }));
 
-        if (jssError) throw jssError;
+      if (assignments.length === 0) throw new Error('No assignments found for this job');
 
-        // Normalize into the same shape the rest of the code expects
-        const assignments = (jssData || []).map(row => ({
-          job_id: jobData.id,
-          job_title: jobData.title,
-          job_description: jobData.description,
-          payout_per_store: jobData.payout_per_store,
-          job_status: jobData.status,
-          store_id: row.store_id,
-          store_chain: row.stores?.store_chain || '',
-          store_name: row.stores?.name || '',
-          store_display_name: row.stores?.STORE || row.stores?.name || '',
-          store_address: row.stores?.address || '',
-          store_city: row.stores?.city || '',
-          store_state: row.stores?.state || '',
-          store_zip: row.stores?.zip_code || '',
-          sku_id: row.sku_id,
-          sku_name: row.skus?.name || '',
-          sku_code: row.skus?.upc || '',
-          sku_size: row.skus?.size || '',
-          brand_id: jobData.brands?.id || '',
-          brand_name: jobData.brands?.name || ''
-        }));
+      currentJob = {
+        id: jobData.id,
+        title: jobData.title,
+        payout_per_store: jobData.payout_per_store,
+        brand_name: jobData.brands?.name || '',
+        assignments
+      };
 
-        if (assignments.length === 0) {
-          throw new Error('No store/SKU assignments found for this job');
+      // Collect unique SKUs across all assignments
+      const skuMap = {};
+      assignments.forEach(a => {
+        if (a.sku?.id && !skuMap[a.sku.id]) {
+          skuMap[a.sku.id] = a.sku;
         }
-
-        const first = assignments[0];
-        currentJob = {
-          id: jobData.id,
-          title: jobData.title,
-          description: jobData.description,
-          brand_name: jobData.brands?.name || '',
-          assignments: assignments
-        };
-        
-        // Compose display strings
-        // Build store display: prefer store_display_name (STORE column), then store_name, then address components
-        let storeHeader = 'Unknown Store';
-        if (first) {
-          const chain = first.store_chain || '';
-          // Try store_display_name first (STORE column), then store_name
-          const name = first.store_display_name || first.store_name || '';
-          
-          // If we have a name, use it
-          if (name) {
-            storeHeader = chain ? `${chain} — ${name}` : name;
-          } else {
-            // Fallback to address components
-            const addressParts = [
-              first.store_address,
-              first.store_city,
-              first.store_state
-            ].filter(Boolean);
-            
-            if (addressParts.length > 0) {
-              storeHeader = chain 
-                ? `${chain} — ${addressParts.join(', ')}`
-                : addressParts.join(', ');
-            } else if (chain) {
-              storeHeader = chain;
-            }
-          }
-        }
-
-        // Build SKU display with full details (name, size, flavor, UPC)
-        let skuHeader = 'Unknown SKU';
-        if (first) {
-          const parts = [];
-          
-          // Brand name (if available and different from SKU name)
-          if (first.brand_name) {
-            parts.push(first.brand_name);
-          }
-          
-          // SKU name
-          if (first.sku_name) {
-            parts.push(first.sku_name);
-          }
-          
-          // Size (e.g., "12 pack", "6 pack")
-          if (first.sku_size) {
-            parts.push(first.sku_size);
-          }
-          
-          skuHeader = parts.length > 0 ? parts.join(' — ') : 'Unknown SKU';
-          
-          // Add UPC if available (in parentheses)
-          if (first.sku_code) {
-            skuHeader += ` (UPC: ${first.sku_code})`;
-          }
-        }
-
-        // Update the DOM
-        document.getElementById('jobId').textContent = first.job_title || 'Untitled Job';
-        document.getElementById('brand').textContent = first.brand_name || 'Unknown Brand';
-        document.getElementById('store').textContent = storeHeader;
-        document.getElementById('sku').textContent = first.sku_name || skuHeader;
-
-        // Show UPC prominently if available
-        if (first.sku_code) {
-          const upcRow = document.getElementById('upc-row');
-          const upcDisplay = document.getElementById('upc-display');
-          if (upcRow && upcDisplay) {
-            upcDisplay.textContent = first.sku_code;
-            upcRow.classList.remove('hidden');
-          }
-        }
-
-        // Show all assignments if there are multiple
-        if (assignments.length > 1) {
-          const multipleAssignmentsDiv = document.getElementById('multiple-assignments');
-          const assignmentList = document.getElementById('assignment-list');
-          
-          if (multipleAssignmentsDiv && assignmentList) {
-            // Show the multiple assignments section
-            multipleAssignmentsDiv.classList.remove('hidden');
-            
-            // Populate the list
-            assignmentList.innerHTML = '';
-            assignments.forEach(assignment => {
-              const li = document.createElement('li');
-              
-              // Build store display with fallback (prefer store_display_name)
-              let storeDisplay = '';
-              const chain = assignment.store_chain || '';
-              const name = assignment.store_display_name || assignment.store_name || '';
-              
-              if (name) {
-                storeDisplay = chain ? `${chain} — ${name}` : name;
-              } else {
-                const addressParts = [
-                  assignment.store_address,
-                  assignment.store_city,
-                  assignment.store_state
-                ].filter(Boolean);
-                
-                if (addressParts.length > 0) {
-                  storeDisplay = chain 
-                    ? `${chain} — ${addressParts.join(', ')}`
-                    : addressParts.join(', ');
-                } else if (chain) {
-                  storeDisplay = chain;
-                } else {
-                  storeDisplay = 'Unknown Store';
-                }
-              }
-              
-              // Build SKU display with full details
-              const skuParts = [];
-              if (assignment.brand_name) {
-                skuParts.push(assignment.brand_name);
-              }
-              if (assignment.sku_name) {
-                skuParts.push(assignment.sku_name);
-              }
-              if (assignment.sku_size) {
-                skuParts.push(assignment.sku_size);
-              }
-              
-              let skuDisplay = skuParts.length > 0 ? skuParts.join(' — ') : 'Unknown SKU';
-              if (assignment.sku_code) {
-                skuDisplay += ` (UPC: ${assignment.sku_code})`;
-              }
-              
-              li.textContent = `${storeDisplay}: ${skuDisplay}`;
-              assignmentList.appendChild(li);
-            });
-          }
-        }
-
-        // Store first assignment for barcode comparison
-        window.currentAssignment = first;
-        
-        // Initialize barcode verification step
-        initBarcodeStep(first?.sku_code || '');
-
-        console.log('✅ Job loaded with assignments:', assignments);
-        
-      } catch (error) {
-        console.error('❌ Error loading job:', error);
-        throw error;
-      }
-    }
-
-    // Setup form handlers
-    function setupFormHandlers() {
-      // Photo upload handlers
-      const slots = [
-        { input: 'photoItemSet', preview: 'previewItemSet', key: 'product_closeup' },
-        { input: 'photoSection', preview: 'previewSection', key: 'section_context' },
-        { input: 'photoWide', preview: 'previewWide', key: 'wide_angle' }
-      ];
-
-      slots.forEach(slot => {
-        const input = document.getElementById(slot.input);
-        const preview = document.getElementById(slot.preview);
-        
-        input.addEventListener('change', async (e) => {
-          const file = e.target.files[0];
-          if (file) {
-            const resizedFile = await validatePhoto(file, preview);
-            if (resizedFile) {
-              // Store resized file for later upload
-              window[slot.key + 'File'] = resizedFile;
-              updateChecklist();
-            }
-          }
-        });
       });
+      allSkus = Object.values(skuMap);
 
-      // Update checklist when price or stock changes
-      document.getElementById('price').addEventListener('input', updateChecklist);
-      document.getElementById('stock').addEventListener('change', updateChecklist);
+      currentAssignment = assignments[0];
 
-      // Form submission
-      document.getElementById('jobForm').addEventListener('submit', handleSubmit);
-      
-      // Save draft
-      document.getElementById('saveDraft').addEventListener('click', saveDraft);
+      // ── Render header ──
+      const first = currentAssignment;
+      const store = first.store;
+      const storeName = store?.STORE || store?.name || '';
+      const storeChain = store?.store_chain || '';
+      const storeDisplay = storeChain
+        ? (storeName ? `${storeChain} ${storeName}` : storeChain)
+        : storeName;
 
-      // Initial checklist state
-      updateChecklist();
-    }
+      const skuCount = allSkus.length;
+      const brandName = first.brand_name;
+      const headline = [brandName, `${skuCount} SKU${skuCount !== 1 ? 's' : ''}`, storeDisplay].filter(Boolean).join(' · ');
 
-    // ===== BARCODE SCANNER STATE =====
-    let scanStream = null;
-    let scanAttempts = 0;
-    const MAX_SCAN_ATTEMPTS = 3;
-    // barcodeState: 'pending' | 'verified' | 'exception'
-    window.barcodeState = 'pending';
-    window.exceptionReasonValue = '';
+      const addressParts = [store?.address, store?.city, store?.state, store?.zip_code].filter(Boolean);
+      const address = addressParts.join(', ');
 
-    // Called after job loads — populate expected UPC
-    function initBarcodeStep(upc) {
-      const el = document.getElementById('expectedUpc');
-      if (el) el.textContent = upc || 'Not specified';
-      // If no UPC on file, auto-verify so flow isn't blocked
-      if (!upc) {
-        window.barcodeState = 'verified';
-        document.getElementById('scanIdle').innerHTML =
-          '<span class="scan-badge-ok">&#10003; No UPC on file — proceed to photos</span>';
-        document.getElementById('scanUI').classList.add('scan-verified');
-        updateChecklist();
+      // Category: use first SKU's category
+      const category = allSkus[0]?.category || '';
+
+      document.getElementById('jobHeadline').textContent = headline;
+      document.getElementById('jobAddress').textContent = address;
+      document.getElementById('headerStatus').textContent = `$${(parseFloat(jobData.payout_per_store || 0) * 0.6).toFixed(2)} payout`;
+
+      if (category) {
+        document.getElementById('jobCategoryText').textContent = category;
+        document.getElementById('jobCategory').classList.remove('hidden');
       }
+
+      document.getElementById('jobPayout').textContent =
+        `Earn $${(parseFloat(jobData.payout_per_store || 0) * 0.6).toFixed(2)} for this job`;
+
+      // Show header content
+      document.getElementById('headerLoading').classList.add('hidden');
+      document.getElementById('headerContent').classList.remove('hidden');
+
+      // ── Render SKU checklist ──
+      renderSkuChecklist();
+
+      console.log('✅ Job loaded:', currentJob);
     }
 
-    // Start camera for barcode scanning
+    // ── Render SKU checklist ──
+    function renderSkuChecklist() {
+      const container = document.getElementById('skuChecklist');
+      if (allSkus.length === 0) {
+        container.innerHTML = '<p class="text-sm text-gray-500 italic">No SKUs found for this job.</p>';
+        return;
+      }
+
+      container.innerHTML = allSkus.map(sku => {
+        const label = sku.name || sku.id;
+        const size = sku.size ? ` <span class="text-xs text-gray-400 font-normal">${sku.size}</span>` : '';
+        return `
+          <div class="sku-item" id="sku-item-${sku.id}" onclick="toggleSku('${sku.id}')">
+            <input type="checkbox" id="sku-cb-${sku.id}" onchange="toggleSku('${sku.id}')" />
+            <label for="sku-cb-${sku.id}">${label}${size}</label>
+          </div>
+        `;
+      }).join('');
+
+      updateChecklistProgress();
+    }
+
+    function toggleSku(skuId) {
+      const cb = document.getElementById(`sku-cb-${skuId}`);
+      const item = document.getElementById(`sku-item-${skuId}`);
+      if (!cb || !item) return;
+
+      // Prevent double-fire from label click propagation
+      // We'll rely on the onclick on the container div
+      const nowChecked = !cb.checked;
+      cb.checked = nowChecked;
+
+      if (nowChecked) {
+        checkedSkuIds.add(skuId);
+        item.classList.add('checked');
+      } else {
+        checkedSkuIds.delete(skuId);
+        item.classList.remove('checked');
+      }
+
+      updateChecklistProgress();
+      updateChecklist();
+      updateProgress();
+    }
+
+    function updateChecklistProgress() {
+      const total = allSkus.length;
+      const checked = checkedSkuIds.size;
+      const el = document.getElementById('checklistProgress');
+      if (!el) return;
+      if (total === 0) { el.classList.add('hidden'); return; }
+      el.textContent = `${checked} of ${total} confirmed on shelf`;
+      el.classList.remove('hidden');
+      el.style.color = checked === total ? '#059669' : '#6B7280';
+    }
+
+    // ═══════════════════════════════════════════════════════
+    //  BARCODE SCANNER — flexible: any SKU in set matches
+    // ═══════════════════════════════════════════════════════
     async function startBarcodeScanner() {
       try {
-        scanAttempts++;
-        document.getElementById('scanAttemptMsg').classList.remove('hidden');
-        document.getElementById('scanAttemptCount').textContent = scanAttempts;
         document.getElementById('scanIdle').classList.add('hidden');
         document.getElementById('scanCamera').classList.remove('hidden');
         document.getElementById('scanMismatch').classList.add('hidden');
@@ -658,55 +500,42 @@
           video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, height: { ideal: 720 } }
         });
         document.getElementById('scanVideo').srcObject = scanStream;
-        document.getElementById('scanCameraMsg').textContent = 'Camera ready — position barcode in view, then tap Capture & Read.';
+        document.getElementById('scanCameraMsg').textContent = 'Camera ready — point at any product barcode, then tap Capture & Read.';
       } catch (err) {
         console.error('Camera error:', err);
         document.getElementById('scanCamera').classList.add('hidden');
         document.getElementById('scanIdle').classList.remove('hidden');
-        document.getElementById('scanCameraMsg').textContent = '';
-        // Camera not available — show exception path immediately
-        document.getElementById('cantScanLink').classList.remove('hidden');
-        alert('Camera access denied or not available. Please use the exception option below.');
+        showMsg('Camera access denied. Tap "Skip" to continue without scanning.', 'warn');
       }
     }
 
-    // Stop camera stream
     function stopScanner() {
-      if (scanStream) {
-        scanStream.getTracks().forEach(t => t.stop());
-        scanStream = null;
-      }
+      if (scanStream) { scanStream.getTracks().forEach(t => t.stop()); scanStream = null; }
       document.getElementById('scanCamera').classList.add('hidden');
       document.getElementById('scanIdle').classList.remove('hidden');
-      if (scanAttempts >= 2) {
-        document.getElementById('cantScanLink').classList.remove('hidden');
-      }
     }
 
-    // Capture frame and attempt barcode decode
     async function captureAndDecode() {
       const video = document.getElementById('scanVideo');
       const canvas = document.getElementById('scanCanvas');
       const msg = document.getElementById('scanCameraMsg');
       canvas.width = video.videoWidth;
       canvas.height = video.videoHeight;
-      const ctx = canvas.getContext('2d');
-      ctx.drawImage(video, 0, 0);
-
+      canvas.getContext('2d').drawImage(video, 0, 0);
       msg.textContent = 'Reading barcode…';
 
       let decoded = null;
 
-      // Try BarcodeDetector API (Chrome/Android)
+      // Try BarcodeDetector (Chrome/Android)
       if ('BarcodeDetector' in window) {
         try {
-          const detector = new BarcodeDetector({ formats: ['ean_13', 'ean_8', 'upc_a', 'upc_e', 'code_128', 'code_39', 'qr_code'] });
+          const detector = new BarcodeDetector({ formats: ['ean_13','ean_8','upc_a','upc_e','code_128','code_39','qr_code'] });
           const barcodes = await detector.detect(canvas);
           if (barcodes.length > 0) decoded = barcodes[0].rawValue;
-        } catch (e) { console.warn('BarcodeDetector failed:', e); }
+        } catch(e) { console.warn('BarcodeDetector failed:', e); }
       }
 
-      // Fallback: ZXing via CDN (lazy load)
+      // Fallback: ZXing
       if (!decoded) {
         try {
           if (!window.ZXing) {
@@ -714,13 +543,12 @@
             await loadScript('https://unpkg.com/@zxing/library@0.21.3/umd/index.min.js');
           }
           const imgData = canvas.toDataURL('image/jpeg', 0.9);
-          const img = new Image();
-          img.src = imgData;
+          const img = new Image(); img.src = imgData;
           await new Promise(r => img.onload = r);
           const reader = new window.ZXing.BrowserMultiFormatReader();
           const result = await reader.decodeFromImageElement(img);
           decoded = result?.text;
-        } catch (e) { console.warn('ZXing fallback failed:', e); }
+        } catch(e) { console.warn('ZXing fallback failed:', e); }
       }
 
       stopScanner();
@@ -729,607 +557,362 @@
         handleScanResult(decoded);
       } else {
         msg.textContent = '';
+        // Show mismatch panel with helpful message
         document.getElementById('scanMismatch').classList.remove('hidden');
-        document.getElementById('scannedUpcDisplay').textContent = 'could not read barcode';
-        // After any failed read, show the skip button
-        document.getElementById('skipScanRow').classList.remove('hidden');
-        if (scanAttempts >= MAX_SCAN_ATTEMPTS) {
-          document.getElementById('cantScanLink').classList.remove('hidden');
-          document.getElementById('skipScanRow').classList.remove('hidden');
-          document.getElementById('startScanBtn').disabled = true;
-          document.getElementById('startScanBtn').textContent = 'Max attempts reached';
-        } else {
-          // Allow retry
-          document.getElementById('scanIdle').classList.remove('hidden');
-        }
-      }
-    }
-
-    // Compare scanned UPC to expected
-    function handleScanResult(scanned) {
-      const expected = (currentAssignment?.sku_code || '').replace(/\D/g, '');
-      const scannedClean = scanned.replace(/\D/g, '');
-      document.getElementById('scannedUpcDisplay').textContent = scanned;
-
-      const match = expected && scannedClean === expected;
-
-      if (match) {
-        // Verified!
-        window.barcodeState = 'verified';
-        document.getElementById('scanUI').classList.add('scan-verified');
-        document.getElementById('scanVerified').classList.remove('hidden');
-        document.getElementById('scanMismatch').classList.add('hidden');
         document.getElementById('scanIdle').classList.add('hidden');
-        document.getElementById('cantScanLink').classList.add('hidden');
-        updateChecklist();
-      } else {
-        // Mismatch — show override button (real UPC was scanned) and skip button
-        document.getElementById('scanMismatch').classList.remove('hidden');
-        document.getElementById('scanIdle').classList.remove('hidden');
-        document.getElementById('upcOverrideRow').classList.remove('hidden');
-        document.getElementById('skipScanRow').classList.remove('hidden');
-        if (scanAttempts >= MAX_SCAN_ATTEMPTS) {
-          document.getElementById('cantScanLink').classList.remove('hidden');
-          document.getElementById('skipScanRow').classList.remove('hidden');
-          document.getElementById('startScanBtn').disabled = true;
-          document.getElementById('startScanBtn').textContent = 'Max attempts reached';
-        }
       }
     }
 
-    // Skip barcode step — user confirms they are at the right product
-    function skipBarcodeStep() {
-      window.barcodeState = 'verified';
-      document.getElementById('scanUI').classList.add('scan-verified');
+    // Check scanned UPC against ANY SKU in the set
+    function handleScanResult(scanned) {
+      const scannedClean = scanned.replace(/\D/g, '');
+      const matchedSku = allSkus.find(sku => {
+        const upc = (sku.upc || '').replace(/\D/g, '');
+        return upc && upc === scannedClean;
+      });
+
+      if (matchedSku) {
+        // Match found — verify and auto-check that SKU in the checklist
+        scanState = 'verified';
+        document.getElementById('scanBox').classList.add('scan-ok');
+        document.getElementById('scanVerified').classList.remove('hidden');
+        document.getElementById('scanVerifiedMsg').textContent = `✓ Matched: ${matchedSku.name || scanned}`;
+        document.getElementById('scanIdle').classList.add('hidden');
+        document.getElementById('scanMismatch').classList.add('hidden');
+
+        // Auto-check the matched SKU in the checklist
+        if (!checkedSkuIds.has(matchedSku.id)) {
+          checkedSkuIds.add(matchedSku.id);
+          const cb = document.getElementById(`sku-cb-${matchedSku.id}`);
+          const item = document.getElementById(`sku-item-${matchedSku.id}`);
+          if (cb) cb.checked = true;
+          if (item) item.classList.add('checked');
+          updateChecklistProgress();
+        }
+      } else {
+        // No match — show friendly mismatch message
+        document.getElementById('scanMismatch').classList.remove('hidden');
+        document.getElementById('scanIdle').classList.add('hidden');
+      }
+
+      updateChecklist();
+      updateProgress();
+    }
+
+    function retryScan() {
+      document.getElementById('scanMismatch').classList.add('hidden');
+      document.getElementById('scanIdle').classList.remove('hidden');
+    }
+
+    function confirmMismatch() {
+      // User has noted the mismatch — treat as verified with caveat
+      const note = document.getElementById('mismatchNote').value.trim();
+      scanState = 'verified';
+      document.getElementById('scanBox').classList.add('scan-ok');
       document.getElementById('scanVerified').classList.remove('hidden');
-      document.getElementById('scanVerified').querySelector('.scan-badge-ok').textContent =
-        '\u2713 Barcode skipped \u2014 product confirmed by user';
+      document.getElementById('scanVerifiedMsg').textContent = '✓ Mismatch noted — location confirmed';
       document.getElementById('scanMismatch').classList.add('hidden');
       document.getElementById('scanIdle').classList.add('hidden');
-      document.getElementById('skipScanRow').classList.add('hidden');
-      document.getElementById('upcOverrideRow').classList.add('hidden');
-      document.getElementById('cantScanLink').classList.add('hidden');
-      updateChecklist();
-    }
-    window.skipBarcodeStep = skipBarcodeStep;
-
-    // Override UPC — update the SKU in the DB to the scanned value and continue
-    async function overrideUpc() {
-      const scannedRaw = document.getElementById('scannedUpcDisplay').textContent || '';
-      const scannedClean = scannedRaw.replace(/\D/g, '');
-      if (!scannedClean || scannedClean === 'could not read barcode') {
-        alert('No valid scanned UPC to save.');
-        return;
-      }
-      if (!currentAssignment?.sku_id) {
-        alert('Cannot update — SKU ID not found for this assignment.');
-        return;
-      }
-      const confirmed = confirm(
-        `Update this SKU's UPC from ${currentAssignment.sku_code || '(empty)'} to ${scannedClean}?\n\nThis will update the database record for all future jobs.`
-      );
-      if (!confirmed) return;
-
-      try {
-        const { error } = await supabase
-          .from('skus')
-          .update({ upc: scannedClean })
-          .eq('id', currentAssignment.sku_id);
-        if (error) throw error;
-        // Update local state so verification passes
-        currentAssignment.sku_code = scannedClean;
-        document.getElementById('expectedUpc').textContent = scannedClean;
-        // Mark as verified
-        window.barcodeState = 'verified';
-        document.getElementById('scanUI').classList.add('scan-verified');
-        document.getElementById('scanVerified').classList.remove('hidden');
-        document.getElementById('scanVerified').querySelector('.scan-badge-ok').textContent =
-          '\u2713 UPC updated to ' + scannedClean + ' \u2014 product verified';
-        document.getElementById('scanMismatch').classList.add('hidden');
-        document.getElementById('scanIdle').classList.add('hidden');
-        document.getElementById('upcOverrideRow').classList.add('hidden');
-        document.getElementById('skipScanRow').classList.add('hidden');
-        document.getElementById('cantScanLink').classList.add('hidden');
-        updateChecklist();
-      } catch (err) {
-        console.error('UPC override error:', err);
-        alert('Failed to update UPC: ' + err.message);
-      }
-    }
-    window.overrideUpc = overrideUpc;
-
-    // Show exception panel
-    function showExceptionPanel() {
-      document.getElementById('exceptionPanel').classList.remove('hidden');
-      document.getElementById('scanUI').classList.add('scan-exception');
-      document.getElementById('cantScanLink').classList.add('hidden');
-    }
-
-    // Handle exception reason selection
-    function handleExceptionChange() {
-      const reason = document.getElementById('exceptionReason').value;
-      window.exceptionReasonValue = reason;
-      // Show free-text box only for 'other'
-      const otherBox = document.getElementById('exceptionOtherText');
-      if (reason === 'other') {
-        otherBox.classList.remove('hidden');
-        otherBox.focus();
-      } else {
-        otherBox.classList.add('hidden');
-        otherBox.value = '';
-      }
-      if (reason) {
-        window.barcodeState = 'exception';
-        // Relax photo/price requirements
-        document.getElementById('check-photo1').querySelector('span').textContent = '(optional)';
-        document.getElementById('check-photo2').querySelector('span').textContent = '(optional)';
-        document.getElementById('check-photo3').querySelector('span').textContent = '(optional)';
-        document.getElementById('check-price').classList.add('hidden');
-        document.getElementById('check-notes').classList.remove('hidden');
+      // Append mismatch note to main notes field
+      if (note) {
+        const notesEl = document.getElementById('notes');
+        notesEl.value = notesEl.value
+          ? notesEl.value + '\n\nBarcode mismatch: ' + note
+          : 'Barcode mismatch: ' + note;
       }
       updateChecklist();
-    }
-    function handleExceptionOtherInput() {
-      // Append the free-text to the exception reason so it's saved in the DB
-      const txt = document.getElementById('exceptionOtherText').value.trim();
-      window.exceptionReasonValue = txt ? 'other: ' + txt : 'other';
-    }
-    window.handleExceptionOtherInput = handleExceptionOtherInput;
-
-    // Lazy script loader
-    function loadScript(src) {
-      return new Promise((resolve, reject) => {
-        const s = document.createElement('script');
-        s.src = src;
-        s.onload = resolve;
-        s.onerror = reject;
-        document.head.appendChild(s);
-      });
+      updateProgress();
     }
 
-    // Update submission checklist and enable/disable submit button
-    function updateChecklist() {
-      const isException = window.barcodeState === 'exception';
-      const checks = [
-        { id: 'check-barcode', met: window.barcodeState === 'verified' || window.barcodeState === 'exception' },
-        { id: 'check-photo1', met: isException ? true : !!window.product_closeupFile },
-        { id: 'check-photo2', met: isException ? true : !!window.section_contextFile },
-        { id: 'check-photo3', met: isException ? true : !!window.wide_angleFile },
-        { id: 'check-price',  met: isException ? true : !!(document.getElementById('price')?.value?.trim()) },
-        { id: 'check-stock',  met: isException ? true : !!(document.getElementById('stock')?.value) },
-        { id: 'check-notes',  met: isException ? !!(document.getElementById('notes')?.value?.trim()) : true }
+    function skipScan() {
+      scanState = 'skipped';
+      document.getElementById('scanBox').classList.add('scan-ok');
+      document.getElementById('scanVerified').classList.remove('hidden');
+      document.getElementById('scanVerifiedMsg').textContent = '✓ Skipped — confirmed in right spot';
+      document.getElementById('scanIdle').classList.add('hidden');
+      updateChecklist();
+      updateProgress();
+    }
+    window.skipScan = skipScan;
+
+    // ═══════════════════════════════════════════════════════
+    //  PHOTOS
+    // ═══════════════════════════════════════════════════════
+    function setupPhotoHandlers() {
+      const slots = [
+        { input: 'photoItemSet', preview: 'previewItemSet', key: 'product_closeup', check: 'check-photo1' },
+        { input: 'photoSection', preview: 'previewSection', key: 'section_context', check: 'check-photo2' },
+        { input: 'photoWide', preview: 'previewWide', key: 'wide_angle', check: 'check-photo3' }
       ];
-
-      checks.forEach(({ id, met }) => {
-        const el = document.getElementById(id);
-        if (!el) return;
-        const icon = el.querySelector('.check-icon');
-        if (met) {
-          el.classList.remove('text-gray-400');
-          el.classList.add('text-green-700');
-          if (icon) icon.innerHTML = '&#10003;';
-        } else {
-          el.classList.remove('text-green-700');
-          el.classList.add('text-gray-400');
-          if (icon) icon.innerHTML = '&#9675;';
-        }
+      slots.forEach(slot => {
+        document.getElementById(slot.input).addEventListener('change', async (e) => {
+          const file = e.target.files[0];
+          if (!file) return;
+          const resized = await validateAndResizePhoto(file, document.getElementById(slot.preview));
+          if (resized) {
+            window[slot.key + 'File'] = resized;
+            updateChecklist();
+            updateProgress();
+          }
+        });
       });
+    }
 
-      const allMet = checks.every(c => c.met);
-      const btn = document.getElementById('submitBtn');
-      if (btn) {
-        btn.disabled = !allMet;
-        btn.classList.toggle('opacity-50', !allMet);
-        btn.classList.toggle('cursor-not-allowed', !allMet);
-        btn.classList.toggle('cursor-pointer', allMet);
+    async function validateAndResizePhoto(file, previewEl) {
+      const MAX_MB = 5;
+      try {
+        const resized = await resizePhoto(file);
+        const mb = resized.size / (1024 * 1024);
+        if (mb > MAX_MB) {
+          previewEl.textContent = `❌ Too large after compression (${mb.toFixed(1)}MB)`;
+          return null;
+        }
+        return new Promise(resolve => {
+          const img = new Image();
+          img.onload = () => {
+            previewEl.innerHTML = `<span class="text-green-700 font-medium">✅ ${resized.name}</span> <span class="text-gray-400 text-xs">${img.width}×${img.height}</span>`;
+            resolve(resized);
+          };
+          img.onerror = () => { previewEl.textContent = '❌ Invalid image'; resolve(null); };
+          img.src = URL.createObjectURL(resized);
+        });
+      } catch(err) {
+        previewEl.textContent = '❌ Error processing photo';
+        return null;
       }
     }
 
-    // Show help modal
-    function showHelp() {
-      const msg = [
-        'Having trouble? Here are some tips:',
-        '',
-        '• Photos must be at least 1000×1000px. Use your phone camera in normal (not portrait) mode.',
-        '• If a photo shows \"Too small\", move closer to the shelf and retake.',
-        '• Price: enter the shelf tag price exactly as shown (e.g. 3.49).',
-        '• Stock level: choose In Stock, Low, or Out of Stock based on what you see.',
-        '',
-        'Still stuck? Email us at support@beshelfassured.com or text (832) 000-0000.'
-      ].join('\n');
-      alert(msg);
-    }
-    window.showHelp = showHelp;
-
-    // Resize and compress photo
-    async function resizePhoto(file, maxWidth = 2000, maxHeight = 2000, quality = 0.8) {
-      return new Promise((resolve) => {
+    async function resizePhoto(file, maxW=2000, maxH=2000, quality=0.8) {
+      return new Promise(resolve => {
         const img = new Image();
         img.onload = () => {
-          const canvas = document.createElement('canvas');
-          let { width, height } = img;
-          
-          // Calculate new dimensions maintaining aspect ratio
-          if (width > maxWidth || height > maxHeight) {
-            const ratio = Math.min(maxWidth / width, maxHeight / height);
-            width = width * ratio;
-            height = height * ratio;
+          let {width, height} = img;
+          if (width > maxW || height > maxH) {
+            const r = Math.min(maxW/width, maxH/height);
+            width = width*r; height = height*r;
           }
-          
-          canvas.width = width;
-          canvas.height = height;
-          
-          const ctx = canvas.getContext('2d');
-          ctx.drawImage(img, 0, 0, width, height);
-          
-          // Convert to blob with compression
-          canvas.toBlob((blob) => {
-            const resizedFile = new File([blob], file.name, {
-              type: 'image/jpeg',
-              lastModified: Date.now()
-            });
-            resolve(resizedFile);
+          const canvas = document.createElement('canvas');
+          canvas.width = width; canvas.height = height;
+          canvas.getContext('2d').drawImage(img, 0, 0, width, height);
+          canvas.toBlob(blob => {
+            resolve(new File([blob], file.name, {type:'image/jpeg', lastModified:Date.now()}));
           }, 'image/jpeg', quality);
         };
         img.src = URL.createObjectURL(file);
       });
     }
 
-    // Validate photo
-    async function validatePhoto(file, previewEl) {
-      const MAX_SIZE_MB = 5;
-      const MIN_W = 1000, MIN_H = 1000;
-      
-      try {
-        // First resize/compress the photo
-        const resizedFile = await resizePhoto(file);
-        
-        // Check file size after resizing
-        const mb = resizedFile.size / (1024 * 1024);
-        if (mb > MAX_SIZE_MB) {
-          previewEl.textContent = `❌ File too large after compression (${mb.toFixed(1)}MB)`;
-          return false;
-        }
+    // ═══════════════════════════════════════════════════════
+    //  CHECKLIST & PROGRESS
+    // ═══════════════════════════════════════════════════════
+    function updateChecklist() {
+      const shelfDone = checkedSkuIds.size > 0; // at least 1 checked
+      const scanDone = scanState === 'verified' || scanState === 'skipped';
+      const photo1Done = !!window.product_closeupFile;
+      const photo2Done = !!window.section_contextFile;
+      const photo3Done = !!window.wide_angleFile;
 
-        // Check dimensions
-        return new Promise((resolve) => {
-          const img = new Image();
-          img.onload = () => {
-            if (img.width < MIN_W || img.height < MIN_H) {
-              previewEl.textContent = `❌ Too small (${img.width}×${img.height})`;
-              resolve(false);
-            } else {
-              previewEl.innerHTML = `<span class='text-green-700'>✅ ${resizedFile.name}</span> <span class='text-gray-500 text-xs'>(${img.width}×${img.height}, ${mb.toFixed(1)}MB)</span>`;
-              // Return the resized file instead of original
-              resolve(resizedFile);
-            }
-          };
-          img.onerror = () => {
-            previewEl.textContent = '❌ Invalid image';
-            resolve(false);
-          };
-          img.src = URL.createObjectURL(resizedFile);
-        });
-      } catch (error) {
-        console.error('Error resizing photo:', error);
-        previewEl.textContent = `❌ Error processing photo`;
-        return false;
+      setCheck('check-shelf', shelfDone);
+      setCheck('check-scan', scanDone);
+      setCheck('check-photo1', photo1Done);
+      setCheck('check-photo2', photo2Done);
+      setCheck('check-photo3', photo3Done);
+
+      const allDone = shelfDone && scanDone && photo1Done && photo2Done && photo3Done;
+      const btn = document.getElementById('submitBtn');
+      btn.disabled = !allDone;
+      btn.classList.toggle('opacity-50', !allDone);
+      btn.classList.toggle('cursor-not-allowed', !allDone);
+      btn.classList.toggle('cursor-pointer', allDone);
+    }
+
+    function setCheck(id, met) {
+      const el = document.getElementById(id);
+      if (!el) return;
+      const icon = el.querySelector('.check-icon');
+      if (met) {
+        el.classList.remove('text-gray-400');
+        el.classList.add('text-green-700');
+        if (icon) { icon.innerHTML = '✓'; icon.classList.remove('border-gray-300'); icon.classList.add('border-green-500','bg-green-50'); }
+      } else {
+        el.classList.remove('text-green-700');
+        el.classList.add('text-gray-400');
+        if (icon) { icon.innerHTML = '○'; icon.classList.add('border-gray-300'); icon.classList.remove('border-green-500','bg-green-50'); }
       }
     }
 
-    // Update metadata
-    function updateMetadata() {
-      const now = new Date();
-      document.getElementById('capturedAt').value = now.toISOString();
-      document.getElementById('device').value = /Mobi|Android/i.test(navigator.userAgent) ? 'mobile' : 'desktop';
+    function updateProgress() {
+      const steps = [
+        checkedSkuIds.size > 0,
+        scanState !== 'pending',
+        !!window.product_closeupFile,
+        !!window.section_contextFile,
+        !!window.wide_angleFile
+      ];
+      const done = steps.filter(Boolean).length;
+      const pct = Math.round((done / steps.length) * 100);
+      document.getElementById('progressBar').style.width = pct + '%';
     }
 
-    // Handle form submission
-    async function handleSubmit(e) {
-      e.preventDefault();
-      
+    // ═══════════════════════════════════════════════════════
+    //  SUBMIT
+    // ═══════════════════════════════════════════════════════
+    async function handleSubmit() {
+      if (!currentJob) return;
+
+      // Check for existing submission
+      const { data: existing } = await supabase
+        .from('job_submissions')
+        .select('id, created_at')
+        .eq('job_id', currentJob.id)
+        .eq('contractor_id', currentUser.id);
+
+      if (existing && existing.length > 0) {
+        const ok = confirm(
+          `You've already submitted this job (${new Date(existing[0].created_at).toLocaleString()}).\n\nSubmit again?`
+        );
+        if (!ok) return;
+      }
+
+      setLoadingState(true);
+
       try {
-        // Check if job already has a submission
-        const { data: existingSubmissions, error: checkError } = await supabase
-          .from('job_submissions')
-          .select('id, created_at')
-          .eq('job_id', currentJob.id)
-          .eq('contractor_id', currentUser.id);
-        
-        if (checkError) {
-          console.warn('⚠️ Could not check for existing submissions:', checkError);
-        } else if (existingSubmissions && existingSubmissions.length > 0) {
-          const confirmResubmit = confirm(
-            `You've already submitted this job (${new Date(existingSubmissions[0].created_at).toLocaleString()}).\n\n` +
-            `Submitting again will create a new submission. The previous one will be marked as superseded during review.\n\n` +
-            `Do you want to continue?`
-          );
-          if (!confirmResubmit) {
-            return;
-          }
-        }
-
-        // Validate barcode step
-        if (window.barcodeState === 'pending') {
-          showError('Please scan the product barcode or report an issue before submitting.');
-          document.getElementById('barcodeSection').scrollIntoView({ behavior: 'smooth' });
-          return;
-        }
-
-        const isException = window.barcodeState === 'exception';
-
-        if (isException) {
-          // Exception path: notes required, photos optional, price optional
-          const notes = document.getElementById('notes').value?.trim();
-          if (!notes) {
-            showError('Please add notes explaining the issue before submitting.');
-            document.getElementById('notes').focus();
-            return;
-          }
-        } else {
-          // Normal path: all photos and price required
-          const requiredPhotos = ['product_closeup', 'section_context', 'wide_angle'];
-          const missingPhotos = requiredPhotos.filter(key => !window[key + 'File']);
-          
-          if (missingPhotos.length > 0) {
-            showError(`Please upload all required photos: ${missingPhotos.join(', ')}`);
-            return;
-          }
-
-          // Validate stock level
-          const stock = document.getElementById('stock').value;
-          if (!stock) {
-            showError('Please select stock level');
-            return;
-          }
-        }
-
-        // Show loading
-        setLoading(true);
-
-        // Upload photos to Supabase Storage
+        // Upload photos
         const photoUrls = await uploadPhotos();
 
-        // Create job submission
-        const stockVal = isException ? (document.getElementById('stock').value || null) : document.getElementById('stock').value;
+        // Build checked SKU list
+        const checkedSkus = allSkus.filter(s => checkedSkuIds.has(s.id)).map(s => ({
+          id: s.id, name: s.name, upc: s.upc
+        }));
+
         const submissionData = {
           job_id: currentJob.id,
           contractor_id: currentUser.id,
           store_id: currentAssignment?.store_id || null,
           sku_id: currentAssignment?.sku_id || null,
-          // submission_type must be one of: 'photo', 'inventory_data', 'price_data', 'shelf_data'
-          // Exceptions are flagged via exception_reason in the data payload, not a separate type
           submission_type: 'photo',
           data: {
-            price: document.getElementById('price').value ? parseFloat(document.getElementById('price').value) : null,
-            stock_level: stockVal,
+            checked_skus: checkedSkus,
+            unchecked_skus: allSkus.filter(s => !checkedSkuIds.has(s.id)).map(s => ({id: s.id, name: s.name})),
+            scan_state: scanState,
             notes: document.getElementById('notes').value || null,
-            captured_at: document.getElementById('capturedAt').value,
-            device: document.getElementById('device').value,
-            barcode_verified: window.barcodeState === 'verified',
-            is_exception: isException,
-            exception_reason: isException ? (window.exceptionReasonValue || null) : null
+            captured_at: new Date().toISOString(),
+            device: /Mobi|Android/i.test(navigator.userAgent) ? 'mobile' : 'desktop',
+            mismatch_note: document.getElementById('mismatchNote')?.value || null
           },
           files: photoUrls
         };
 
-        const { data: submission, error: submitError } = await supabase
+        const { error: submitErr } = await supabase
           .from('job_submissions')
           .insert(submissionData)
           .select()
           .single();
 
-        if (submitError) {
-          console.error('❌ Job submission database error:', submitError);
-          throw new Error(`Failed to save submission to database: ${submitError.message}. Details: ${submitError.details || 'N/A'}. Hint: ${submitError.hint || 'N/A'}`);
-        }
-        
-        console.log('✅ Job submission record created:', submission);
+        if (submitErr) throw new Error(`Submission failed: ${submitErr.message}`);
 
-        // Update job status - CRITICAL: must happen after submission is saved
-        const newJobStatus = isException ? 'exception_reported' : 'pending_review';
-        const { data: updatedJobs, error: updateError } = await supabase
-          .from('jobs')
-          .update({ 
-            status: newJobStatus,
-            updated_at: new Date().toISOString()
-          })
-          .eq('id', currentJob.id)
-          .select('id, status');
-          
-        if (updateError) {
-          console.error('❌ Job status update failed:', updateError);
-          console.error('Update error details:', {
-            message: updateError.message,
-            code: updateError.code,
-            details: updateError.details,
-            hint: updateError.hint
-          });
-          
-          // This is critical - show error but don't block
-          const errorMsg = `⚠️ Submission saved but status update failed: ${updateError.message}. Admin can fix with SQL script.`;
-          console.error(errorMsg);
-          alert(errorMsg);
-          showError(errorMsg);
-          
-          // Still show success since submission was saved
-          // But log that admin intervention needed
-        } else if (updatedJobs && updatedJobs.length > 0) {
-          const updatedJob = updatedJobs[0];
-          console.log('✅ Job status updated to pending_review:', updatedJob);
-          // Verify the update
-          if (updatedJob.status !== 'pending_review') {
-            console.error('⚠️ Status update returned wrong status:', updatedJob.status);
-          }
-        } else {
-          console.warn('⚠️ Job status update returned no rows - job may not exist or update may have failed silently');
-        }
+        // Update job status
+        await supabase.from('jobs')
+          .update({ status: 'pending_review', updated_at: new Date().toISOString() })
+          .eq('id', currentJob.id);
 
-        // Show success with storage info
-        const hasStorageIssues = photoUrls.some(photo => photo.error);
-        if (isException) {
-          showSuccess('Exception reported successfully. Thank you for letting us know — we will follow up.');
-        } else if (hasStorageIssues) {
-          showSuccess('Job submitted successfully! Photos saved locally (storage bucket needs setup).');
-        } else {
-          showSuccess('Job submitted successfully! Thank you for your work.');
-        }
-        
-        // Redirect after delay
-        setTimeout(() => {
-          window.location.href = 'shelfer.html';
-        }, 2000);
+        showMsg('✅ Job submitted! Great work.', 'success');
+        setTimeout(() => { window.location.href = 'shelfer.html'; }, 2000);
 
-      } catch (error) {
-        console.error('❌ Error submitting job:', error);
-        
-        // Show detailed error message that stays visible
-        const errorMsg = error.message || 'Failed to submit job. Please try again.';
-        console.error('Full error details:', {
-          message: error.message,
-          code: error.code,
-          details: error.details,
-          hint: error.hint,
-          stack: error.stack
-        });
-        
-        // Check for specific bucket errors
-        let displayMsg = errorMsg;
-        if (errorMsg.includes('Bucket not found') || errorMsg.includes('bucket')) {
-          displayMsg = `Storage bucket error: ${errorMsg}\n\nPlease contact admin. The 'job_submissions' bucket may need to be created in Supabase Storage.`;
-        } else if (errorMsg.includes('policy') || errorMsg.includes('permission') || errorMsg.includes('RLS')) {
-          displayMsg = `Permission error: ${errorMsg}\n\nStorage bucket RLS policies may need to be configured.`;
-        }
-        
-        // Show error in a way that won't disappear
-        alert(`❌ Job Submission Error\n\n${displayMsg}\n\nCheck browser console (F12) for full details.`);
-        showError(displayMsg);
-        
-        // Don't redirect on error - let user see the error and try again
-        // Remove auto-redirect so error stays visible
+      } catch (err) {
+        console.error('❌ Submit error:', err);
+        alert(`Submission error:\n\n${err.message}\n\nCheck console for details.`);
+        showMsg(err.message, 'error');
       } finally {
-        setLoading(false);
+        setLoadingState(false);
       }
     }
 
-    // Upload photos to Supabase Storage
+    // ═══════════════════════════════════════════════════════
+    //  PHOTO UPLOAD
+    // ═══════════════════════════════════════════════════════
     async function uploadPhotos() {
       const photoUrls = [];
-      const photoTypes = ['product_closeup', 'section_context', 'wide_angle'];
-      
-      for (const photoType of photoTypes) {
-        const file = window[photoType + 'File'];
-        if (file) {
-          const fileName = `${photoType}_${Date.now()}.${file.name.split('.').pop()}`;
-          const filePath = `jobs/${currentJob.id}/${fileName}`;
-          
-          try {
-            const { data, error } = await supabase.storage
-              .from('job_submissions')
-              .upload(filePath, file);
-            
-            if (error) {
-              console.error('❌ Storage upload error:', error);
-              
-              // Check if bucket doesn't exist
-              if (error.message.includes('Bucket not found') || error.message.includes('not found')) {
-                console.warn('⚠️ Storage bucket not found, creating fallback...');
-                
-                // Fallback: store file info without upload
-                photoUrls.push({
-                  type: photoType,
-                  url: null, // Will be null for now
-                  filename: fileName,
-                  file_data: await fileToBase64(file), // Store as base64 for now
-                  error: 'Storage bucket not configured'
-                });
-                continue;
-              }
-              
-              throw new Error(`Failed to upload ${photoType} photo: ${error.message}`);
-            }
-            
-            // Get public URL
-            const { data: urlData } = supabase.storage
-              .from('job_submissions')
-              .getPublicUrl(filePath);
-            
-            photoUrls.push({
-              type: photoType,
-              url: urlData.publicUrl,
-              filename: fileName
-            });
-            
-          } catch (storageError) {
-            console.error('❌ Storage error:', storageError);
-            
-            // Fallback: store file info without upload
-            photoUrls.push({
-              type: photoType,
-              url: null,
-              filename: fileName,
-              file_data: await fileToBase64(file),
-              error: storageError.message
-            });
-          }
+      const types = ['product_closeup','section_context','wide_angle'];
+      for (const t of types) {
+        const file = window[t + 'File'];
+        if (!file) continue;
+        const path = `jobs/${currentJob.id}/${t}_${Date.now()}.jpg`;
+        try {
+          const { error } = await supabase.storage.from('job_submissions').upload(path, file);
+          if (error) throw error;
+          const { data: urlData } = supabase.storage.from('job_submissions').getPublicUrl(path);
+          photoUrls.push({ type: t, url: urlData.publicUrl, filename: path });
+        } catch(err) {
+          console.warn(`⚠️ Upload failed for ${t}:`, err.message);
+          photoUrls.push({ type: t, url: null, filename: path, error: err.message });
         }
       }
-      
       return photoUrls;
     }
 
-    // Helper function to convert file to base64
-    function fileToBase64(file) {
-      return new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.readAsDataURL(file);
-        reader.onload = () => resolve(reader.result);
-        reader.onerror = error => reject(error);
-      });
-    }
-
-    // Save draft
+    // ═══════════════════════════════════════════════════════
+    //  DRAFT
+    // ═══════════════════════════════════════════════════════
     function saveDraft() {
-      // Store form data in localStorage
-      const draftData = {
+      if (!currentJob) return;
+      const draft = {
         jobId: currentJob.id,
-        price: document.getElementById('price').value,
-        stock: document.getElementById('stock').value,
+        checkedSkuIds: [...checkedSkuIds],
         notes: document.getElementById('notes').value,
         timestamp: new Date().toISOString()
       };
-      
-      localStorage.setItem(`job_draft_${currentJob.id}`, JSON.stringify(draftData));
-      showSuccess('Draft saved locally');
+      localStorage.setItem(`job_draft_${currentJob.id}`, JSON.stringify(draft));
+      showMsg('Draft saved.', 'success');
     }
 
-    // Show error message (stays visible, doesn't auto-clear)
-    function showError(message) {
-      const msgEl = document.getElementById('formMsg');
-      msgEl.textContent = message;
-      msgEl.style.color = '#C62828';
-      msgEl.style.fontWeight = '600';
-      msgEl.style.fontSize = '14px';
-      // Don't auto-clear - let user read it
+    function loadDraft(jobId) {
+      const raw = localStorage.getItem(`job_draft_${jobId}`);
+      if (!raw) return;
+      try {
+        const draft = JSON.parse(raw);
+        if (draft.notes) document.getElementById('notes').value = draft.notes;
+        if (draft.checkedSkuIds) {
+          draft.checkedSkuIds.forEach(id => {
+            checkedSkuIds.add(id);
+            const cb = document.getElementById(`sku-cb-${id}`);
+            const item = document.getElementById(`sku-item-${id}`);
+            if (cb) cb.checked = true;
+            if (item) item.classList.add('checked');
+          });
+          updateChecklistProgress();
+          updateChecklist();
+          updateProgress();
+        }
+      } catch(e) { console.warn('Draft parse error:', e); }
     }
 
-    // Show success message
-    function showSuccess(message) {
-      const msgEl = document.getElementById('formMsg');
-      msgEl.textContent = message;
-      msgEl.style.color = '#059669';
+    // ═══════════════════════════════════════════════════════
+    //  HELPERS
+    // ═══════════════════════════════════════════════════════
+    function showMsg(text, type='info') {
+      const el = document.getElementById('formMsg');
+      el.textContent = text;
+      el.className = 'text-sm text-center mt-1';
+      el.classList.remove('hidden');
+      if (type === 'error') el.style.color = '#C62828';
+      else if (type === 'success') el.style.color = '#059669';
+      else if (type === 'warn') el.style.color = '#D97706';
+      else el.style.color = '#6B7280';
     }
 
-    // Set loading state
-    function setLoading(loading) {
-      const submitBtn = document.querySelector('button[type="submit"]');
-      if (loading) {
-        submitBtn.disabled = true;
-        submitBtn.textContent = 'Submitting...';
-      } else {
-        submitBtn.disabled = false;
-        submitBtn.textContent = 'Submit for review';
-      }
+    function setLoadingState(loading) {
+      const btn = document.getElementById('submitBtn');
+      btn.disabled = loading;
+      btn.textContent = loading ? 'Submitting…' : 'Submit Job';
+    }
+
+    function loadScript(src) {
+      return new Promise((resolve, reject) => {
+        const s = document.createElement('script');
+        s.src = src; s.onload = resolve; s.onerror = reject;
+        document.head.appendChild(s);
+      });
     }
   </script>
 </body>
