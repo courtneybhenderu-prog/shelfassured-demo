@@ -15,7 +15,42 @@
         .tab-btn { transition: color 0.15s, border-color 0.15s; }
         .tab-btn.active { color: #C62828; border-bottom: 2px solid #C62828; }
         .tab-btn:not(.active) { color: #6b7280; border-bottom: 2px solid transparent; }
-        .row-hover:hover { background: #f9fafb; }
+
+        /* Intelligence card */
+        .brand-card { background:#fff; border:1px solid #e5e7eb; border-radius:10px; padding:14px 16px; margin-bottom:10px; box-shadow:0 1px 3px rgba(0,0,0,0.05); }
+        .brand-card:hover { box-shadow:0 2px 8px rgba(0,0,0,0.08); }
+
+        /* Category badges */
+        .cat-badge { font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:0.05em; padding:2px 7px; border-radius:20px; white-space:nowrap; }
+        .cat-snack    { background:#fef3c7; color:#92400e; }
+        .cat-beverage { background:#dbeafe; color:#1e40af; }
+        .cat-meat     { background:#fce7f3; color:#9d174d; }
+        .cat-sauce    { background:#d1fae5; color:#065f46; }
+        .cat-bakery   { background:#ede9fe; color:#5b21b6; }
+        .cat-frozen   { background:#e0f2fe; color:#0369a1; }
+        .cat-condiment{ background:#d1fae5; color:#065f46; }
+        .cat-default  { background:#f3f4f6; color:#6b7280; }
+
+        /* Pipeline badges */
+        .pipe-badge { font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:0.04em; padding:2px 7px; border-radius:20px; white-space:nowrap; }
+        .pipe-scanned       { background:#fff7ed; color:#c2410c; }
+        .pipe-prospect      { background:#f3f4f6; color:#6b7280; }
+        .pipe-pitched       { background:#fef9c3; color:#854d0e; }
+        .pipe-demo          { background:#fed7aa; color:#9a3412; }
+        .pipe-converted     { background:#dcfce7; color:#166534; }
+        .pipe-active        { background:#bbf7d0; color:#14532d; }
+
+        /* Intelligence chips */
+        .chip { display:inline-flex; align-items:center; gap:5px; font-size:11px; font-weight:500; color:#374151; background:#f3f4f6; border-radius:20px; padding:3px 9px; white-space:nowrap; }
+        .chip .dot { width:7px; height:7px; border-radius:50%; flex-shrink:0; }
+        .chip-green .dot { background:#22c55e; }
+        .chip-blue  .dot { background:#3b82f6; }
+        .chip-amber .dot { background:#f59e0b; }
+        .chip-gray  .dot { background:#d1d5db; }
+        .chip-red   .dot { background:#ef4444; }
+
+        /* Pipeline select */
+        .pipe-select { font-size:11px; border:1px solid #e5e7eb; border-radius:6px; padding:2px 6px; cursor:pointer; font-weight:600; }
     </style>
 </head>
 <body class="bg-gray-50">
@@ -37,38 +72,49 @@
 
     <!-- Stats Row -->
     <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
-        <div class="bg-white rounded-lg shadow-sm p-4 cursor-pointer hover:bg-gray-50 transition-colors" onclick="goToPage('brands.html')" title="View all brands">
+        <div class="bg-white rounded-lg shadow-sm p-4">
             <p class="text-xs font-semibold text-gray-500 uppercase tracking-wide">Total Brands</p>
             <p class="text-3xl font-bold text-gray-900 mt-1" id="br-total">—</p>
-            <p class="text-xs text-[#C62828] mt-1">View all →</p>
         </div>
         <div class="bg-white rounded-lg shadow-sm p-4">
-            <p class="text-xs font-semibold text-gray-500 uppercase tracking-wide">New This Week</p>
-            <p class="text-3xl font-bold text-green-600 mt-1" id="br-new">—</p>
+            <p class="text-xs font-semibold text-gray-500 uppercase tracking-wide">Prospects</p>
+            <p class="text-3xl font-bold text-blue-600 mt-1" id="br-prospects">—</p>
         </div>
         <div class="bg-white rounded-lg shadow-sm p-4">
             <p class="text-xs font-semibold text-gray-500 uppercase tracking-wide">Open Jobs</p>
-            <p class="text-3xl font-bold text-blue-600 mt-1" id="br-open-jobs">—</p>
+            <p class="text-3xl font-bold text-green-600 mt-1" id="br-open-jobs">—</p>
         </div>
         <div class="bg-white rounded-lg shadow-sm p-4">
-            <p class="text-xs font-semibold text-gray-500 uppercase tracking-wide">Audit Requests</p>
-            <p class="text-3xl font-bold text-orange-500 mt-1" id="br-audit-reqs">—</p>
+            <p class="text-xs font-semibold text-gray-500 uppercase tracking-wide">Pending Review</p>
+            <p class="text-3xl font-bold text-orange-500 mt-1" id="br-pending">—</p>
         </div>
     </div>
 
     <!-- Tabs -->
     <div class="bg-white rounded-lg shadow-sm mb-6">
         <div class="flex border-b border-gray-200 px-4 overflow-x-auto">
-            <button class="tab-btn active py-3 mr-6 text-sm font-medium whitespace-nowrap" onclick="switchTab('audit-requests')" id="tab-audit-requests">Audit Requests</button>
+            <button class="tab-btn active py-3 mr-6 text-sm font-medium whitespace-nowrap" onclick="switchTab('all-brands')" id="tab-all-brands">All Brands</button>
             <button class="tab-btn py-3 mr-6 text-sm font-medium whitespace-nowrap" onclick="switchTab('open-jobs')" id="tab-open-jobs">Open Jobs</button>
-            <button class="tab-btn py-3 mr-6 text-sm font-medium whitespace-nowrap" onclick="switchTab('new-signups')" id="tab-new-signups">New Signups</button>
-            <button class="tab-btn py-3 text-sm font-medium whitespace-nowrap" onclick="switchTab('all-brands')" id="tab-all-brands">All Brands</button>
+            <button class="tab-btn py-3 mr-6 text-sm font-medium whitespace-nowrap" onclick="switchTab('audit-requests')" id="tab-audit-requests">Audit Requests</button>
+            <button class="tab-btn py-3 text-sm font-medium whitespace-nowrap" onclick="switchTab('new-signups')" id="tab-new-signups">New Signups</button>
         </div>
 
         <!-- Search + toggle (shown on all-brands tab) -->
-        <div class="px-4 pt-3 pb-2 hidden" id="brand-search-bar">
-            <input type="text" id="brand-search" placeholder="Search by name or website..."
-                   class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-300 mb-2">
+        <div class="px-4 pt-3 pb-2" id="brand-search-bar">
+            <div class="flex gap-2 mb-2">
+                <input type="text" id="brand-search" placeholder="Search by name, category, or retail..."
+                       class="flex-1 border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-300">
+                <select id="stage-filter" onchange="renderActiveTab()"
+                    class="border border-gray-300 rounded-md px-2 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-300">
+                    <option value="">All Stages</option>
+                    <option value="scanned">Scanned</option>
+                    <option value="prospect">Prospect</option>
+                    <option value="pitched">Pitched</option>
+                    <option value="demo_scheduled">Demo Scheduled</option>
+                    <option value="converted">Converted</option>
+                    <option value="active_client">Active Client</option>
+                </select>
+            </div>
             <div class="flex items-center gap-3">
                 <label class="flex items-center gap-2 cursor-pointer select-none">
                     <div class="relative">
@@ -82,8 +128,8 @@
         </div>
 
         <!-- Tab content -->
-        <div id="tab-content" class="divide-y divide-gray-100 min-h-[200px]">
-            <div class="p-6 text-center text-gray-400 text-sm">Loading...</div>
+        <div id="tab-content" class="min-h-[200px] p-4">
+            <div class="text-center text-gray-400 text-sm py-8">Loading...</div>
         </div>
     </div>
 
@@ -103,10 +149,13 @@
 <script src="../shared/api.js"></script>
 <script>
     let allBrandUsers  = [];
-    let allBrands      = [];   // from the brands table (logos, websites)
+    let allBrands      = [];
     let allJobs        = [];
     let allAuditReqs   = [];
-    let currentTab     = 'audit-requests';
+    let allSkus        = [];
+    let allBrandStores = [];
+    let allSubmissions = [];
+    let currentTab     = 'all-brands';
 
     function goToPage(p) { window.location.href = p; }
     window.goToPage = goToPage;
@@ -124,11 +173,8 @@
 
         await loadBrandData();
 
-        document.getElementById('brand-search').addEventListener('input', function () {
-            renderActiveTab();
-        });
+        document.getElementById('brand-search').addEventListener('input', renderActiveTab);
 
-        // Toggle: show shadow brands
         const toggle = document.getElementById('show-shadow-toggle');
         const track  = document.getElementById('toggle-track');
         const thumb  = document.getElementById('toggle-thumb');
@@ -149,45 +195,61 @@
 
     async function loadBrandData() {
         const sc = window.saClient || supabase;
+        document.getElementById('tab-content').innerHTML = '<div class="text-center text-gray-400 text-sm py-8">Loading...</div>';
+
         const [
             { data: users,     error: usersErr },
             { data: jobs,      error: jobsErr },
             { data: auditReqs, error: auditErr },
-            { data: brands,    error: brandsErr }
+            { data: brands,    error: brandsErr },
+            { data: skus,      error: skusErr },
+            { data: brandStores, error: bsErr },
+            { data: submissions, error: subErr }
         ] = await Promise.all([
-            sc.from('users').select('id, full_name, email, role, is_active, created_at, company_name').eq('role', 'brand_client').order('created_at', { ascending: false }),
-            sc.from('jobs').select('id, title, status, created_at, client_id, total_payout').order('created_at', { ascending: false }),
+            sc.from('users').select('id, full_name, email, role, is_active, created_at').eq('role', 'brand_client').order('created_at', { ascending: false }),
+            sc.from('jobs').select('id, title, status, created_at, brand_id, client_id, total_payout, updated_at').order('created_at', { ascending: false }),
             sc.from('audit_requests').select('id, title, audit_type, status, created_at, client_id, preferred_contact').order('created_at', { ascending: false }),
-            sc.from('brands').select('id, name, website, created_at, logo_url, is_shadow, pipeline_stage, category, internal_notes').order('created_at', { ascending: false })
+            sc.from('brands').select('id, name, website, created_at, logo_url, is_shadow, pipeline_stage, internal_notes, updated_at').order('name', { ascending: true }),
+            sc.from('skus').select('id, brand_id, name, is_active').eq('is_active', true),
+            sc.from('brand_stores').select('id, brand_id'),
+            sc.from('job_submissions').select('id, job_id, status, created_at')
         ]);
 
-        if (usersErr)  console.error('Brand Hub: users query error', usersErr);
-        if (jobsErr)   console.error('Brand Hub: jobs query error', jobsErr);
-        if (auditErr)  console.error('Brand Hub: audit_requests query error', auditErr);
-        if (brandsErr) console.error('Brand Hub: brands query error', brandsErr);
-        console.log('Brand Hub data:', { users: users?.length, jobs: jobs?.length, brands: brands?.length });
+        if (usersErr)  console.error('Brand Hub: users error', usersErr);
+        if (jobsErr)   console.error('Brand Hub: jobs error', jobsErr);
+        if (auditErr)  console.error('Brand Hub: audit_requests error', auditErr);
+        if (brandsErr) console.error('Brand Hub: brands error', brandsErr);
+        if (skusErr)   console.error('Brand Hub: skus error', skusErr);
+        if (bsErr)     console.error('Brand Hub: brand_stores error', bsErr);
+        if (subErr)    console.error('Brand Hub: job_submissions error', subErr);
 
-        allBrandUsers = users    || [];
-        allJobs       = jobs     || [];
-        allAuditReqs  = auditReqs || [];
-        allBrands     = brands   || [];
+        console.log('Brand Hub loaded:', {
+            brands: brands?.length, jobs: jobs?.length, skus: skus?.length,
+            brand_stores: brandStores?.length, submissions: submissions?.length
+        });
 
-        const now = Date.now();
-        const WEEK = 7 * 24 * 60 * 60 * 1000;
-        const newThisWeek  = allBrandUsers.filter(u => (now - new Date(u.created_at).getTime()) < WEEK).length;
+        allBrandUsers  = users       || [];
+        allJobs        = jobs        || [];
+        allAuditReqs   = auditReqs   || [];
+        allBrands      = brands      || [];
+        allSkus        = skus        || [];
+        allBrandStores = brandStores || [];
+        allSubmissions = submissions || [];
+
+        const totalBrands  = allBrands.length;
+        const prospects    = allBrands.filter(b => !b.is_shadow || b.pipeline_stage === 'prospect').length;
         const openJobs     = allJobs.filter(j => j.status === 'pending' || j.status === 'assigned').length;
-        const pendingAudit = allAuditReqs.filter(r => r.status === 'pending_review').length;
+        const pendingReview = allSubmissions.filter(s => s.status === 'pending_review' || s.status === 'submitted').length;
+
+        setText('br-total',     totalBrands);
+        setText('br-prospects', prospects);
+        setText('br-open-jobs', openJobs);
+        setText('br-pending',   pendingReview);
+
         const clientBrands = allBrands.filter(b => !b.is_shadow).length;
         const shadowBrands = allBrands.filter(b => b.is_shadow).length;
-        const totalBrands  = allBrands.length;
-
-        setText('br-total',      totalBrands);
-        setText('br-new',        newThisWeek);
-        setText('br-open-jobs',  openJobs);
-        setText('br-audit-reqs', pendingAudit);
-
         const el = document.getElementById('brand-summary');
-        if (el) el.innerHTML = `${clientBrands} client brand${clientBrands !== 1 ? 's' : ''} &middot; ${shadowBrands} scanned (intelligence)`;
+        if (el) el.innerHTML = `${clientBrands} client brand${clientBrands !== 1 ? 's' : ''} &middot; ${shadowBrands} scanned (intelligence) &middot; ${totalBrands} total`;
 
         renderActiveTab();
     }
@@ -206,190 +268,271 @@
         const container = document.getElementById('tab-content');
         if (!container) return;
 
-        if (currentTab === 'audit-requests') {
-            const pending = allAuditReqs.filter(r => r.status === 'pending_review');
-            if (pending.length === 0) {
-                container.innerHTML = '<div class="p-6 text-center text-gray-400 text-sm">No pending audit requests</div>';
-                return;
-            }
-            container.innerHTML = pending.map(r => {
-                const brand = allBrandUsers.find(u => u.id === r.client_id);
-                return `
-                <div class="px-4 py-4 row-hover">
-                    <div class="flex items-start justify-between gap-4">
-                        <div class="flex-1 min-w-0">
-                            <p class="text-sm font-semibold text-gray-900">${esc(r.title || 'Untitled Request')}</p>
-                            <p class="text-xs text-gray-500 mt-0.5">${esc(r.audit_type || '')} &middot; ${timeAgo(r.created_at)}</p>
-                            ${brand ? `<p class="text-xs text-gray-400 mt-0.5">From: ${esc(brand.full_name || brand.email)}</p>` : ''}
-                            <p class="text-xs text-gray-400">Preferred contact: ${esc(r.preferred_contact || 'email')}</p>
-                        </div>
-                        <div class="flex flex-col gap-2 shrink-0">
-                            <span class="px-2 py-0.5 text-xs font-semibold rounded-full bg-orange-100 text-orange-700">Pending Review</span>
-                            <button onclick="markAuditInProgress('${r.id}')" class="text-xs text-[#C62828] hover:underline text-right">Mark In Progress</button>
-                        </div>
-                    </div>
-                </div>`;
-            }).join('');
+        if (currentTab === 'all-brands') {
+            renderAllBrands(container);
+        } else if (currentTab === 'open-jobs') {
+            renderOpenJobs(container);
+        } else if (currentTab === 'audit-requests') {
+            renderAuditRequests(container);
+        } else if (currentTab === 'new-signups') {
+            renderNewSignups(container);
+        }
+    }
+
+    function renderAllBrands(container) {
+        const term       = (document.getElementById('brand-search')?.value || '').toLowerCase().trim();
+        const showShadow = document.getElementById('show-shadow-toggle')?.checked !== false;
+        const stageFilter = document.getElementById('stage-filter')?.value || '';
+
+        let list = showShadow ? [...allBrands] : allBrands.filter(b => !b.is_shadow);
+
+        if (stageFilter) {
+            list = list.filter(b => (b.pipeline_stage || 'prospect') === stageFilter);
         }
 
-        else if (currentTab === 'open-jobs') {
-            const open = allJobs.filter(j => j.status === 'pending' || j.status === 'assigned');
-            if (open.length === 0) {
-                container.innerHTML = '<div class="p-6 text-center text-gray-400 text-sm">No open jobs</div>';
-                return;
-            }
-            container.innerHTML = open.map(j => {
-                const brand = allBrandUsers.find(u => u.id === j.client_id);
-                const statusColor = j.status === 'assigned' ? 'bg-blue-100 text-blue-700' : 'bg-yellow-100 text-yellow-700';
-                const now = Date.now();
-                const ageHours = Math.floor((now - new Date(j.created_at).getTime()) / 3600000);
-                const isStale = j.status === 'pending' && ageHours > 24;
-                return `
-                <div class="px-4 py-4 row-hover ${isStale ? 'border-l-4 border-red-400' : ''}">
-                    <div class="flex items-center justify-between gap-4">
-                        <div class="flex-1 min-w-0">
-                            <p class="text-sm font-semibold text-gray-900">${esc(j.title || 'Untitled Job')}</p>
-                            ${brand ? `<p class="text-xs text-gray-500">${esc(brand.full_name || brand.email)}</p>` : ''}
-                            <p class="text-xs text-gray-400">${timeAgo(j.created_at)}${isStale ? ' &mdash; <span class="text-red-500 font-medium">No takers yet</span>' : ''}</p>
-                        </div>
-                        <div class="text-right shrink-0">
-                            <span class="px-2 py-0.5 text-xs font-semibold rounded-full ${statusColor}">${capitalize(j.status)}</span>
-                            <p class="text-xs text-gray-500 mt-1">$${j.total_payout || 0}</p>
-                        </div>
-                    </div>
-                </div>`;
-            }).join('');
+        if (term) {
+            list = list.filter(b => {
+                const cat = parseNotesField(b.internal_notes, 'Category').toLowerCase();
+                const retail = parseNotesField(b.internal_notes, 'Retail').toLowerCase();
+                return (b.name || '').toLowerCase().includes(term) ||
+                       (b.website || '').toLowerCase().includes(term) ||
+                       cat.includes(term) || retail.includes(term);
+            });
         }
 
-        else if (currentTab === 'new-signups') {
-            const now = Date.now();
-            const WEEK = 7 * 24 * 60 * 60 * 1000;
-            const newBrands = allBrandUsers.filter(u => (now - new Date(u.created_at).getTime()) < WEEK);
-            if (newBrands.length === 0) {
-                container.innerHTML = '<div class="p-6 text-center text-gray-400 text-sm">No new brand signups in the last 7 days</div>';
-                return;
-            }
-            container.innerHTML = newBrands.map(u => {
-                const jobCount = allJobs.filter(j => j.client_id === u.id).length;
-                return `
-                <div class="px-4 py-4 row-hover">
-                    <div class="flex items-center justify-between">
-                        <div>
-                            <p class="text-sm font-semibold text-gray-900">${esc(u.full_name || 'No name')}</p>
-                            <p class="text-xs text-gray-500">${esc(u.email)}</p>
-                            ${u.company_name ? `<p class="text-xs text-gray-400">${esc(u.company_name)}</p>` : ''}
-                        </div>
-                        <div class="text-right">
-                            <p class="text-xs text-gray-400">Joined ${timeAgo(u.created_at)}</p>
-                            <p class="text-xs text-gray-500 mt-1">${jobCount} job${jobCount !== 1 ? 's' : ''} created</p>
-                        </div>
-                    </div>
-                </div>`;
-            }).join('');
+        if (list.length === 0) {
+            container.innerHTML = '<div class="py-8 text-center text-gray-400 text-sm">No brands found</div>';
+            return;
         }
 
-        else if (currentTab === 'all-brands') {
-            const term        = (document.getElementById('brand-search')?.value || '').toLowerCase().trim();
-            const showShadow  = document.getElementById('show-shadow-toggle')?.checked || false;
-            let list = showShadow ? [...allBrands] : allBrands.filter(b => !b.is_shadow);
-            if (term) {
-                list = list.filter(b =>
-                    (b.name || '').toLowerCase().includes(term) ||
-                    (b.website || '').toLowerCase().includes(term)
-                );
-            }
-            if (list.length === 0) {
-                container.innerHTML = '<div class="p-6 text-center text-gray-400 text-sm">No brands found</div>';
-                return;
-            }
-            container.innerHTML = list.map(b => {
-                let logoHtml;
-                if (b.logo_url) {
-                    let logoUrl = b.logo_url.replace('/brand logos/', '/brand_logos/');
-                    logoUrl = encodeURI(logoUrl);
-                    logoHtml = `<img src="${esc(logoUrl)}" alt="${esc(b.name)} logo"
-                        class="w-10 h-10 object-contain rounded border border-gray-200 bg-white p-1"
-                        loading="lazy"
-                        onerror="this.onerror=null;this.parentElement.innerHTML='<div class=\'w-10 h-10 flex items-center justify-center bg-gray-100 rounded border border-gray-200 text-gray-400 text-xs\'>No Logo</div>'">`;
-                } else {
-                    logoHtml = `<div class="w-10 h-10 flex items-center justify-center bg-gray-100 rounded border border-gray-200 text-gray-400 text-xs">No Logo</div>`;
-                }
-                const stageColors = {
-                    'scanned':          'bg-gray-100 text-gray-600',
-                    'prospect':         'bg-blue-100 text-blue-700',
-                    'pitched':          'bg-yellow-100 text-yellow-700',
-                    'demo_scheduled':   'bg-orange-100 text-orange-700',
-                    'converted':        'bg-green-100 text-green-700',
-                    'active_client':    'bg-red-100 text-red-700'
-                };
-                const stageLabels = {
-                    'scanned':          'Scanned',
-                    'prospect':         'Prospect',
-                    'pitched':          'Pitched',
-                    'demo_scheduled':   'Demo Scheduled',
-                    'converted':        'Converted',
-                    'active_client':    'Active Client'
-                };
-                const stage = b.pipeline_stage || (b.is_shadow ? 'scanned' : 'prospect');
-                const stageColor = stageColors[stage] || 'bg-gray-100 text-gray-600';
-                const stageLabel = stageLabels[stage] || stage;
-                const bId   = b.id;
-                const bName = b.name || 'Unnamed Brand';
-                const bWeb  = b.website || '';
-                const bCat  = b.category || '';
-                // Parse retail presence from internal_notes (stored as JSON string by import script)
-                let retailInfo = '';
-                if (b.internal_notes) {
-                    try {
-                        const notes = typeof b.internal_notes === 'string' ? JSON.parse(b.internal_notes) : b.internal_notes;
-                        if (notes.heb_presence) retailInfo = notes.heb_presence;
-                        else if (notes.retail_presence) retailInfo = notes.retail_presence;
-                    } catch(e) {
-                        // internal_notes is plain text, not JSON
-                        if (b.internal_notes.length < 80) retailInfo = b.internal_notes;
-                    }
-                }
-                return `
-                <div class="px-4 py-3 row-hover">
-                    <div class="flex items-center gap-3">
-                        ${logoHtml}
-                        <div class="flex-1 min-w-0">
-                            <a href="brands-detail.html?id=${bId}" class="text-sm font-semibold text-blue-600 hover:underline">${esc(bName)}</a>
-                            <div class="flex flex-wrap items-center gap-1.5 mt-0.5">
-                                ${bCat ? `<span class="text-xs bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded font-medium">${esc(bCat)}</span>` : ''}
-                                ${retailInfo ? `<span class="text-xs text-gray-500 truncate max-w-xs">${esc(retailInfo)}</span>` : (bWeb ? `<span class="text-xs text-gray-500 truncate max-w-xs">${esc(bWeb)}</span>` : '')}
-                            </div>
-                            <p class="text-xs text-gray-400 mt-0.5">Added ${timeAgo(b.created_at)}</p>
-                        </div>
-                        <div class="flex flex-col items-end gap-1 shrink-0">
-                            <select onchange="updatePipelineStage('${bId}', this.value)"
-                                class="text-xs border border-gray-200 rounded px-1.5 py-0.5 ${stageColor} font-medium cursor-pointer focus:outline-none focus:ring-1 focus:ring-red-300">
-                                <option value="scanned"         ${stage === 'scanned'         ? 'selected' : ''}>Scanned</option>
-                                <option value="prospect"        ${stage === 'prospect'        ? 'selected' : ''}>Prospect</option>
-                                <option value="pitched"         ${stage === 'pitched'         ? 'selected' : ''}>Pitched</option>
-                                <option value="demo_scheduled"  ${stage === 'demo_scheduled'  ? 'selected' : ''}>Demo Scheduled</option>
-                                <option value="converted"       ${stage === 'converted'       ? 'selected' : ''}>Converted</option>
-                                <option value="active_client"   ${stage === 'active_client'   ? 'selected' : ''}>Active Client</option>
-                            </select>
-                            <a href="brands-detail.html?id=${bId}" class="text-xs text-[#C62828] hover:underline">View</a>
-                        </div>
-                    </div>
-                    <!-- Outreach actions -->
-                    <div class="flex gap-2 mt-2 pt-2 border-t border-gray-100">
-                        <button onclick="copyBrandEmail('${bId}','${esc(bName)}','${esc(bWeb)}')"
-                            class="flex items-center gap-1 text-xs px-2.5 py-1 bg-blue-50 text-blue-700 rounded-full hover:bg-blue-100 transition-colors font-medium">
-                            <svg xmlns='http://www.w3.org/2000/svg' class='h-3 w-3' fill='none' viewBox='0 0 24 24' stroke='currentColor'><path stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z'/></svg>
-                            Copy Email Draft
-                        </button>
-                        ${bWeb ? `<button onclick="openHunterPlaceholder('${esc(bWeb)}')"
-                            class="flex items-center gap-1 text-xs px-2.5 py-1 bg-gray-100 text-gray-500 rounded-full hover:bg-gray-200 transition-colors font-medium" title="Find contact email (Pro feature)">
-                            <svg xmlns='http://www.w3.org/2000/svg' class='h-3 w-3' fill='none' viewBox='0 0 24 24' stroke='currentColor'><path stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z'/></svg>
-                            Find Contact
-                        </button>` : ''}
-                    </div>
-                </div>`;
-            }).join('');
+        container.innerHTML = list.map(b => buildBrandCard(b)).join('');
+    }
+
+    function buildBrandCard(b) {
+        const bId   = b.id;
+        const bName = b.name || 'Unnamed Brand';
+        const bWeb  = b.website ? b.website.replace(/^https?:\/\//, '').replace(/\/$/, '') : '';
+        const cat   = parseNotesField(b.internal_notes, 'Category');
+        const retail = parseNotesField(b.internal_notes, 'Retail');
+        const stage  = b.pipeline_stage || (b.is_shadow ? 'scanned' : 'prospect');
+
+        // Intelligence counts
+        const brandJobs       = allJobs.filter(j => j.brand_id === bId);
+        const completedJobs   = brandJobs.filter(j => j.status === 'completed').length;
+        const totalJobs       = brandJobs.length;
+        const storeCount      = allBrandStores.filter(s => s.brand_id === bId).length;
+        const skuCount        = allSkus.filter(s => s.brand_id === bId).length;
+        const pendingApprovals = allSubmissions.filter(s => {
+            const job = allJobs.find(j => j.id === s.job_id);
+            return job && job.brand_id === bId && (s.status === 'submitted' || s.status === 'pending_review');
+        }).length;
+
+        // Last activity
+        const dates = [b.updated_at, b.created_at, ...brandJobs.map(j => j.updated_at || j.created_at)].filter(Boolean);
+        const lastActivity = dates.length ? new Date(Math.max(...dates.map(d => new Date(d).getTime()))) : null;
+
+        // Logo
+        let logoHtml;
+        if (b.logo_url) {
+            const logoUrl = encodeURI(b.logo_url.replace('/brand logos/', '/brand_logos/'));
+            logoHtml = `<img src="${esc(logoUrl)}" alt="${esc(bName)}"
+                class="w-12 h-12 object-contain rounded-lg border border-gray-200 bg-white p-1 flex-shrink-0"
+                loading="lazy"
+                onerror="this.onerror=null;this.outerHTML='<div class=\\'w-12 h-12 flex items-center justify-center bg-gray-100 rounded-lg border border-gray-200 text-gray-400 text-xs flex-shrink-0\\'>No Logo</div>'">`;
+        } else {
+            const initials = bName.split(' ').slice(0,2).map(w=>w[0]).join('').toUpperCase();
+            logoHtml = `<div class="w-12 h-12 flex items-center justify-center bg-gray-100 rounded-lg border border-gray-200 text-gray-600 text-sm font-bold flex-shrink-0">${esc(initials)}</div>`;
         }
+
+        // Category badge
+        const catClass = getCatClass(cat);
+        const catBadge = cat ? `<span class="cat-badge ${catClass}">${esc(cat.split('/')[0].trim())}</span>` : '';
+
+        // Pipeline badge
+        const { cls: pipeClass, label: pipeLabel } = getPipeStyle(stage);
+        const pipeBadge = `<span class="pipe-badge ${pipeClass}">${pipeLabel}</span>`;
+
+        // Intelligence chips
+        const chips = [];
+        if (completedJobs > 0) {
+            chips.push(`<span class="chip chip-green"><span class="dot"></span>${completedJobs} job${completedJobs !== 1 ? 's' : ''} completed</span>`);
+        } else if (totalJobs > 0) {
+            chips.push(`<span class="chip chip-amber"><span class="dot"></span>${totalJobs} job${totalJobs !== 1 ? 's' : ''} in progress</span>`);
+        } else {
+            chips.push(`<span class="chip chip-gray"><span class="dot"></span>No jobs yet</span>`);
+        }
+        if (storeCount > 0) {
+            chips.push(`<span class="chip chip-blue"><span class="dot"></span>${storeCount} store${storeCount !== 1 ? 's' : ''} on map</span>`);
+        }
+        if (pendingApprovals > 0) {
+            chips.push(`<span class="chip chip-amber"><span class="dot"></span>${pendingApprovals} pending approval</span>`);
+        }
+        if (skuCount > 0) {
+            chips.push(`<span class="chip chip-gray"><span class="dot"></span>${skuCount} SKU${skuCount !== 1 ? 's' : ''} tracked</span>`);
+        }
+        if (!b.contact_email && !b.website) {
+            chips.push(`<span class="chip chip-red"><span class="dot"></span>No contact info</span>`);
+        }
+
+        const lastSeenText = lastActivity ? timeAgo(lastActivity.toISOString()) : `Added ${timeAgo(b.created_at)}`;
+
+        return `
+        <div class="brand-card">
+            <div class="flex items-start gap-3">
+                ${logoHtml}
+                <div class="flex-1 min-w-0">
+                    <div class="flex items-center gap-2 flex-wrap">
+                        <a href="brands-detail.html?id=${bId}" class="text-sm font-bold text-gray-900 hover:text-[#C62828] hover:underline">${esc(bName)}</a>
+                        ${catBadge}
+                        ${pipeBadge}
+                    </div>
+                    ${bWeb ? `<p class="text-xs text-gray-500 mt-0.5 truncate">${esc(bWeb)}</p>` : '<p class="text-xs text-gray-400 mt-0.5 italic">No website on file</p>'}
+                    ${retail ? `<p class="text-xs text-gray-600 mt-0.5 italic truncate">${esc(retail)}</p>` : ''}
+                </div>
+                <select onchange="updatePipelineStage('${bId}', this.value)"
+                    class="pipe-select ${pipeClass} hidden sm:block"
+                    title="Update pipeline stage">
+                    <option value="scanned"         ${stage === 'scanned'         ? 'selected' : ''}>Scanned</option>
+                    <option value="prospect"        ${stage === 'prospect'        ? 'selected' : ''}>Prospect</option>
+                    <option value="pitched"         ${stage === 'pitched'         ? 'selected' : ''}>Pitched</option>
+                    <option value="demo_scheduled"  ${stage === 'demo_scheduled'  ? 'selected' : ''}>Demo Sched.</option>
+                    <option value="converted"       ${stage === 'converted'       ? 'selected' : ''}>Converted</option>
+                    <option value="active_client"   ${stage === 'active_client'   ? 'selected' : ''}>Active Client</option>
+                </select>
+            </div>
+
+            <!-- Intelligence chips -->
+            <div class="flex flex-wrap gap-1.5 mt-2.5">
+                ${chips.join('')}
+            </div>
+
+            <!-- Action row -->
+            <div class="flex items-center gap-2 mt-2.5 pt-2.5 border-t border-gray-100">
+                <a href="brands-detail.html?id=${bId}"
+                    class="text-xs px-3 py-1.5 bg-gray-100 text-gray-700 rounded-md font-medium hover:bg-gray-200">View</a>
+                <button onclick="copyBrandEmail('${bId}','${esc(bName)}','${esc(bWeb)}')"
+                    class="text-xs px-3 py-1.5 bg-blue-50 text-blue-700 rounded-md font-medium hover:bg-blue-100">
+                    Copy Email Draft
+                </button>
+                <a href="manage-jobs.html?brand_id=${bId}"
+                    class="text-xs px-3 py-1.5 bg-green-50 text-green-700 border border-green-200 rounded-md font-medium hover:bg-green-100">
+                    + Create Job
+                </a>
+                <span class="flex-1"></span>
+                <span class="text-xs text-gray-400 hidden sm:inline">${lastSeenText}</span>
+            </div>
+        </div>`;
+    }
+
+    function renderOpenJobs(container) {
+        const open = allJobs.filter(j => j.status === 'pending' || j.status === 'assigned');
+        if (open.length === 0) {
+            container.innerHTML = '<div class="py-8 text-center text-gray-400 text-sm">No open jobs</div>';
+            return;
+        }
+        container.innerHTML = '<div class="divide-y divide-gray-100">' + open.map(j => {
+            const brand = allBrands.find(b => b.id === j.brand_id);
+            const statusColor = j.status === 'assigned' ? 'bg-blue-100 text-blue-700' : 'bg-yellow-100 text-yellow-700';
+            const ageHours = Math.floor((Date.now() - new Date(j.created_at).getTime()) / 3600000);
+            const isStale = j.status === 'pending' && ageHours > 24;
+            return `
+            <div class="px-2 py-3 ${isStale ? 'border-l-4 border-red-400 pl-3' : ''}">
+                <div class="flex items-center justify-between gap-4">
+                    <div class="flex-1 min-w-0">
+                        <p class="text-sm font-semibold text-gray-900">${esc(j.title || 'Untitled Job')}</p>
+                        ${brand ? `<p class="text-xs text-gray-500">${esc(brand.name)}</p>` : ''}
+                        <p class="text-xs text-gray-400">${timeAgo(j.created_at)}${isStale ? ' &mdash; <span class="text-red-500 font-medium">No takers yet</span>' : ''}</p>
+                    </div>
+                    <div class="text-right shrink-0">
+                        <span class="px-2 py-0.5 text-xs font-semibold rounded-full ${statusColor}">${capitalize(j.status)}</span>
+                        <p class="text-xs text-gray-500 mt-1">$${j.total_payout || 0}</p>
+                    </div>
+                </div>
+            </div>`;
+        }).join('') + '</div>';
+    }
+
+    function renderAuditRequests(container) {
+        const pending = allAuditReqs.filter(r => r.status === 'pending_review');
+        if (pending.length === 0) {
+            container.innerHTML = '<div class="py-8 text-center text-gray-400 text-sm">No pending audit requests</div>';
+            return;
+        }
+        container.innerHTML = '<div class="divide-y divide-gray-100">' + pending.map(r => {
+            const user = allBrandUsers.find(u => u.id === r.client_id);
+            return `
+            <div class="px-2 py-3">
+                <div class="flex items-start justify-between gap-4">
+                    <div class="flex-1 min-w-0">
+                        <p class="text-sm font-semibold text-gray-900">${esc(r.title || 'Untitled Request')}</p>
+                        <p class="text-xs text-gray-500 mt-0.5">${esc(r.audit_type || '')} &middot; ${timeAgo(r.created_at)}</p>
+                        ${user ? `<p class="text-xs text-gray-400 mt-0.5">From: ${esc(user.full_name || user.email)}</p>` : ''}
+                    </div>
+                    <div class="flex flex-col gap-2 shrink-0">
+                        <span class="px-2 py-0.5 text-xs font-semibold rounded-full bg-orange-100 text-orange-700">Pending Review</span>
+                        <button onclick="markAuditInProgress('${r.id}')" class="text-xs text-[#C62828] hover:underline text-right">Mark In Progress</button>
+                    </div>
+                </div>
+            </div>`;
+        }).join('') + '</div>';
+    }
+
+    function renderNewSignups(container) {
+        const WEEK = 7 * 24 * 60 * 60 * 1000;
+        const newBrands = allBrandUsers.filter(u => (Date.now() - new Date(u.created_at).getTime()) < WEEK);
+        if (newBrands.length === 0) {
+            container.innerHTML = '<div class="py-8 text-center text-gray-400 text-sm">No new brand signups in the last 7 days</div>';
+            return;
+        }
+        container.innerHTML = '<div class="divide-y divide-gray-100">' + newBrands.map(u => {
+            const jobCount = allJobs.filter(j => j.client_id === u.id).length;
+            return `
+            <div class="px-2 py-3">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-sm font-semibold text-gray-900">${esc(u.full_name || 'No name')}</p>
+                        <p class="text-xs text-gray-500">${esc(u.email)}</p>
+                    </div>
+                    <div class="text-right">
+                        <p class="text-xs text-gray-400">Joined ${timeAgo(u.created_at)}</p>
+                        <p class="text-xs text-gray-500 mt-1">${jobCount} job${jobCount !== 1 ? 's' : ''} created</p>
+                    </div>
+                </div>
+            </div>`;
+        }).join('') + '</div>';
+    }
+
+    // ── Helpers ──────────────────────────────────────────────────────────────
+
+    function getCatClass(cat) {
+        if (!cat) return 'cat-default';
+        const c = cat.toLowerCase();
+        if (c.includes('snack') || c.includes('chip') || c.includes('cracker')) return 'cat-snack';
+        if (c.includes('beverage') || c.includes('drink') || c.includes('water') || c.includes('coffee') || c.includes('tea') || c.includes('juice')) return 'cat-beverage';
+        if (c.includes('meat') || c.includes('boudain') || c.includes('sausage') || c.includes('jerky')) return 'cat-meat';
+        if (c.includes('sauce') || c.includes('salsa') || c.includes('condiment') || c.includes('dip') || c.includes('chamoy')) return 'cat-sauce';
+        if (c.includes('bakery') || c.includes('cookie') || c.includes('bread') || c.includes('pastry')) return 'cat-bakery';
+        if (c.includes('frozen') || c.includes('ice cream')) return 'cat-frozen';
+        return 'cat-default';
+    }
+
+    function getPipeStyle(stage) {
+        const map = {
+            'scanned':        { cls: 'pipe-scanned',   label: 'Shadow' },
+            'prospect':       { cls: 'pipe-prospect',  label: 'Prospect' },
+            'pitched':        { cls: 'pipe-pitched',   label: 'Pitched' },
+            'demo_scheduled': { cls: 'pipe-demo',      label: 'Demo Sched.' },
+            'converted':      { cls: 'pipe-converted', label: 'Converted' },
+            'active_client':  { cls: 'pipe-active',    label: 'Active Client' }
+        };
+        return map[stage] || { cls: 'pipe-prospect', label: stage || 'Prospect' };
+    }
+
+    function parseNotesField(notes, field) {
+        if (!notes) return '';
+        if (typeof notes === 'object') return notes[field.toLowerCase()] || notes[field] || '';
+        const match = notes.match(new RegExp(field + ':\\s*([^|\\n]+)', 'i'));
+        return match ? match[1].trim() : '';
     }
 
     async function markAuditInProgress(auditId) {
@@ -403,37 +546,16 @@
         const sc = window.saClient || supabase;
         const { error } = await sc.from('brands').update({ pipeline_stage: stage }).eq('id', brandId);
         if (error) {
-            alert('Could not save pipeline stage: ' + error.message + '\n\nNote: Run the SQL migration to add the pipeline_stage column if you haven\'t yet.');
-            await loadBrandData(); // revert UI
+            alert('Could not save pipeline stage: ' + error.message);
+            await loadBrandData();
+            return;
         }
-        // Update local cache silently (no full reload needed)
         const brand = allBrands.find(b => b.id === brandId);
         if (brand) brand.pipeline_stage = stage;
     }
 
-    window.updatePipelineStage = updatePipelineStage;
-
-    function setText(id, val) { const el = document.getElementById(id); if (el) el.textContent = val; }
-    function esc(t) { if (t == null) return ''; const d = document.createElement('div'); d.textContent = String(t); return d.innerHTML; }
-    function capitalize(s) { return s ? s.charAt(0).toUpperCase() + s.slice(1) : ''; }
-    function timeAgo(d) {
-        if (!d) return '';
-        const diff = Date.now() - new Date(d).getTime();
-        const mins = Math.floor(diff/60000), hours = Math.floor(diff/3600000), days = Math.floor(diff/86400000);
-        if (mins < 60) return `${mins}m ago`;
-        if (hours < 24) return `${hours}h ago`;
-        return `${days}d ago`;
-    }
-
-    window.loadBrandData        = loadBrandData;
-    window.switchTab            = switchTab;
-    window.markAuditInProgress  = markAuditInProgress;
-
-        // ── Outreach helpers ─────────────────────────────────────────────────────────────────────────────
     function copyBrandEmail(brandId, brandName, brandWebsite) {
-        // $5 store check request form — swap in real Stripe Payment Link when ready
         const STORE_CHECK_FORM_URL = 'https://courtneybhenderu-prog.github.io/shelfassured-demo/store-check-request.html';
-
         const lines = [
             'Subject: We spotted your product in Houston today',
             '',
@@ -465,55 +587,40 @@
             'Watch a quick 60-second overview: [link]',
             'Book a quick call: [link]'
         ];
-        const emailDraft = lines.join('\n');
-
-        navigator.clipboard.writeText(emailDraft).then(() => {
-            const toast = document.createElement('div');
-            toast.textContent = '\u2713 Email draft copied to clipboard';
-            toast.style.cssText = 'position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:#111827;color:#fff;padding:10px 20px;border-radius:8px;font-size:13px;z-index:9999;pointer-events:none';
-            document.body.appendChild(toast);
-            setTimeout(() => toast.remove(), 2500);
+        navigator.clipboard.writeText(lines.join('\n')).then(() => {
+            showToast('\u2713 Email draft copied to clipboard');
         }).catch(() => {
             alert('Copy failed \u2014 please allow clipboard access in your browser settings.');
         });
     }
-    window.copyBrandEmail = copyBrandEmail;
 
-    function openHunterPlaceholder(website) {
-        document.getElementById('hunter-modal').style.display = 'flex';
-        const domain = website.replace(/https?:\/\//,'').replace(/\/.*$/,'');
-        document.getElementById('hunter-domain').textContent = domain;
-        document.getElementById('hunter-link').href = 'https://hunter.io/search/' + domain;
+    function showToast(msg) {
+        const toast = document.createElement('div');
+        toast.textContent = msg;
+        toast.style.cssText = 'position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:#111827;color:#fff;padding:10px 20px;border-radius:8px;font-size:13px;z-index:9999;pointer-events:none';
+        document.body.appendChild(toast);
+        setTimeout(() => toast.remove(), 2500);
     }
-    window.openHunterPlaceholder = openHunterPlaceholder;
 
-    function closeHunterModal() {
-        document.getElementById('hunter-modal').style.display = 'none';
+    function setText(id, val) { const el = document.getElementById(id); if (el) el.textContent = val; }
+    function esc(t) { if (t == null) return ''; const d = document.createElement('div'); d.textContent = String(t); return d.innerHTML; }
+    function capitalize(s) { return s ? s.charAt(0).toUpperCase() + s.slice(1) : ''; }
+    function timeAgo(d) {
+        if (!d) return '';
+        const diff = Date.now() - new Date(d).getTime();
+        const mins = Math.floor(diff/60000), hours = Math.floor(diff/3600000), days = Math.floor(diff/86400000);
+        if (mins < 2) return 'just now';
+        if (mins < 60) return `${mins}m ago`;
+        if (hours < 24) return `${hours}h ago`;
+        if (days < 30) return `${days}d ago`;
+        return new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
     }
-    window.closeHunterModal = closeHunterModal;
+
+    window.loadBrandData       = loadBrandData;
+    window.switchTab           = switchTab;
+    window.markAuditInProgress = markAuditInProgress;
+    window.updatePipelineStage = updatePipelineStage;
+    window.copyBrandEmail      = copyBrandEmail;
 </script>
-
-<!-- Hunter.io Placeholder Modal -->
-<div id="hunter-modal" style="display:none" class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-    <div class="bg-white rounded-2xl shadow-xl max-w-sm w-full p-6">
-        <div class="flex items-center justify-between mb-4">
-            <h3 class="text-base font-bold text-gray-900">Find Contact</h3>
-            <button onclick="closeHunterModal()" class="text-gray-400 hover:text-gray-600 text-xl leading-none">&times;</button>
-        </div>
-        <p class="text-sm text-gray-600 mb-1">Domain: <span id="hunter-domain" class="font-semibold text-gray-900"></span></p>
-        <p class="text-sm text-gray-500 mb-4">Contact lookup is available via Hunter.io. This feature can be integrated into ShelfAssured on the Pro plan to automatically surface verified email addresses for brand contacts.</p>
-        <div class="bg-amber-50 border border-amber-200 rounded-lg p-3 mb-4">
-            <p class="text-xs text-amber-700 font-medium">Pro Feature</p>
-            <p class="text-xs text-amber-600 mt-0.5">Automated contact lookup requires a Hunter.io API key (~$49/mo). Until then, you can search manually using the link below.</p>
-        </div>
-        <div class="flex gap-2">
-            <a id="hunter-link" href="#" target="_blank" rel="noopener"
-                class="flex-1 text-center text-sm bg-[#C62828] text-white rounded-lg py-2 font-medium hover:bg-red-700 transition-colors">
-                Search on Hunter.io
-            </a>
-            <button onclick="closeHunterModal()" class="px-4 text-sm bg-gray-100 text-gray-700 rounded-lg py-2 font-medium hover:bg-gray-200 transition-colors">Cancel</button>
-        </div>
-    </div>
-</div>
 </body>
 </html>
