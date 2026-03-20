@@ -169,13 +169,18 @@
       <!-- Exception panel -->
       <div id="exceptionPanel" class="exception-panel hidden">
         <p class="text-sm font-semibold text-amber-800 mb-2">Why can't you complete this job as required?</p>
-        <select id="exceptionReason" class="brand-input w-full px-3 py-2 mb-3" onchange="handleExceptionChange()">
+        <select id="exceptionReason" class="brand-input w-full px-3 py-2 mb-2" onchange="handleExceptionChange()">
           <option value="" disabled selected>Select a reason…</option>
           <option value="product_not_found">Product not found</option>
           <option value="wrong_item_on_shelf">Wrong item on shelf</option>
           <option value="out_of_stock">Out of stock</option>
+          <option value="barcode_scanner_issue">Barcode scanner not working</option>
           <option value="other">Other</option>
         </select>
+        <!-- Free-text box shown when Other is selected -->
+        <textarea id="exceptionOtherText" class="brand-input w-full px-3 py-2 mb-3 hidden" rows="2"
+          placeholder="Describe the issue briefly…"
+          oninput="handleExceptionOtherInput()"></textarea>
         <p class="text-xs text-amber-700">You can still take photos of what you see and submit — photos are optional but helpful. Notes are required.</p>
         <p class="text-xs text-amber-700 mt-1">Price is not required for exception submissions.</p>
       </div>
@@ -840,6 +845,15 @@
     function handleExceptionChange() {
       const reason = document.getElementById('exceptionReason').value;
       window.exceptionReasonValue = reason;
+      // Show free-text box only for 'other'
+      const otherBox = document.getElementById('exceptionOtherText');
+      if (reason === 'other') {
+        otherBox.classList.remove('hidden');
+        otherBox.focus();
+      } else {
+        otherBox.classList.add('hidden');
+        otherBox.value = '';
+      }
       if (reason) {
         window.barcodeState = 'exception';
         // Relax photo/price requirements
@@ -851,6 +865,12 @@
       }
       updateChecklist();
     }
+    function handleExceptionOtherInput() {
+      // Append the free-text to the exception reason so it's saved in the DB
+      const txt = document.getElementById('exceptionOtherText').value.trim();
+      window.exceptionReasonValue = txt ? 'other: ' + txt : 'other';
+    }
+    window.handleExceptionOtherInput = handleExceptionOtherInput;
 
     // Lazy script loader
     function loadScript(src) {
