@@ -51,6 +51,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         setupStoreInput();
         setupBrandAutocomplete();
         setupFormSubmit();
+        // Auto-request GPS on page load (silent = no button spinner)
+        setTimeout(() => captureGPSLocation(true), 500);
         // Populate category dropdown from shared categories.js if available
         const catSelect = document.getElementById('product-category');
         if (catSelect && typeof generateCategoryDropdownHTML === 'function') {
@@ -477,60 +479,76 @@ async function checkBrandShadowStatus(brandName) {
 }
 
 // ─── GPS Location ──────────────────────────────────────────────────────────────
-function captureGPSLocation() {
+async function applyGPSPosition(pos, status, btn) {
+    const lat = pos.coords.latitude;
+    const lng = pos.coords.longitude;
+    document.getElementById('store-lat').value = lat;
+    document.getElementById('store-lng').value = lng;
+    try {
+        const resp = await fetch(
+            `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json`,
+            { headers: { 'Accept-Language': 'en' } }
+        );
+        const geo = await resp.json();
+        const addr = geo.address || {};
+        const storeName = addr.shop || addr.amenity || addr.building || '';
+        const city = addr.city || addr.town || addr.village || '';
+        const state = addr.state || '';
+        const suggestion = [storeName, city, state].filter(Boolean).join(', ');
+        if (suggestion) {
+            document.getElementById('store-input').value = suggestion;
+            storeValue = suggestion;
+        }
+        status.textContent = `GPS locked \u2014 ${city || lat.toFixed(4) + ', ' + lng.toFixed(4)}`;
+        document.getElementById('store-locked-badge').classList.remove('hidden');
+        if (city) { searchStoresTypeahead(city); }
+    } catch {
+        status.textContent = `GPS: ${lat.toFixed(5)}, ${lng.toFixed(5)}`;
+        // Still search by coords even if reverse-geocode failed
+        searchStoresTypeahead('');
+    }
+    btn.innerHTML = `<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg> GPS`;
+    btn.disabled = false;
+}
+
+function captureGPSLocation(silent = false) {
     const btn = document.getElementById('gps-btn');
     const status = document.getElementById('gps-status');
 
     if (!navigator.geolocation) {
-        showToast('GPS not available on this device', 'error');
+        if (!silent) showToast('GPS not available on this device', 'error');
         return;
     }
 
-    btn.textContent = '...';
-    btn.disabled = true;
+    if (!silent) {
+        btn.textContent = '...';
+        btn.disabled = true;
+    }
     status.textContent = 'Getting location...';
     status.classList.remove('hidden');
 
+    // Try high-accuracy first (GPS chip); fall back to low-accuracy (cell/WiFi) on timeout
+    const tryLowAccuracy = (err) => {
+        console.warn('High-accuracy GPS failed, trying low-accuracy:', err);
+        navigator.geolocation.getCurrentPosition(
+            (pos) => applyGPSPosition(pos, status, btn),
+            (err2) => {
+                console.error('GPS error (low-accuracy fallback):', err2);
+                let msg = 'GPS failed \u2014 enter store manually';
+                if (err2.code === 1) msg = 'Location permission denied \u2014 enable in Settings > Safari > Location';
+                else if (err2.code === 3) msg = 'GPS timed out \u2014 enter store manually';
+                status.textContent = msg;
+                btn.innerHTML = `<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg> GPS`;
+                btn.disabled = false;
+            },
+            { enableHighAccuracy: false, timeout: 8000, maximumAge: 120000 }
+        );
+    };
+
     navigator.geolocation.getCurrentPosition(
-        async (pos) => {
-            const lat = pos.coords.latitude;
-            const lng = pos.coords.longitude;
-            document.getElementById('store-lat').value = lat;
-            document.getElementById('store-lng').value = lng;
-
-            try {
-                const resp = await fetch(
-                    `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json`,
-                    { headers: { 'Accept-Language': 'en' } }
-                );
-                const geo = await resp.json();
-                const addr = geo.address || {};
-                const storeName = addr.shop || addr.amenity || addr.building || '';
-                const city = addr.city || addr.town || addr.village || '';
-                const state = addr.state || '';
-                const suggestion = [storeName, city, state].filter(Boolean).join(', ');
-                if (suggestion) {
-                    document.getElementById('store-input').value = suggestion;
-                    storeValue = suggestion;
-                }
-                status.textContent = `GPS locked: ${lat.toFixed(5)}, ${lng.toFixed(5)}`;
-                document.getElementById('store-locked-badge').classList.remove('hidden');
-                // Auto-search stores database using city from GPS
-                if (city) { searchStoresTypeahead(city); }
-            } catch {
-                status.textContent = `GPS: ${lat.toFixed(5)}, ${lng.toFixed(5)}`;
-            }
-
-            btn.innerHTML = `<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg> GPS`;
-            btn.disabled = false;
-        },
-        (err) => {
-            console.error('GPS error:', err);
-            status.textContent = 'GPS failed \u2014 enter store manually';
-            btn.innerHTML = `<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg> GPS`;
-            btn.disabled = false;
-        },
-        { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 }
+        (pos) => applyGPSPosition(pos, status, btn),
+        tryLowAccuracy,
+        { enableHighAccuracy: true, timeout: 7000, maximumAge: 60000 }
     );
 }
 
