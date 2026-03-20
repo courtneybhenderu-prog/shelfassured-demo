@@ -516,39 +516,82 @@ function captureGPSLocation(silent = false) {
     const status = document.getElementById('gps-status');
 
     if (!navigator.geolocation) {
-        if (!silent) showToast('GPS not available on this device', 'error');
+        if (!silent) { status.textContent = 'GPS not available on this device'; status.classList.remove('hidden'); }
         return;
     }
 
     if (!silent) {
         btn.textContent = '...';
         btn.disabled = true;
+        status.textContent = 'Getting location…';
+        status.classList.remove('hidden');
     }
-    status.textContent = 'Getting location...';
-    status.classList.remove('hidden');
 
-    // Try high-accuracy first (GPS chip); fall back to low-accuracy (cell/WiFi) on timeout
-    const tryLowAccuracy = (err) => {
-        console.warn('High-accuracy GPS failed, trying low-accuracy:', err);
+    const resetBtn = () => {
+        btn.innerHTML = `<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg> GPS`;
+        btn.disabled = false;
+    };
+
+    // Build a human-readable error message based on the actual error code.
+    // iOS Safari sometimes returns code 1 (PERMISSION_DENIED) even when the
+    // user has granted access — this happens when the system-level Location
+    // Services switch is off, or when the page hasn't received a user gesture
+    // yet. We use the Permissions API (where available) to distinguish a true
+    // denial from a timeout so we never show a misleading message.
+    const buildErrorMsg = async (err, isFallback) => {
+        let msg = 'Could not get location — enter store manually';
+        if (err.code === 1) {
+            // Check Permissions API before blaming the user
+            if (navigator.permissions) {
+                try {
+                    const perm = await navigator.permissions.query({ name: 'geolocation' });
+                    if (perm.state === 'denied') {
+                        msg = 'Location blocked — tap GPS to retry, or type store name';
+                    } else {
+                        // State is 'granted' or 'prompt' — likely a system-level block
+                        msg = 'Location unavailable — check iOS Settings > Privacy > Location Services';
+                    }
+                } catch {
+                    msg = 'Location unavailable — enter store manually';
+                }
+            } else {
+                msg = 'Location unavailable — enter store manually';
+            }
+        } else if (err.code === 2) {
+            msg = 'Location unavailable — enter store manually';
+        } else if (err.code === 3) {
+            msg = isFallback
+                ? 'Location timed out — enter store manually or tap GPS again'
+                : null; // will retry low-accuracy, don't show yet
+        }
+        return msg;
+    };
+
+    // Low-accuracy fallback (cell/WiFi) — longer timeout for indoor use
+    const tryLowAccuracy = async (err) => {
+        console.warn('High-accuracy GPS failed, trying low-accuracy:', err.code, err.message);
         navigator.geolocation.getCurrentPosition(
             (pos) => applyGPSPosition(pos, status, btn),
-            (err2) => {
-                console.error('GPS error (low-accuracy fallback):', err2);
-                let msg = 'GPS failed \u2014 enter store manually';
-                if (err2.code === 1) msg = 'Location permission denied \u2014 enable in Settings > Safari > Location';
-                else if (err2.code === 3) msg = 'GPS timed out \u2014 enter store manually';
-                status.textContent = msg;
-                btn.innerHTML = `<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg> GPS`;
-                btn.disabled = false;
+            async (err2) => {
+                console.error('GPS error (low-accuracy fallback):', err2.code, err2.message);
+                const msg = await buildErrorMsg(err2, true);
+                if (silent) {
+                    // Auto-attempt on page load: hide status, don't alarm the user
+                    status.classList.add('hidden');
+                } else {
+                    status.textContent = msg || 'Could not get location — enter store manually';
+                }
+                resetBtn();
             },
-            { enableHighAccuracy: false, timeout: 8000, maximumAge: 120000 }
+            { enableHighAccuracy: false, timeout: 12000, maximumAge: 300000 }
         );
     };
 
+    // High-accuracy first (GPS chip), generous timeout for iOS cold-start
     navigator.geolocation.getCurrentPosition(
         (pos) => applyGPSPosition(pos, status, btn),
         tryLowAccuracy,
-        { enableHighAccuracy: true, timeout: 7000, maximumAge: 60000 }
+        { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 }
     );
 }
 
