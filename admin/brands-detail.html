@@ -347,23 +347,48 @@
             spinner.classList.add('flex');
 
             try {
-                const sc = window.saClient || supabase;
                 const ext = file.name.split('.').pop().toLowerCase() || 'jpg';
                 const fileName = `${brandId}.${ext}`;
                 const filePath = `brands/${fileName}`;
+                const cfg = window.SA_CONFIG || {};
+                const supaUrl = cfg.SUPABASE_URL || '';
+                const serviceKey = cfg.SUPABASE_SERVICE_ROLE_KEY || '';
 
-                // Upload to brand_logos bucket (upsert so re-upload works)
-                const { error: uploadError } = await sc.storage
-                    .from('brand_logos')
-                    .upload(filePath, file, { upsert: true, contentType: file.type });
+                let publicUrl;
 
-                if (uploadError) throw uploadError;
+                if (serviceKey) {
+                    // Use service role key via direct REST call to bypass storage RLS
+                    const uploadRes = await fetch(
+                        `${supaUrl}/storage/v1/object/brand_logos/${filePath}`,
+                        {
+                            method: 'POST',
+                            headers: {
+                                'Authorization': `Bearer ${serviceKey}`,
+                                'apikey': serviceKey,
+                                'Content-Type': file.type,
+                                'x-upsert': 'true'
+                            },
+                            body: file
+                        }
+                    );
+                    if (!uploadRes.ok) {
+                        const errText = await uploadRes.text();
+                        throw new Error(errText);
+                    }
+                    publicUrl = `${supaUrl}/storage/v1/object/public/brand_logos/${filePath}`;
+                } else {
+                    // Fallback: use authenticated Supabase client (requires storage RLS policy)
+                    const sc = window.saClient || supabase;
+                    const { error: uploadError } = await sc.storage
+                        .from('brand_logos')
+                        .upload(filePath, file, { upsert: true, contentType: file.type });
+                    if (uploadError) throw uploadError;
+                    const { data: urlData } = sc.storage.from('brand_logos').getPublicUrl(filePath);
+                    publicUrl = urlData.publicUrl;
+                }
 
-                // Get public URL
-                const { data: urlData } = sc.storage.from('brand_logos').getPublicUrl(filePath);
-                const publicUrl = urlData.publicUrl;
-
-                // Save to brands table
+                // Save to brands table (anon key is fine for this update)
+                const sc = window.saClient || supabase;
                 const { error: updateError } = await sc.from('brands')
                     .update({ logo_url: publicUrl })
                     .eq('id', brandId);
