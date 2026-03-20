@@ -18,7 +18,6 @@
     { id: 'review-submissions',  label: 'Review Submissions',  href: 'review-submissions.html' },
     { id: 'report-queue',         label: 'Report Queue',         href: 'report-queue.html' },
     { id: 'manage-jobs',         label: 'Manage Jobs',         href: 'manage-jobs.html' },
-    { id: 'brands',              label: 'Brands',              href: 'brands.html' },
     { id: 'user-management',     label: 'User Management',     href: 'user-management.html' },
     { id: 'barcode-capture',     label: 'Barcode Scanner',     href: 'barcode-capture.html' },
     { id: 'help-support',        label: 'Help & Support',      href: 'help-support.html' },
