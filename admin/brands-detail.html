@@ -62,7 +62,7 @@
                 <!-- Quick Actions -->
                 <div class="bg-white rounded-lg shadow p-6 mb-6">
                     <h3 class="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h3>
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
                         <a href="" id="create-job-link" class="px-4 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 font-medium text-center">
                             Create Job for This Brand
                         </a>
@@ -72,6 +72,9 @@
                         <a href="brands.html" class="px-4 py-3 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 font-medium text-center">
                             Back to All Brands
                         </a>
+                        <button onclick="deleteBrand()" id="delete-brand-btn" class="px-4 py-3 bg-red-50 text-red-700 border border-red-300 rounded-lg hover:bg-red-100 font-medium text-center">
+                            🗑️ Delete Brand
+                        </button>
                     </div>
                 </div>
 
@@ -327,6 +330,61 @@
         }
 
         window.handleSignOut = handleSignOut;
+
+        // Delete brand with cascade
+        async function deleteBrand() {
+            const brandName = document.getElementById('brand-name-display').textContent || 'this brand';
+
+            // Two-step confirmation: native confirm + typed name
+            const step1 = confirm(
+                `Delete "${brandName}"?\n\n` +
+                `This will permanently remove:\n` +
+                `  • The brand record\n` +
+                `  • All brand-store links (map pins)\n` +
+                `  • All brand-product links\n` +
+                `  • All SKUs for this brand\n\n` +
+                `Jobs and submissions are kept for audit history.\n\n` +
+                `Click OK to continue to the final confirmation.`
+            );
+            if (!step1) return;
+
+            const typedName = prompt(`To confirm, type the brand name exactly:\n\n${brandName}`);
+            if (!typedName || typedName.trim() !== brandName.trim()) {
+                alert('Brand name did not match. Deletion cancelled.');
+                return;
+            }
+
+            const btn = document.getElementById('delete-brand-btn');
+            try {
+                btn.disabled = true;
+                btn.textContent = 'Deleting...';
+
+                // 1. Remove brand_stores links
+                const { error: bsErr } = await supabase.from('brand_stores').delete().eq('brand_id', brandId);
+                if (bsErr) console.warn('brand_stores delete warning:', bsErr.message);
+
+                // 2. Remove brand_products links
+                const { error: bpErr } = await supabase.from('brand_products').delete().eq('brand_id', brandId);
+                if (bpErr) console.warn('brand_products delete warning:', bpErr.message);
+
+                // 3. Remove SKUs for this brand
+                const { error: skuErr } = await supabase.from('skus').delete().eq('brand_id', brandId);
+                if (skuErr) console.warn('skus delete warning:', skuErr.message);
+
+                // 4. Delete the brand itself
+                const { error: brandErr } = await supabase.from('brands').delete().eq('id', brandId);
+                if (brandErr) throw brandErr;
+
+                alert(`"${brandName}" has been deleted.`);
+                window.location.href = 'brands.html';
+            } catch (err) {
+                console.error('Delete brand error:', err);
+                alert('Delete failed: ' + (err.message || 'Unknown error'));
+                btn.disabled = false;
+                btn.textContent = '🗑️ Delete Brand';
+            }
+        }
+        window.deleteBrand = deleteBrand;
     </script>
 
 
