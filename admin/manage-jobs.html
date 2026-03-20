@@ -1618,28 +1618,68 @@
             const skuIds = [];
             
             for (const skuItem of skuData) {
-                // Check if SKU exists by name (case insensitive)
-                const existingSku = skus.find(s => s.name.toLowerCase() === skuItem.name.toLowerCase());
+                const upcValue = skuItem.sku || null;
+
+                // 1. Check local cache by name (case-insensitive)
+                let existingSku = skus.find(s => s.name.toLowerCase() === skuItem.name.toLowerCase());
+
+                // 2. If not in cache by name, check cache by UPC to avoid duplicate key
+                if (!existingSku && upcValue) {
+                    existingSku = skus.find(s => s.upc === upcValue);
+                }
+
                 if (existingSku) {
                     skuIds.push(existingSku.id);
-                } else {
-                    // Create new SKU with name, UPC, and category (UPC and category can be null)
-                    const { data: sku, error } = await supabase
-                        .from('skus')
-                        .insert({ 
-                            name: skuItem.name,
-                            upc: skuItem.sku || null, // UPC can be null if not provided
-                            category: skuItem.category || null, // Category can be null if not provided
-                            brand_id: brandId
-                        })
-                        .select()
-                        .single();
-                    
-                    if (error) throw new Error(`Failed to create SKU: ${error.message}`);
-                    
-                    skus.push(sku);
-                    skuIds.push(sku.id);
+                    continue;
                 }
+
+                // 3. Cache miss — query DB by UPC first (prevents skus_upc_key violation)
+                if (upcValue) {
+                    const { data: dbSkuByUpc } = await supabase
+                        .from('skus')
+                        .select('*')
+                        .eq('upc', upcValue)
+                        .maybeSingle();
+                    if (dbSkuByUpc) {
+                        skus.push(dbSkuByUpc); // refresh local cache
+                        skuIds.push(dbSkuByUpc.id);
+                        continue;
+                    }
+                }
+
+                // 4. Query DB by name + brand (handles stale cache without UPC)
+                {
+                    const { data: dbSkuByName } = await supabase
+                        .from('skus')
+                        .select('*')
+                        .ilike('name', skuItem.name)
+                        .eq('brand_id', brandId)
+                        .maybeSingle();
+                    if (dbSkuByName) {
+                        skus.push(dbSkuByName);
+                        skuIds.push(dbSkuByName.id);
+                        continue;
+                    }
+                }
+
+                // 5. SKU truly does not exist — create it.
+                // If no UPC provided, generate a temp placeholder to satisfy NOT NULL constraint.
+                const upcToInsert = upcValue || ('TEMP-' + brandId.slice(0, 8) + '-' + Date.now());
+                const { data: sku, error } = await supabase
+                    .from('skus')
+                    .insert({ 
+                        name: skuItem.name,
+                        upc: upcToInsert,
+                        category: skuItem.category || null,
+                        brand_id: brandId
+                    })
+                    .select()
+                    .single();
+                
+                if (error) throw new Error(`Failed to create SKU: ${error.message}`);
+                
+                skus.push(sku);
+                skuIds.push(sku.id);
             }
             
             return skuIds;
