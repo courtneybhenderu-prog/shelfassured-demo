@@ -237,7 +237,7 @@
         allSubmissions = submissions || [];
 
         const totalBrands  = allBrands.length;
-        const prospects    = allBrands.filter(b => !b.is_shadow || b.pipeline_stage === 'prospect').length;
+        const prospects    = allBrands.filter(b => b.is_shadow !== false).length;
         const openJobs     = allJobs.filter(j => j.status === 'pending' || j.status === 'assigned').length;
         const pendingReview = allSubmissions.filter(s => s.status === 'pending_review' || s.status === 'submitted').length;
 
@@ -246,10 +246,10 @@
         setText('br-open-jobs', openJobs);
         setText('br-pending',   pendingReview);
 
-        const clientBrands = allBrands.filter(b => !b.is_shadow).length;
-        const shadowBrands = allBrands.filter(b => b.is_shadow).length;
+        const clientBrands = allBrands.filter(b => b.is_shadow === false).length;
+        const shadowBrands = allBrands.filter(b => b.is_shadow !== false).length;
         const el = document.getElementById('brand-summary');
-        if (el) el.innerHTML = `${clientBrands} client brand${clientBrands !== 1 ? 's' : ''} &middot; ${shadowBrands} scanned (intelligence) &middot; ${totalBrands} total`;
+        if (el) el.innerHTML = `${clientBrands > 0 ? clientBrands + ` client brand${clientBrands !== 1 ? 's' : ''} &middot; ` : ''}${shadowBrands} prospect${shadowBrands !== 1 ? 's' : ''} (intelligence) &middot; ${totalBrands} total`;
 
         renderActiveTab();
     }
@@ -284,7 +284,7 @@
         const showShadow = document.getElementById('show-shadow-toggle')?.checked !== false;
         const stageFilter = document.getElementById('stage-filter')?.value || '';
 
-        let list = showShadow ? [...allBrands] : allBrands.filter(b => !b.is_shadow);
+        let list = showShadow ? [...allBrands] : allBrands.filter(b => b.is_shadow === false);
 
         if (stageFilter) {
             list = list.filter(b => (b.pipeline_stage || 'prospect') === stageFilter);
@@ -314,7 +314,7 @@
         const bWeb  = b.website ? b.website.replace(/^https?:\/\//, '').replace(/\/$/, '') : '';
         const cat   = parseNotesField(b.internal_notes, 'Category');
         const retail = parseNotesField(b.internal_notes, 'Retail');
-        const stage  = b.pipeline_stage || (b.is_shadow ? 'scanned' : 'prospect');
+        const stage  = b.pipeline_stage || (b.is_shadow === false ? 'active_client' : 'prospect');
 
         // Intelligence counts
         const brandJobs       = allJobs.filter(j => j.brand_id === bId);
