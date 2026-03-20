@@ -29,6 +29,7 @@ jobs:
         env:
           SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
           SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
         run: |
           mkdir -p _site
           rsync -av --exclude='_site' --exclude='.git' . _site/
@@ -42,7 +43,8 @@ jobs:
           cat > _site/admin/config.js << ENDOFFILE
           window.SA_CONFIG = {
             SUPABASE_URL: "${SUPABASE_URL}",
-            SUPABASE_ANON_KEY: "${SUPABASE_ANON_KEY}"
+            SUPABASE_ANON_KEY: "${SUPABASE_ANON_KEY}",
+            SUPABASE_SERVICE_ROLE_KEY: "${SUPABASE_SERVICE_ROLE_KEY}"
           };
           ENDOFFILE
 
