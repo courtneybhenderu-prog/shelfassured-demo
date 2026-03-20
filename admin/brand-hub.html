@@ -158,7 +158,7 @@
             sc.from('users').select('id, full_name, email, role, is_active, created_at, company_name').eq('role', 'brand_client').order('created_at', { ascending: false }),
             sc.from('jobs').select('id, title, status, created_at, client_id, total_payout').order('created_at', { ascending: false }),
             sc.from('audit_requests').select('id, title, audit_type, status, created_at, client_id, preferred_contact').order('created_at', { ascending: false }),
-            sc.from('brands').select('id, name, website, created_at, logo_url, is_shadow, pipeline_stage').order('created_at', { ascending: false })
+            sc.from('brands').select('id, name, website, created_at, logo_url, is_shadow, pipeline_stage, category, internal_notes').order('created_at', { ascending: false })
         ]);
 
         if (usersErr)  console.error('Brand Hub: users query error', usersErr);
@@ -336,14 +336,30 @@
                 const bId   = b.id;
                 const bName = b.name || 'Unnamed Brand';
                 const bWeb  = b.website || '';
+                const bCat  = b.category || '';
+                // Parse retail presence from internal_notes (stored as JSON string by import script)
+                let retailInfo = '';
+                if (b.internal_notes) {
+                    try {
+                        const notes = typeof b.internal_notes === 'string' ? JSON.parse(b.internal_notes) : b.internal_notes;
+                        if (notes.heb_presence) retailInfo = notes.heb_presence;
+                        else if (notes.retail_presence) retailInfo = notes.retail_presence;
+                    } catch(e) {
+                        // internal_notes is plain text, not JSON
+                        if (b.internal_notes.length < 80) retailInfo = b.internal_notes;
+                    }
+                }
                 return `
                 <div class="px-4 py-3 row-hover">
                     <div class="flex items-center gap-3">
                         ${logoHtml}
                         <div class="flex-1 min-w-0">
                             <a href="brands-detail.html?id=${bId}" class="text-sm font-semibold text-blue-600 hover:underline">${esc(bName)}</a>
-                            ${bWeb ? `<p class="text-xs text-gray-500 truncate">${esc(bWeb)}</p>` : ''}
-                            <p class="text-xs text-gray-400">Added ${timeAgo(b.created_at)}</p>
+                            <div class="flex flex-wrap items-center gap-1.5 mt-0.5">
+                                ${bCat ? `<span class="text-xs bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded font-medium">${esc(bCat)}</span>` : ''}
+                                ${retailInfo ? `<span class="text-xs text-gray-500 truncate max-w-xs">${esc(retailInfo)}</span>` : (bWeb ? `<span class="text-xs text-gray-500 truncate max-w-xs">${esc(bWeb)}</span>` : '')}
+                            </div>
+                            <p class="text-xs text-gray-400 mt-0.5">Added ${timeAgo(b.created_at)}</p>
                         </div>
                         <div class="flex flex-col items-end gap-1 shrink-0">
                             <select onchange="updatePipelineStage('${bId}', this.value)"

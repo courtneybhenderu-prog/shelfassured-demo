@@ -243,15 +243,20 @@
                 </div>
 
                 <div class="flex gap-2 pt-1">
+                    <button type="button" onclick="quickSave()"
+                        class="flex-1 bg-green-600 hover:bg-green-700 active:bg-green-800 text-white font-semibold py-3 rounded-lg text-sm transition-colors">
+                        ⚡ Quick Save
+                    </button>
                     <button type="submit"
                         class="flex-1 bg-red-600 hover:bg-red-700 active:bg-red-800 text-white font-semibold py-3 rounded-lg text-sm transition-colors">
-                        Save &amp; Scan Next
+                        Save Full
                     </button>
                     <button type="button" onclick="resetForm(false)"
                         class="px-4 py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium rounded-lg text-sm transition-colors">
-                        Cancel
+                        ✕
                     </button>
                 </div>
+                <p class="text-xs text-gray-400 text-center">⚡ Quick Save = UPC + brand + name only. Fill in details later from admin.</p>
             </form>
         </div>
 

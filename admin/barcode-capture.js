@@ -842,6 +842,81 @@ async function saveProduct() {
     }
 }
 
+// ─── Quick Save ───────────────────────────────────────────────────────────────
+async function quickSave() {
+    const upc = document.getElementById('upc-value').value.trim();
+    const brandName = document.getElementById('brand-input').value.trim();
+    const productName = document.getElementById('product-name').value.trim();
+    const storeName = document.getElementById('store-input').value.trim();
+    const existingId = document.getElementById('existing-product-id').value;
+
+    if (!brandName || !productName) {
+        showToast('Brand and product name are required', 'error');
+        return;
+    }
+
+    const quickBtn = document.querySelector('button[onclick="quickSave()"]');
+    quickBtn.disabled = true;
+    quickBtn.textContent = 'Saving...';
+
+    try {
+        const brandId = await ensureBrandExists(brandName);
+
+        const productData = {
+            barcode: upc || null,
+            upc: upc || null,
+            brand: brandName,
+            brand_id: brandId || null,
+            name: productName,
+            store: storeName || null,
+            scan_date: new Date().toISOString().split('T')[0],
+            added_by: currentUser.id,
+            updated_at: new Date().toISOString(),
+            needs_review: true  // Flag for admin to fill in details later
+        };
+
+        let savedId = existingId;
+        if (existingId) {
+            const { error } = await _supabase.from('products').update(productData).eq('id', existingId);
+            if (error) throw error;
+        } else {
+            productData.created_at = new Date().toISOString();
+            const { data, error } = await _supabase.from('products').insert(productData).select('id').single();
+            if (error) throw error;
+            savedId = data.id;
+        }
+
+        // Upload any photos that were already taken
+        if (Object.keys(pendingPhotos).length > 0 && savedId) {
+            await uploadPhotos(savedId);
+        }
+
+        // Upsert into skus catalog
+        if (brandId && upc) {
+            await _supabase.from('skus').upsert({
+                upc: upc,
+                name: productName,
+                brand_id: brandId,
+                is_active: true,
+                created_by: currentUser.id,
+                updated_at: new Date().toISOString()
+            }, { onConflict: 'upc' });
+        }
+
+        todayScanCount++;
+        document.getElementById('scan-count-badge').textContent = `${todayScanCount} today`;
+        showToast(`⚡ Quick saved: ${productName}`, 'success');
+        await loadRecentScans();
+        resetForm(true);
+    } catch (err) {
+        console.error('Quick save error:', err);
+        showToast('Quick save failed: ' + (err.message || 'Unknown error'), 'error');
+    } finally {
+        quickBtn.disabled = false;
+        quickBtn.textContent = '⚡ Quick Save';
+    }
+}
+
 // ─── Form Reset ────────────────────────────────────────────────────────────────
 function resetForm(keepStore) {
     document.getElementById('product-form-section').classList.add('hidden');

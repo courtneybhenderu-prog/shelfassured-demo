@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <title>ShelfAssured · Job Details</title>
   <meta name="description" content="Shelfer job details: upload photos, verify price, record stock level, and submit." />
   <meta name="color-scheme" content="light" />
@@ -26,7 +26,11 @@
       --brand-gold:#F9A825; --brand-brown:#3D342F;
       --bg:#F7F3F0; --card:#FCFBF9; --text-900:#111827; --text-600:#6B7280; --border:#E5E7EB;
     }
-    html,body{background:var(--bg);color:var(--text-900)}
+    html,body{background:var(--bg);color:var(--text-900);-webkit-text-size-adjust:100%}
+    /* Safe area padding for iPhone notch/home bar */
+    body{padding-bottom:env(safe-area-inset-bottom,0px)}
+    /* Prevent zoom on input focus on iOS */
+    input,select,textarea{font-size:16px!important}
     @media(prefers-color-scheme:dark){html,body{background:var(--bg)!important;color:var(--text-900)!important}}
     .btn-red{background:var(--brand-red);color:#fff;transition:transform .12s ease}
     .btn-red:hover{background:var(--brand-red-hover);transform:translateY(-1px)}
@@ -60,7 +64,7 @@
     </div>
   </header>
 
-  <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+  <main class="max-w-2xl mx-auto px-4 sm:px-6 py-4 sm:py-6">
     <!-- Job header -->
     <section class="brand-card p-5 sm:p-6 mb-6">
       <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
@@ -186,7 +190,7 @@
       </div>
     </section>
 
-    <form id="jobForm" class="grid lg:grid-cols-2 gap-6">
+    <form id="jobForm" class="grid gap-4 sm:gap-6">
       <!-- Left: Photo uploads -->
       <section class="brand-card p-5 sm:p-6">
         <h2 class="text-xl font-semibold">Upload Photos</h2>
@@ -254,14 +258,14 @@
             <textarea id="notes" rows="4" class="brand-input w-full px-3 py-2" placeholder="Anything unusual (promo sign, missing tag, moved location, etc.)"></textarea>
           </div>
 
-          <div class="grid sm:grid-cols-2 gap-4">
+          <div class="grid grid-cols-2 gap-3">
             <div>
-              <label class="block text-sm font-medium">Captured at</label>
-              <input id="capturedAt" type="text" class="brand-input w-full px-3 py-2" readonly />
+              <label class="block text-xs font-medium text-gray-500">Captured at</label>
+              <input id="capturedAt" type="text" class="brand-input w-full px-3 py-2 text-sm" readonly />
             </div>
             <div>
-              <label class="block text-sm font-medium">Device</label>
-              <input id="device" type="text" class="brand-input w-full px-3 py-2" readonly />
+              <label class="block text-xs font-medium text-gray-500">Device</label>
+              <input id="device" type="text" class="brand-input w-full px-3 py-2 text-sm" readonly />
             </div>
           </div>
 
@@ -279,9 +283,9 @@
             </ul>
           </div>
 
-          <div class="pt-2 flex flex-wrap gap-3 items-center">
-            <button type="submit" id="submitBtn" class="btn-red px-5 py-3 rounded-xl font-semibold opacity-50 cursor-not-allowed" disabled>Submit for review</button>
-            <button type="button" id="saveDraft" class="btn-gray px-5 py-3 rounded-xl font-semibold">Save draft</button>
+          <div class="pt-2 flex flex-col sm:flex-row gap-3 items-stretch sm:items-center">
+            <button type="submit" id="submitBtn" class="btn-red px-5 py-4 sm:py-3 rounded-xl font-semibold opacity-50 cursor-not-allowed text-base w-full sm:w-auto" disabled>Submit for review</button>
+            <button type="button" id="saveDraft" class="btn-gray px-5 py-4 sm:py-3 rounded-xl font-semibold text-base w-full sm:w-auto">Save draft</button>
             <button type="button" onclick="showHelp()" class="text-sm text-blue-600 hover:underline px-2">Need help?</button>
             <span id="formMsg" class="text-sm" style="color:var(--text-600)"></span>
           </div>

@@ -1178,22 +1178,52 @@
           let productId;
           
           if (existingProduct) {
-            // Product exists - update missing fields if provided
+            // Product exists - update all provided fields (allow UPC correction)
             const updateData = {};
-            if (p.suggested_retail_price && !existingProduct.suggested_retail_price) {
-              updateData.suggested_retail_price = p.suggested_retail_price;
+            if (p.suggested_retail_price) updateData.suggested_retail_price = p.suggested_retail_price;
+            if (p.size && p.size.trim()) updateData.size = p.size.trim();
+            // Always update UPC/barcode/sku if the form has a value (allows correction)
+            if (barcodeValue) {
+              updateData.upc = barcodeValue;
+              updateData.barcode = barcodeValue;
+              updateData.sku = barcodeValue;
             }
-            // Update size if provided and product doesn't have one
-            if (p.size && p.size.trim() && !existingProduct.size) {
-              updateData.size = p.size.trim();
-            }
+            if (p.category && p.category.trim()) updateData.category = p.category.trim();
             
             if (Object.keys(updateData).length > 0) {
               await supabase
                 .from('products')
                 .update(updateData)
                 .eq('id', existingProduct.id);
-              console.log(`Updated product ${sku} with missing fields:`, updateData);
+              console.log(`Updated product ${sku} with fields:`, updateData);
+            }
+
+            // ALSO sync the UPC to the skus table so jobs pick up the corrected barcode
+            if (barcodeValue) {
+              const { data: linkedSku } = await supabase
+                .from('skus')
+                .select('id, upc')
+                .eq('brand_id', brandId)
+                .ilike('name', productName)
+                .maybeSingle();
+              if (linkedSku && linkedSku.upc !== barcodeValue) {
+                // Check the new UPC isn't already used by a different SKU
+                const { data: upcConflict } = await supabase
+                  .from('skus')
+                  .select('id')
+                  .eq('upc', barcodeValue)
+                  .neq('id', linkedSku.id)
+                  .maybeSingle();
+                if (!upcConflict) {
+                  await supabase
+                    .from('skus')
+                    .update({ upc: barcodeValue })
+                    .eq('id', linkedSku.id);
+                  console.log(`✅ Synced UPC to skus table for ${productName}: ${barcodeValue}`);
+                } else {
+                  console.warn(`⚠️ UPC ${barcodeValue} already used by another SKU — skipping skus sync`);
+                }
+              }
             }
             
             // Check if already linked to this brand
