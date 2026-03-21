@@ -288,20 +288,24 @@
                 document.getElementById('create-job-link').href = `manage-jobs.html?brand_id=${brandId}`;
                 document.getElementById('edit-brand-link').href = `brands-new.html?id=${brandId}`;
                 
-                // Update statistics
+                // Update statistics — each card links to the relevant section on the brand dashboard
+                const dashBase = `../dashboard/brand-client.html?brand_id=${brandId}`;
                 document.getElementById('brand-stats').innerHTML = `
-                    <div class="bg-blue-50 rounded-lg p-4">
+                    <a href="${dashBase}#products-section" class="block bg-blue-50 rounded-lg p-4 hover:bg-blue-100 active:bg-blue-200 transition-colors cursor-pointer">
                         <div class="text-2xl font-bold text-blue-600">${productCount}</div>
                         <div class="text-sm text-gray-600">Products</div>
-                    </div>
-                    <div class="bg-green-50 rounded-lg p-4">
+                        <div class="text-xs text-blue-400 mt-1">View &rarr;</div>
+                    </a>
+                    <a href="${dashBase}#store-map" class="block bg-green-50 rounded-lg p-4 hover:bg-green-100 active:bg-green-200 transition-colors cursor-pointer">
                         <div class="text-2xl font-bold text-green-600">${storeCount}</div>
                         <div class="text-sm text-gray-600">Stores</div>
-                    </div>
-                    <div class="bg-purple-50 rounded-lg p-4">
+                        <div class="text-xs text-green-400 mt-1">View &rarr;</div>
+                    </a>
+                    <a href="${dashBase}#jobs-section" class="block bg-purple-50 rounded-lg p-4 hover:bg-purple-100 active:bg-purple-200 transition-colors cursor-pointer">
                         <div class="text-2xl font-bold text-purple-600">${jobCount}</div>
                         <div class="text-sm text-gray-600">Jobs</div>
-                    </div>
+                        <div class="text-xs text-purple-400 mt-1">View &rarr;</div>
+                    </a>
                 `;
                 
                 // Show content
