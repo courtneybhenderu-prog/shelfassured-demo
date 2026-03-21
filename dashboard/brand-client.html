@@ -875,15 +875,129 @@
         
         // Navigation functions
         function goToAddProduct() {
-            // Navigate to product management or onboarding
-            const urlParams = new URLSearchParams(window.location.search);
-            const brandId = urlParams.get('brand_id');
-            if (brandId) {
-                window.location.href = `../admin/brands-detail.html?id=${brandId}`;
-            } else {
-                alert('Please contact admin to add products.');
-            }
+            openQuickAddProduct();
         }
+
+        // ── Quick Add Product Modal ──────────────────────────────────────────
+        let _quickAddPhotoFile = null;
+
+        function openQuickAddProduct() {
+            _quickAddPhotoFile = null;
+            document.getElementById('qap-name').value = '';
+            document.getElementById('qap-upc').value = '';
+            document.getElementById('qap-category').value = '';
+            document.getElementById('qap-photo-preview').innerHTML = '';
+            document.getElementById('qap-photo-preview').style.display = 'none';
+            document.getElementById('qap-photo-label').textContent = '📷 Add Photo (optional)';
+            document.getElementById('qap-error').textContent = '';
+            document.getElementById('qap-modal').classList.remove('hidden');
+            document.getElementById('qap-name').focus();
+        }
+
+        function closeQuickAddProduct() {
+            document.getElementById('qap-modal').classList.add('hidden');
+            _quickAddPhotoFile = null;
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            // Photo picker for quick-add modal
+            document.getElementById('qap-photo-input').addEventListener('change', (e) => {
+                const file = e.target.files[0];
+                if (!file) return;
+                _quickAddPhotoFile = file;
+                const reader = new FileReader();
+                reader.onload = (ev) => {
+                    const preview = document.getElementById('qap-photo-preview');
+                    preview.innerHTML = `<img src="${ev.target.result}" class="w-full h-32 object-contain rounded-lg border border-gray-200" />`;
+                    preview.style.display = 'block';
+                    document.getElementById('qap-photo-label').textContent = '✅ Photo selected — tap to change';
+                };
+                reader.readAsDataURL(file);
+            });
+        });
+
+        window.saveQuickAddProduct = async function() {
+            const nameEl = document.getElementById('qap-name');
+            const upcEl = document.getElementById('qap-upc');
+            const catEl = document.getElementById('qap-category');
+            const errEl = document.getElementById('qap-error');
+            const saveBtn = document.getElementById('qap-save-btn');
+
+            const name = nameEl.value.trim();
+            const upc = upcEl.value.trim() || null;
+            const category = catEl.value || 'General';
+
+            if (!name) {
+                errEl.textContent = 'Product name is required.';
+                nameEl.focus();
+                return;
+            }
+
+            const urlParams = new URLSearchParams(window.location.search);
+            const brandId = urlParams.get('brand_id') || (await getBrandIdFromUser());
+            if (!brandId) {
+                errEl.textContent = 'Could not determine brand. Please refresh and try again.';
+                return;
+            }
+
+            saveBtn.disabled = true;
+            saveBtn.textContent = 'Saving…';
+            errEl.textContent = '';
+
+            try {
+                // 1. Insert the SKU record
+                const insertPayload = {
+                    brand_id: brandId,
+                    name: name,
+                    category: category,
+                    is_active: true
+                };
+                if (upc) insertPayload.upc = upc;
+
+                const { data: newSku, error: insertError } = await supabase
+                    .from('skus')
+                    .insert(insertPayload)
+                    .select('id')
+                    .single();
+
+                if (insertError) {
+                    errEl.textContent = 'Error saving product: ' + insertError.message;
+                    saveBtn.disabled = false;
+                    saveBtn.textContent = 'Save Product';
+                    return;
+                }
+
+                // 2. Upload photo if one was selected
+                if (_quickAddPhotoFile && newSku?.id) {
+                    try {
+                        const fileExt = _quickAddPhotoFile.name.split('.').pop();
+                        const filePath = `${newSku.id}/${Date.now()}.${fileExt}`;
+                        const { error: uploadError } = await supabase.storage
+                            .from('product-photos')
+                            .upload(filePath, _quickAddPhotoFile, { cacheControl: '3600', upsert: false });
+
+                        if (!uploadError) {
+                            const { data: { publicUrl } } = supabase.storage
+                                .from('product-photos')
+                                .getPublicUrl(filePath);
+                            await supabase.from('skus').update({ image_url: publicUrl }).eq('id', newSku.id);
+                        }
+                    } catch (photoErr) {
+                        console.warn('Photo upload failed (product was saved):', photoErr);
+                    }
+                }
+
+                // 3. Refresh the product grid and close modal
+                closeQuickAddProduct();
+                await loadProductsShowcase(brandId);
+
+            } catch (err) {
+                console.error('Quick add product error:', err);
+                errEl.textContent = 'Unexpected error. Please try again.';
+                saveBtn.disabled = false;
+                saveBtn.textContent = 'Save Product';
+            }
+        };
         
         function goToAddRetailLocation() {
             // Navigate to store management or onboarding
@@ -1695,6 +1809,81 @@
             }
         }
     </script>
+
+    <!-- Quick Add Product Modal (bottom sheet) -->
+    <div id="qap-modal" class="hidden fixed inset-0 z-50 flex items-end justify-center" style="background:rgba(0,0,0,0.45);">
+        <div class="bg-white w-full max-w-lg rounded-t-2xl shadow-2xl p-6 pb-10" style="max-height:92vh;overflow-y:auto;">
+            <!-- Handle bar -->
+            <div class="flex justify-center mb-4">
+                <div class="w-10 h-1 bg-gray-300 rounded-full"></div>
+            </div>
+            <div class="flex items-center justify-between mb-5">
+                <h2 class="text-lg font-bold text-gray-900">Add Product</h2>
+                <button onclick="closeQuickAddProduct()" class="text-gray-400 hover:text-gray-600 text-2xl leading-none">&times;</button>
+            </div>
+
+            <!-- Product Name -->
+            <div class="mb-4">
+                <label class="block text-sm font-medium text-gray-700 mb-1">Product Name <span class="text-red-500">*</span></label>
+                <input id="qap-name" type="text" placeholder="e.g., Satsuma Sparkling Water 12 oz"
+                    class="w-full border border-gray-300 rounded-lg px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    autocomplete="off" />
+            </div>
+
+            <!-- UPC -->
+            <div class="mb-4">
+                <label class="block text-sm font-medium text-gray-700 mb-1">UPC <span class="text-gray-400 font-normal">(optional — add later)</span></label>
+                <input id="qap-upc" type="text" inputmode="numeric" pattern="[0-9]*" placeholder="e.g., 012345678901"
+                    class="w-full border border-gray-300 rounded-lg px-4 py-3 text-base font-mono focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    autocomplete="off" />
+            </div>
+
+            <!-- Category -->
+            <div class="mb-4">
+                <label class="block text-sm font-medium text-gray-700 mb-1">Category</label>
+                <select id="qap-category" class="w-full border border-gray-300 rounded-lg px-4 py-3 text-base bg-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <option value="">Select category</option>
+                    <option>Air Care</option><option>Asian Foods</option><option>Baby Food</option>
+                    <option>Beer</option><option>Body Care</option><option>Bread</option>
+                    <option>Candy</option><option>Chips</option><option>Cleaning Supplies</option>
+                    <option>Coffee</option><option>Condiments</option><option>Cookies</option>
+                    <option>Energy &amp; Functional Beverage</option><option>Frozen Desserts &amp; Novelties</option>
+                    <option>Frozen Meals</option><option>Frozen Pizza</option><option>Frozen Vegetables</option>
+                    <option>Granola</option><option>Ice Cream</option><option>Meat Alternatives</option>
+                    <option>Mediterranean Foods</option><option>Mexican Foods</option><option>Milk</option>
+                    <option>Nuts</option><option>Oil &amp; Vinegar</option><option>Pancake Mix</option>
+                    <option>Pasta</option><option>Pasta Sauce</option><option>Protein Bars</option>
+                    <option>Ready to Drink Coffee &amp; Tea</option><option>Rice, Beans &amp; Grains</option>
+                    <option>Salad Dressing</option><option>Sparkling Water</option>
+                    <option>Spices &amp; Seasonings</option><option>Spirits</option><option>Still Water</option>
+                    <option>Supplements</option><option>Tea</option><option>Trail Mix</option>
+                    <option>Vitamins</option><option>Wine</option><option>Yogurt</option>
+                    <option>General</option>
+                </select>
+            </div>
+
+            <!-- Photo -->
+            <div class="mb-5">
+                <label class="block text-sm font-medium text-gray-700 mb-1">Product Photo <span class="text-gray-400 font-normal">(optional)</span></label>
+                <div id="qap-photo-preview" style="display:none;" class="mb-2"></div>
+                <label for="qap-photo-input"
+                    class="flex items-center justify-center w-full border-2 border-dashed border-gray-300 rounded-lg py-4 cursor-pointer hover:border-blue-400 transition-colors">
+                    <span id="qap-photo-label" class="text-sm text-gray-500">📷 Add Photo (optional)</span>
+                </label>
+                <input id="qap-photo-input" type="file" accept="image/*" class="hidden" />
+            </div>
+
+            <!-- Error -->
+            <p id="qap-error" class="text-red-500 text-sm mb-3"></p>
+
+            <!-- Save Button -->
+            <button id="qap-save-btn" onclick="saveQuickAddProduct()"
+                class="w-full bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white font-semibold py-4 rounded-xl text-base transition-colors">
+                Save Product
+            </button>
+            <button onclick="closeQuickAddProduct()" class="w-full mt-3 text-gray-500 py-2 text-sm">Cancel</button>
+        </div>
+    </div>
 
     <!-- Navigation -->
     <div class="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200">
