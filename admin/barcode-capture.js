@@ -914,8 +914,7 @@ async function quickSave() {
             store: storeName || null,
             scan_date: new Date().toISOString().split('T')[0],
             added_by: currentUser.id,
-            updated_at: new Date().toISOString(),
-            needs_review: true  // Flag for admin to fill in details later
+            updated_at: new Date().toISOString()
         };
 
         let savedId = existingId;

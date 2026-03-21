@@ -1475,6 +1475,8 @@
                     const size = product.size ? ` • ${product.size}` : '';
                     const imageUrl = product.image_url || null;
                     
+                    const hasUpc = product.upc && product.upc.trim().length > 0;
+                    const upcDisplay = hasUpc ? escapeHtml(product.upc) : '<span class="text-amber-600 font-medium">Tap to add UPC</span>';
                     return `
                         <div class="border border-gray-200 rounded-lg overflow-hidden hover:shadow-md transition-shadow flex flex-col">
                             <div class="relative aspect-square bg-gray-100">
@@ -1489,9 +1491,21 @@
                             </div>
                             <div class="p-3 flex-1 flex flex-col">
                                 <div class="font-semibold text-gray-900 mb-1 text-sm">${escapeHtml(productName)}</div>
-                                <div class="text-xs text-gray-600 mb-1">
+                                <div class="text-xs text-gray-600 mb-1" id="upc-display-${product.id}">
                                     <span class="font-medium">UPC:</span> 
-                                    <span class="font-mono">${escapeHtml(upc)}</span>
+                                    <span class="font-mono cursor-pointer hover:text-blue-600 underline decoration-dotted" 
+                                          onclick="editProductUpc('${product.id}', '${product.upc || ''}')" 
+                                          title="Tap to edit UPC">${upcDisplay}</span>
+                                </div>
+                                <div id="upc-edit-${product.id}" class="hidden mb-1">
+                                    <div class="flex gap-1 items-center">
+                                        <input id="upc-input-${product.id}" type="text" inputmode="numeric" pattern="[0-9]*"
+                                               value="${product.upc || ''}" placeholder="Scan or type UPC"
+                                               class="flex-1 border border-blue-400 rounded px-2 py-1 text-xs font-mono focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                               onkeydown="if(event.key==='Enter') saveProductUpc('${product.id}'); if(event.key==='Escape') cancelEditUpc('${product.id}')" />
+                                        <button onclick="saveProductUpc('${product.id}')" class="bg-blue-600 text-white px-2 py-1 rounded text-xs font-medium">✓</button>
+                                        <button onclick="cancelEditUpc('${product.id}')" class="bg-gray-200 text-gray-600 px-2 py-1 rounded text-xs">✕</button>
+                                    </div>
                                 </div>
                                 ${size ? `<div class="text-xs text-gray-500">${escapeHtml(size)}</div>` : ''}
                     </div>
@@ -1506,6 +1520,52 @@
             }
         }
         
+        // ─── Inline UPC edit functions ─────────────────────────────────────────────
+        window.editProductUpc = function(productId, currentUpc) {
+            document.getElementById('upc-display-' + productId).classList.add('hidden');
+            const editDiv = document.getElementById('upc-edit-' + productId);
+            editDiv.classList.remove('hidden');
+            const input = document.getElementById('upc-input-' + productId);
+            input.focus();
+            input.select();
+        };
+
+        window.cancelEditUpc = function(productId) {
+            document.getElementById('upc-edit-' + productId).classList.add('hidden');
+            document.getElementById('upc-display-' + productId).classList.remove('hidden');
+        };
+
+        window.saveProductUpc = async function(productId) {
+            const input = document.getElementById('upc-input-' + productId);
+            const newUpc = input.value.trim();
+            const saveBtn = input.nextElementSibling;
+            saveBtn.disabled = true;
+            saveBtn.textContent = '...';
+            try {
+                const { error } = await supabase
+                    .from('skus')
+                    .update({ upc: newUpc || null, updated_at: new Date().toISOString() })
+                    .eq('id', productId);
+                if (error) throw error;
+                // Update display inline without full reload
+                const displaySpan = document.querySelector('#upc-display-' + productId + ' span.font-mono');
+                if (displaySpan) {
+                    if (newUpc) {
+                        displaySpan.innerHTML = newUpc;
+                        displaySpan.className = 'font-mono cursor-pointer hover:text-blue-600 underline decoration-dotted';
+                    } else {
+                        displaySpan.innerHTML = '<span class="text-amber-600 font-medium">Tap to add UPC</span>';
+                    }
+                }
+                cancelEditUpc(productId);
+            } catch (err) {
+                console.error('UPC save error:', err);
+                alert('Failed to save UPC: ' + err.message);
+                saveBtn.disabled = false;
+                saveBtn.textContent = '\u2713';
+            }
+        };
+
         // Upload product photo (global function)
         window.uploadProductPhoto = async function(productId, productName) {
             const input = document.createElement('input');
