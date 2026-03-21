@@ -47,13 +47,20 @@
     .sa-input{background:#fff;border:1.5px solid var(--border);border-radius:.5rem;padding:.65rem .875rem;width:100%;transition:border-color .15s}
     .sa-input:focus{outline:none;border-color:var(--brand-red);box-shadow:0 0 0 3px rgba(198,40,40,.12)}
 
-    /* Checklist items */
+    /* SKU checklist items */
     .sku-item{display:flex;align-items:center;gap:.75rem;padding:.75rem 1rem;border-radius:.625rem;background:#fff;border:1.5px solid var(--border);cursor:pointer;transition:border-color .15s,background .15s;-webkit-tap-highlight-color:transparent}
     .sku-item:hover{border-color:#9CA3AF}
     .sku-item.checked{border-color:#059669;background:#f0fdf4}
+    .sku-item.not-found-sku{border-color:#DC2626;background:#FEF2F2}
     .sku-item input[type="checkbox"]{width:1.25rem;height:1.25rem;accent-color:#059669;cursor:pointer;flex-shrink:0}
     .sku-item label{flex:1;cursor:pointer;font-size:.95rem;font-weight:500}
     .sku-item.checked label{color:#166534}
+    .sku-item.not-found-sku label{color:#991B1B}
+
+    /* Not Found toggle button per SKU */
+    .btn-not-found{display:inline-flex;align-items:center;gap:.3rem;padding:.3rem .65rem;border-radius:.4rem;font-size:.75rem;font-weight:600;cursor:pointer;border:1.5px solid #FCA5A5;background:#FEF2F2;color:#B91C1C;white-space:nowrap;flex-shrink:0;transition:background .15s,border-color .15s}
+    .btn-not-found:hover{background:#FEE2E2;border-color:#EF4444}
+    .btn-not-found.active{background:#DC2626;border-color:#DC2626;color:#fff}
 
     /* Scan states */
     .scan-box{border:2px solid var(--border);border-radius:.75rem;background:#fff;padding:1.25rem}
@@ -70,6 +77,12 @@
 
     /* Progress bar */
     #progressBar{height:4px;background:var(--brand-red);border-radius:2px;transition:width .3s ease}
+
+    /* Discovery mode banner */
+    .discovery-banner{background:#EFF6FF;border:1.5px solid #BFDBFE;border-radius:.75rem;padding:.75rem 1rem;display:flex;align-items:center;gap:.625rem}
+
+    /* Not Found summary panel */
+    #notFoundSummary{background:#FEF2F2;border:1.5px solid #FECACA;border-radius:.75rem;padding:.875rem 1rem}
   </style>
 </head>
 <body class="font-sans antialiased">
@@ -110,8 +123,19 @@
           <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
           <span id="jobCategoryText"></span>
         </p>
+        <!-- HEB.com search link — populated by JS with brand name query -->
+        <a id="hebSearchLink" href="#" target="_blank" rel="noopener"
+           class="mt-2 inline-flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-full bg-red-50 text-red-700 border border-red-200 hidden hover:bg-red-100">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
+          Search on HEB.com
+        </a>
         <!-- Payout badge -->
         <p id="jobPayout" class="mt-3 text-sm font-semibold" style="color:var(--brand-red)"></p>
+        <!-- Discovery mode banner -->
+        <div id="discoveryBanner" class="discovery-banner mt-3 hidden">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-blue-600 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+          <p class="text-xs text-blue-700 font-medium">Discovery Mode — check shelf presence and report what you find. No photo required.</p>
+        </div>
       </div>
     </section>
 
@@ -121,7 +145,7 @@
         <span class="section-num">1</span>
         <div>
           <h2 class="text-base font-semibold text-gray-900">Shelf Check</h2>
-          <p class="text-sm" style="color:var(--text-600)">Check off every flavor you see on the shelf.</p>
+          <p class="text-sm" style="color:var(--text-600)">Check off every flavor you see. Tap <strong>Not Found</strong> for anything missing.</p>
         </div>
       </div>
       <div id="skuChecklist" class="space-y-2">
@@ -133,6 +157,16 @@
         </div>
       </div>
       <p id="checklistProgress" class="mt-3 text-xs font-medium text-gray-500 hidden"></p>
+
+      <!-- Not Found summary — shown when ≥1 SKU is marked not found -->
+      <div id="notFoundSummary" class="mt-4 hidden">
+        <p class="text-sm font-semibold text-red-800 mb-2">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 inline-block mr-1 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+          Products not found on shelf:
+        </p>
+        <ul id="notFoundList" class="space-y-1 text-sm text-red-700 list-disc list-inside"></ul>
+        <p class="mt-2 text-xs text-red-600">These will be flagged for the brand team to follow up.</p>
+      </div>
     </section>
 
     <!-- ── SECTION 2: VERIFY LOCATION ── -->
@@ -197,16 +231,35 @@
       </div>
     </section>
 
-    <!-- ── SECTION 3: PHOTOS ── -->
+    <!-- ── SECTION 3: AISLE ── -->
     <section class="sa-card p-5">
       <div class="flex items-center gap-3 mb-4">
         <span class="section-num">3</span>
+        <div>
+          <h2 class="text-base font-semibold text-gray-900">Aisle</h2>
+          <p class="text-sm" style="color:var(--text-600)">Which aisle are these products in?</p>
+        </div>
+      </div>
+      <div class="flex items-center gap-3">
+        <input id="aisleInput" type="text" class="sa-input flex-1" placeholder="e.g. Aisle 7, Natural Foods, Beverage"
+               oninput="onAisleInput()" />
+        <div id="aisleConfirmed" class="hidden flex-shrink-0 flex items-center gap-1 text-green-700 font-semibold text-sm">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
+          Confirmed
+        </div>
+      </div>
+      <p class="mt-2 text-xs text-gray-400">This helps the brand team find the product faster on future visits.</p>
+    </section>
+
+    <!-- ── SECTION 4: PHOTOS ── -->
+    <section id="photosSection" class="sa-card p-5">
+      <div class="flex items-center gap-3 mb-4">
+        <span class="section-num">4</span>
         <div>
           <h2 class="text-base font-semibold text-gray-900">Photos</h2>
           <p class="text-sm" style="color:var(--text-600)">3 shots: close-up, shelf context, wide angle.</p>
         </div>
       </div>
-
       <div class="space-y-3">
         <div>
           <label class="block text-sm font-medium mb-1.5">1) Product close-up</label>
@@ -233,12 +286,14 @@
           </div>
         </div>
       </div>
+      <!-- Discovery mode note: photos optional -->
+      <p id="discoveryPhotoNote" class="mt-3 text-xs text-blue-600 hidden">Discovery Mode: photos are optional but appreciated.</p>
     </section>
 
-    <!-- ── SECTION 4: NOTES ── -->
+    <!-- ── SECTION 5: NOTES ── -->
     <section class="sa-card p-5">
       <div class="flex items-center gap-3 mb-4">
-        <span class="section-num">4</span>
+        <span class="section-num">5</span>
         <div>
           <h2 class="text-base font-semibold text-gray-900">Notes</h2>
           <p class="text-sm" style="color:var(--text-600)">Anything the brand team should know.</p>
@@ -260,6 +315,10 @@
           <span class="check-icon w-5 h-5 flex items-center justify-center rounded-full border-2 border-gray-300 text-xs flex-shrink-0">○</span>
           <span>Location verified</span>
         </div>
+        <div id="check-aisle" class="flex items-center gap-2 text-sm text-gray-400">
+          <span class="check-icon w-5 h-5 flex items-center justify-center rounded-full border-2 border-gray-300 text-xs flex-shrink-0">○</span>
+          <span>Aisle recorded</span>
+        </div>
         <div id="check-photo1" class="flex items-center gap-2 text-sm text-gray-400">
           <span class="check-icon w-5 h-5 flex items-center justify-center rounded-full border-2 border-gray-300 text-xs flex-shrink-0">○</span>
           <span>Photo 1: Product close-up</span>
@@ -273,7 +332,6 @@
           <span>Photo 3: Wide-angle view</span>
         </div>
       </div>
-
       <div class="flex flex-col gap-3">
         <button type="button" id="submitBtn" class="btn-primary w-full py-4 opacity-50 cursor-not-allowed" disabled onclick="handleSubmit()">
           Submit Job
@@ -301,9 +359,11 @@
     let currentUser = null;
     let currentAssignment = null;   // first store/SKU assignment
     let allSkus = [];               // all SKUs for this job (for flexible scan match)
-    let checkedSkuIds = new Set();  // which SKU checkboxes are ticked
+    let checkedSkuIds = new Set();  // which SKU checkboxes are ticked (found on shelf)
+    let notFoundSkuIds = new Set(); // which SKUs are marked as not found
     let scanState = 'pending';      // 'pending' | 'verified' | 'skipped'
     let scanStream = null;
+    let isDiscoveryMode = false;    // true when job/brand is in Discovery Mode
 
     // ═══════════════════════════════════════════════════════
     //  INIT
@@ -312,23 +372,19 @@
       try {
         const urlParams = new URLSearchParams(window.location.search);
         const jobId = urlParams.get('job_id');
-
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) { window.location.href = '../auth/signin.html'; return; }
         currentUser = user;
-
         if (!jobId) {
           const { data: profile } = await supabase.from('users').select('role').eq('id', user.id).single();
           window.location.href = profile?.role === 'admin' ? '../admin/dashboard.html' : 'shelfer.html';
           return;
         }
-
         await loadJobDetails(jobId);
         setupPhotoHandlers();
         updateChecklist();
         updateProgress();
         loadDraft(jobId);
-
       } catch (err) {
         console.error('❌ Init error:', err);
         showMsg('Failed to load job. Please try again.', 'error');
@@ -339,13 +395,17 @@
     //  LOAD JOB
     // ═══════════════════════════════════════════════════════
     async function loadJobDetails(jobId) {
-      // Fetch job + brand
+      // Fetch job + brand (include mode flag if present)
       const { data: jobData, error: jobErr } = await supabase
         .from('jobs')
-        .select('id, title, description, payout_per_store, status, brands(id, name)')
+        .select('id, title, description, payout_per_store, status, mode, brands(id, name, mode)')
         .eq('id', jobId)
         .single();
       if (jobErr) throw jobErr;
+
+      // Determine Discovery Mode: job-level overrides brand-level
+      isDiscoveryMode = (jobData.mode === 'discovery') ||
+                        (!jobData.mode && jobData.brands?.mode === 'discovery');
 
       // Fetch store/SKU assignments (include skus.category)
       const { data: jssData, error: jssErr } = await supabase
@@ -367,7 +427,6 @@
         sku: row.skus || {},
         brand_name: jobData.brands?.name || ''
       }));
-
       if (assignments.length === 0) throw new Error('No assignments found for this job');
 
       currentJob = {
@@ -375,6 +434,7 @@
         title: jobData.title,
         payout_per_store: jobData.payout_per_store,
         brand_name: jobData.brands?.name || '',
+        brand_id: jobData.brands?.id || null,
         assignments
       };
 
@@ -386,7 +446,6 @@
         }
       });
       allSkus = Object.values(skuMap);
-
       currentAssignment = assignments[0];
 
       // ── Render header ──
@@ -397,17 +456,14 @@
       const storeDisplay = storeChain
         ? (storeName ? `${storeChain} ${storeName}` : storeChain)
         : storeName;
-
       const skuCount = allSkus.length;
       const brandName = first.brand_name;
       const headline = [brandName, `${skuCount} SKU${skuCount !== 1 ? 's' : ''}`, storeDisplay].filter(Boolean).join(' · ');
-
       const addressParts = [store?.address, store?.city, store?.state, store?.zip_code].filter(Boolean);
       const address = addressParts.join(', ');
 
       // Category: use first SKU's category
       const category = allSkus[0]?.category || '';
-
       document.getElementById('jobHeadline').textContent = headline;
       document.getElementById('jobAddress').textContent = address;
       document.getElementById('headerStatus').textContent = `$${(parseFloat(jobData.payout_per_store || 0) * 0.6).toFixed(2)} payout`;
@@ -420,70 +476,181 @@
       document.getElementById('jobPayout').textContent =
         `Earn $${(parseFloat(jobData.payout_per_store || 0) * 0.6).toFixed(2)} for this job`;
 
+      // ── HEB.com search link ──
+      if (brandName) {
+        const hebQuery = encodeURIComponent(brandName);
+        const hebLink = document.getElementById('hebSearchLink');
+        hebLink.href = `https://www.heb.com/search?q=${hebQuery}`;
+        hebLink.classList.remove('hidden');
+      }
+
+      // ── Discovery Mode UI ──
+      if (isDiscoveryMode) {
+        document.getElementById('discoveryBanner').classList.remove('hidden');
+        document.getElementById('discoveryPhotoNote').classList.remove('hidden');
+        // In Discovery Mode photos are optional — update section label
+        const photoSection = document.getElementById('photosSection');
+        const photoHeading = photoSection.querySelector('h2');
+        if (photoHeading) photoHeading.textContent = 'Photos (optional)';
+      }
+
+      // ── Load existing aisle from brand_stores ──
+      if (currentAssignment.store_id && currentJob.brand_id) {
+        const { data: bsData } = await supabase
+          .from('brand_stores')
+          .select('aisle')
+          .eq('brand_id', currentJob.brand_id)
+          .eq('store_id', currentAssignment.store_id)
+          .maybeSingle();
+        if (bsData?.aisle) {
+          document.getElementById('aisleInput').value = bsData.aisle;
+          document.getElementById('aisleConfirmed').classList.remove('hidden');
+        }
+      }
+
       // Show header content
       document.getElementById('headerLoading').classList.add('hidden');
       document.getElementById('headerContent').classList.remove('hidden');
 
       // ── Render SKU checklist ──
       renderSkuChecklist();
-
-      console.log('✅ Job loaded:', currentJob);
+      console.log('✅ Job loaded:', currentJob, '| Discovery mode:', isDiscoveryMode);
     }
 
-    // ── Render SKU checklist ──
+    // ── Render SKU checklist with Not Found toggle per SKU ──
     function renderSkuChecklist() {
       const container = document.getElementById('skuChecklist');
       if (allSkus.length === 0) {
         container.innerHTML = '<p class="text-sm text-gray-500 italic">No SKUs found for this job.</p>';
         return;
       }
-
       container.innerHTML = allSkus.map(sku => {
         const label = sku.name || sku.id;
         const size = sku.size ? ` <span class="text-xs text-gray-400 font-normal">${sku.size}</span>` : '';
         return `
-          <div class="sku-item" id="sku-item-${sku.id}" onclick="toggleSku('${sku.id}')">
+          <div class="sku-item" id="sku-item-${sku.id}">
             <input type="checkbox" id="sku-cb-${sku.id}" onchange="toggleSku('${sku.id}')" />
-            <label for="sku-cb-${sku.id}">${label}${size}</label>
+            <label for="sku-cb-${sku.id}" onclick="toggleSku('${sku.id}')">${label}${size}</label>
+            <button type="button"
+              id="sku-nf-btn-${sku.id}"
+              class="btn-not-found"
+              onclick="toggleNotFound('${sku.id}', event)"
+              title="Mark as not found on shelf">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+              Not Found
+            </button>
           </div>
         `;
       }).join('');
-
       updateChecklistProgress();
     }
 
     function toggleSku(skuId) {
+      // If this SKU is marked not-found, un-mark it first
+      if (notFoundSkuIds.has(skuId)) {
+        notFoundSkuIds.delete(skuId);
+        const nfBtn = document.getElementById(`sku-nf-btn-${skuId}`);
+        if (nfBtn) nfBtn.classList.remove('active');
+      }
+
       const cb = document.getElementById(`sku-cb-${skuId}`);
       const item = document.getElementById(`sku-item-${skuId}`);
       if (!cb || !item) return;
 
-      // Prevent double-fire from label click propagation
-      // We'll rely on the onclick on the container div
       const nowChecked = !cb.checked;
       cb.checked = nowChecked;
-
       if (nowChecked) {
         checkedSkuIds.add(skuId);
         item.classList.add('checked');
+        item.classList.remove('not-found-sku');
       } else {
         checkedSkuIds.delete(skuId);
         item.classList.remove('checked');
+      }
+      updateChecklistProgress();
+      updateChecklist();
+      updateProgress();
+      updateNotFoundSummary();
+    }
+
+    function toggleNotFound(skuId, event) {
+      event.stopPropagation();
+
+      const btn = document.getElementById(`sku-nf-btn-${skuId}`);
+      const item = document.getElementById(`sku-item-${skuId}`);
+      const cb = document.getElementById(`sku-cb-${skuId}`);
+      if (!btn || !item || !cb) return;
+
+      const isNowNotFound = !notFoundSkuIds.has(skuId);
+
+      if (isNowNotFound) {
+        // Mark as not found — uncheck if was checked
+        notFoundSkuIds.add(skuId);
+        checkedSkuIds.delete(skuId);
+        cb.checked = false;
+        item.classList.remove('checked');
+        item.classList.add('not-found-sku');
+        btn.classList.add('active');
+      } else {
+        // Unmark not found
+        notFoundSkuIds.delete(skuId);
+        item.classList.remove('not-found-sku');
+        btn.classList.remove('active');
       }
 
       updateChecklistProgress();
       updateChecklist();
       updateProgress();
+      updateNotFoundSummary();
     }
 
     function updateChecklistProgress() {
       const total = allSkus.length;
       const checked = checkedSkuIds.size;
+      const notFound = notFoundSkuIds.size;
       const el = document.getElementById('checklistProgress');
       if (!el) return;
       if (total === 0) { el.classList.add('hidden'); return; }
-      el.textContent = `${checked} of ${total} confirmed on shelf`;
+
+      const parts = [];
+      if (checked > 0) parts.push(`${checked} found`);
+      if (notFound > 0) parts.push(`${notFound} not found`);
+      const remaining = total - checked - notFound;
+      if (remaining > 0) parts.push(`${remaining} unchecked`);
+
+      el.textContent = parts.join(' · ');
       el.classList.remove('hidden');
-      el.style.color = checked === total ? '#059669' : '#6B7280';
+      const allAccountedFor = (checked + notFound) === total;
+      el.style.color = allAccountedFor ? '#059669' : '#6B7280';
+    }
+
+    function updateNotFoundSummary() {
+      const summary = document.getElementById('notFoundSummary');
+      const list = document.getElementById('notFoundList');
+      if (notFoundSkuIds.size === 0) {
+        summary.classList.add('hidden');
+        return;
+      }
+      summary.classList.remove('hidden');
+      list.innerHTML = allSkus
+        .filter(s => notFoundSkuIds.has(s.id))
+        .map(s => `<li>${s.name}${s.size ? ' ' + s.size : ''}</li>`)
+        .join('');
+    }
+
+    // ═══════════════════════════════════════════════════════
+    //  AISLE INPUT
+    // ═══════════════════════════════════════════════════════
+    function onAisleInput() {
+      const val = document.getElementById('aisleInput').value.trim();
+      const confirmed = document.getElementById('aisleConfirmed');
+      if (val.length > 0) {
+        confirmed.classList.remove('hidden');
+      } else {
+        confirmed.classList.add('hidden');
+      }
+      updateChecklist();
+      updateProgress();
     }
 
     // ═══════════════════════════════════════════════════════
@@ -495,7 +662,6 @@
         document.getElementById('scanCamera').classList.remove('hidden');
         document.getElementById('scanMismatch').classList.add('hidden');
         document.getElementById('scanVerified').classList.add('hidden');
-
         scanStream = await navigator.mediaDevices.getUserMedia({
           video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, height: { ideal: 720 } }
         });
@@ -583,11 +749,15 @@
         // Auto-check the matched SKU in the checklist
         if (!checkedSkuIds.has(matchedSku.id)) {
           checkedSkuIds.add(matchedSku.id);
+          notFoundSkuIds.delete(matchedSku.id);
           const cb = document.getElementById(`sku-cb-${matchedSku.id}`);
           const item = document.getElementById(`sku-item-${matchedSku.id}`);
+          const nfBtn = document.getElementById(`sku-nf-btn-${matchedSku.id}`);
           if (cb) cb.checked = true;
-          if (item) item.classList.add('checked');
+          if (item) { item.classList.add('checked'); item.classList.remove('not-found-sku'); }
+          if (nfBtn) nfBtn.classList.remove('active');
           updateChecklistProgress();
+          updateNotFoundSummary();
         }
       } else {
         // No match — show friendly mismatch message
@@ -706,19 +876,28 @@
     //  CHECKLIST & PROGRESS
     // ═══════════════════════════════════════════════════════
     function updateChecklist() {
-      const shelfDone = checkedSkuIds.size > 0; // at least 1 checked
+      // Shelf check: at least 1 SKU checked OR all SKUs marked not-found
+      const totalSkus = allSkus.length;
+      const shelfDone = checkedSkuIds.size > 0 ||
+                        (totalSkus > 0 && notFoundSkuIds.size === totalSkus);
       const scanDone = scanState === 'verified' || scanState === 'skipped';
+      const aisleDone = document.getElementById('aisleInput').value.trim().length > 0;
       const photo1Done = !!window.product_closeupFile;
       const photo2Done = !!window.section_contextFile;
       const photo3Done = !!window.wide_angleFile;
 
       setCheck('check-shelf', shelfDone);
       setCheck('check-scan', scanDone);
+      setCheck('check-aisle', aisleDone);
       setCheck('check-photo1', photo1Done);
       setCheck('check-photo2', photo2Done);
       setCheck('check-photo3', photo3Done);
 
-      const allDone = shelfDone && scanDone && photo1Done && photo2Done && photo3Done;
+      // In Discovery Mode, photos are optional
+      const photosRequired = !isDiscoveryMode;
+      const allDone = shelfDone && scanDone && aisleDone &&
+                      (!photosRequired || (photo1Done && photo2Done && photo3Done));
+
       const btn = document.getElementById('submitBtn');
       btn.disabled = !allDone;
       btn.classList.toggle('opacity-50', !allDone);
@@ -742,12 +921,18 @@
     }
 
     function updateProgress() {
+      const aisleDone = document.getElementById('aisleInput').value.trim().length > 0;
+      const photo1Done = !!window.product_closeupFile;
+      const photo2Done = !!window.section_contextFile;
+      const photo3Done = !!window.wide_angleFile;
+
       const steps = [
-        checkedSkuIds.size > 0,
+        checkedSkuIds.size > 0 || notFoundSkuIds.size > 0,
         scanState !== 'pending',
-        !!window.product_closeupFile,
-        !!window.section_contextFile,
-        !!window.wide_angleFile
+        aisleDone,
+        photo1Done,
+        photo2Done,
+        photo3Done
       ];
       const done = steps.filter(Boolean).length;
       const pct = Math.round((done / steps.length) * 100);
@@ -766,7 +951,6 @@
         .select('id, created_at')
         .eq('job_id', currentJob.id)
         .eq('contractor_id', currentUser.id);
-
       if (existing && existing.length > 0) {
         const ok = confirm(
           `You've already submitted this job (${new Date(existing[0].created_at).toLocaleString()}).\n\nSubmit again?`
@@ -777,7 +961,7 @@
       setLoadingState(true);
 
       try {
-        // Upload photos
+        // Upload photos (skip in Discovery Mode if none provided)
         const photoUrls = await uploadPhotos();
 
         // Build checked SKU list
@@ -785,20 +969,40 @@
           id: s.id, name: s.name, upc: s.upc
         }));
 
+        // Build not-found SKU list
+        const notFoundSkus = allSkus.filter(s => notFoundSkuIds.has(s.id)).map(s => ({
+          id: s.id, name: s.name, upc: s.upc
+        }));
+
+        // Unchecked (neither confirmed nor not-found)
+        const uncheckedSkus = allSkus
+          .filter(s => !checkedSkuIds.has(s.id) && !notFoundSkuIds.has(s.id))
+          .map(s => ({ id: s.id, name: s.name }));
+
+        const aisleValue = document.getElementById('aisleInput').value.trim() || null;
+
+        // Determine submission type
+        const hasAnyFound = checkedSkus.length > 0;
+        const allNotFound = notFoundSkus.length === allSkus.length && allSkus.length > 0;
+        const submissionType = allNotFound ? 'not_found' : 'photo';
+
         const submissionData = {
           job_id: currentJob.id,
           contractor_id: currentUser.id,
           store_id: currentAssignment?.store_id || null,
           sku_id: currentAssignment?.sku_id || null,
-          submission_type: 'photo',
+          submission_type: submissionType,
           data: {
             checked_skus: checkedSkus,
-            unchecked_skus: allSkus.filter(s => !checkedSkuIds.has(s.id)).map(s => ({id: s.id, name: s.name})),
+            not_found_skus: notFoundSkus,
+            unchecked_skus: uncheckedSkus,
             scan_state: scanState,
+            aisle: aisleValue,
             notes: document.getElementById('notes').value || null,
             captured_at: new Date().toISOString(),
             device: /Mobi|Android/i.test(navigator.userAgent) ? 'mobile' : 'desktop',
-            mismatch_note: document.getElementById('mismatchNote')?.value || null
+            mismatch_note: document.getElementById('mismatchNote')?.value || null,
+            mode: isDiscoveryMode ? 'discovery' : 'live'
           },
           files: photoUrls
         };
@@ -811,12 +1015,23 @@
 
         if (submitErr) throw new Error(`Submission failed: ${submitErr.message}`);
 
-        // Update job status
+        // Update job status to pending_review
         await supabase.from('jobs')
           .update({ status: 'pending_review', updated_at: new Date().toISOString() })
           .eq('id', currentJob.id);
 
-        showMsg('✅ Job submitted! Great work.', 'success');
+        // Save aisle to brand_stores if provided
+        if (aisleValue && currentAssignment?.store_id && currentJob.brand_id) {
+          await supabase.from('brand_stores')
+            .update({ aisle: aisleValue, aisle_updated_at: new Date().toISOString() })
+            .eq('brand_id', currentJob.brand_id)
+            .eq('store_id', currentAssignment.store_id);
+        }
+
+        const successMsg = allNotFound
+          ? '✅ Submitted — products flagged as not found.'
+          : '✅ Job submitted! Great work.';
+        showMsg(successMsg, 'success');
         setTimeout(() => { window.location.href = 'shelfer.html'; }, 2000);
 
       } catch (err) {
@@ -859,6 +1074,8 @@
       const draft = {
         jobId: currentJob.id,
         checkedSkuIds: [...checkedSkuIds],
+        notFoundSkuIds: [...notFoundSkuIds],
+        aisle: document.getElementById('aisleInput').value,
         notes: document.getElementById('notes').value,
         timestamp: new Date().toISOString()
       };
@@ -872,6 +1089,10 @@
       try {
         const draft = JSON.parse(raw);
         if (draft.notes) document.getElementById('notes').value = draft.notes;
+        if (draft.aisle) {
+          document.getElementById('aisleInput').value = draft.aisle;
+          document.getElementById('aisleConfirmed').classList.remove('hidden');
+        }
         if (draft.checkedSkuIds) {
           draft.checkedSkuIds.forEach(id => {
             checkedSkuIds.add(id);
@@ -880,10 +1101,20 @@
             if (cb) cb.checked = true;
             if (item) item.classList.add('checked');
           });
-          updateChecklistProgress();
-          updateChecklist();
-          updateProgress();
         }
+        if (draft.notFoundSkuIds) {
+          draft.notFoundSkuIds.forEach(id => {
+            notFoundSkuIds.add(id);
+            const item = document.getElementById(`sku-item-${id}`);
+            const btn = document.getElementById(`sku-nf-btn-${id}`);
+            if (item) item.classList.add('not-found-sku');
+            if (btn) btn.classList.add('active');
+          });
+        }
+        updateChecklistProgress();
+        updateNotFoundSummary();
+        updateChecklist();
+        updateProgress();
       } catch(e) { console.warn('Draft parse error:', e); }
     }
 

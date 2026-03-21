@@ -231,8 +231,10 @@
                     return;
                 }
                 
-                // Fetch brand statistics — check both junction table AND products by name, use max
-                const [junctionProductsResult, nameProductsResult, storesResult, jobsResult] = await Promise.all([
+                // Fetch brand statistics — check skus (primary), brand_products junction, products by name
+                const [skusResult, junctionProductsResult, nameProductsResult, storesResult, jobsResult] = await Promise.all([
+                    supabase.from('skus').select('id', { count: 'exact', head: true }).eq('brand_id', brandId)
+                        .then(r => r.error ? { count: 0 } : r),
                     supabase.from('brand_products').select('id', { count: 'exact', head: true }).eq('brand_id', brandId)
                         .then(r => r.error ? { count: 0 } : r),
                     supabase.from('products').select('id', { count: 'exact', head: true }).ilike('brand', brand.name)
@@ -243,7 +245,12 @@
                         .then(r => r.error ? { count: 0 } : r)
                 ]);
                 
-                const productCount = Math.max(junctionProductsResult.count || 0, nameProductsResult.count || 0);
+                // Use the highest count across all three product sources (skus is the primary catalog)
+                const productCount = Math.max(
+                    skusResult.count || 0,
+                    junctionProductsResult.count || 0,
+                    nameProductsResult.count || 0
+                );
                 const storeCount = storesResult.count || 0;
                 const jobCount = jobsResult.count || 0;
                 
