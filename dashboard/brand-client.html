@@ -1000,14 +1000,172 @@
         };
         
         function goToAddRetailLocation() {
-            // Navigate to store management or onboarding
-            const urlParams = new URLSearchParams(window.location.search);
-            const brandId = urlParams.get('brand_id');
-            if (brandId) {
-                window.location.href = `../admin/brands-new.html?id=${brandId}&focus=stores`;
-            } else {
-                alert('Please contact admin to add retail locations.');
+            openQuickAddStore();
+        }
+
+        // ── Quick Add Retail Location Modal ──────────────────────────────────
+        let _storeSearchTimeout = null;
+        let _storeSearchResults = [];
+
+        function openQuickAddStore() {
+            document.getElementById('qas-search').value = '';
+            document.getElementById('qas-results').innerHTML = '';
+            document.getElementById('qas-results').style.display = 'none';
+            document.getElementById('qas-manual').style.display = 'none';
+            document.getElementById('qas-name').value = '';
+            document.getElementById('qas-address').value = '';
+            document.getElementById('qas-city').value = '';
+            document.getElementById('qas-state').value = 'TX';
+            document.getElementById('qas-zip').value = '';
+            document.getElementById('qas-error').textContent = '';
+            document.getElementById('qas-modal').classList.remove('hidden');
+            document.getElementById('qas-search').focus();
+        }
+
+        function closeQuickAddStore() {
+            document.getElementById('qas-modal').classList.add('hidden');
+            clearTimeout(_storeSearchTimeout);
+        }
+
+        // Wire up store search on DOMContentLoaded
+        document.addEventListener('DOMContentLoaded', () => {
+            const searchInput = document.getElementById('qas-search');
+            if (searchInput) {
+                searchInput.addEventListener('input', () => {
+                    clearTimeout(_storeSearchTimeout);
+                    const q = searchInput.value.trim();
+                    if (q.length < 2) {
+                        document.getElementById('qas-results').style.display = 'none';
+                        return;
+                    }
+                    _storeSearchTimeout = setTimeout(() => searchStores(q), 300);
+                });
             }
+        });
+
+        async function searchStores(query) {
+            const resultsEl = document.getElementById('qas-results');
+            resultsEl.innerHTML = '<div class="px-4 py-3 text-sm text-gray-400">Searching…</div>';
+            resultsEl.style.display = 'block';
+
+            try {
+                const { data: stores, error } = await supabase
+                    .from('stores')
+                    .select('id, name, STORE, address, city, state, zip_code')
+                    .or(`name.ilike.%${query}%,address.ilike.%${query}%,city.ilike.%${query}%,STORE.ilike.%${query}%`)
+                    .eq('is_active', true)
+                    .limit(8);
+
+                if (error || !stores || stores.length === 0) {
+                    resultsEl.innerHTML = `
+                        <div class="px-4 py-3 text-sm text-gray-500">No stores found for "${escapeHtml(query)}"</div>
+                        <div class="border-t border-gray-100">
+                            <button onclick="showManualStoreForm()" class="w-full text-left px-4 py-3 text-sm text-blue-600 font-medium hover:bg-blue-50">
+                                + Add "${escapeHtml(query)}" as a new store
+                            </button>
+                        </div>`;
+                    return;
+                }
+
+                _storeSearchResults = stores;
+                resultsEl.innerHTML = stores.map((s, i) => {
+                    const label = s.name || s.STORE || 'Unknown Store';
+                    const sub = [s.address, s.city, s.state].filter(Boolean).join(', ');
+                    return `<button onclick="linkStoreToBrand(${i})" class="w-full text-left px-4 py-3 hover:bg-gray-50 border-b border-gray-100 last:border-0">
+                        <div class="font-medium text-gray-900 text-sm">${escapeHtml(label)}</div>
+                        <div class="text-xs text-gray-500 mt-0.5">${escapeHtml(sub)}</div>
+                    </button>`;
+                }).join('') + `<div class="border-t border-gray-100">
+                    <button onclick="showManualStoreForm()" class="w-full text-left px-4 py-3 text-sm text-blue-600 hover:bg-blue-50">
+                        + Not listed — add manually
+                    </button>
+                </div>`;
+            } catch (err) {
+                resultsEl.innerHTML = '<div class="px-4 py-3 text-sm text-red-500">Search error. Try again.</div>';
+            }
+        }
+
+        window.linkStoreToBrand = async function(index) {
+            const store = _storeSearchResults[index];
+            if (!store) return;
+            await _doLinkStore(store.id, store.name || store.STORE);
+        };
+
+        function showManualStoreForm() {
+            document.getElementById('qas-results').style.display = 'none';
+            document.getElementById('qas-manual').style.display = 'block';
+            document.getElementById('qas-name').value = document.getElementById('qas-search').value.trim();
+            document.getElementById('qas-name').focus();
+        }
+
+        window.saveManualStore = async function() {
+            const name = document.getElementById('qas-name').value.trim();
+            const address = document.getElementById('qas-address').value.trim();
+            const city = document.getElementById('qas-city').value.trim();
+            const state = document.getElementById('qas-state').value.trim() || 'TX';
+            const zip = document.getElementById('qas-zip').value.trim();
+            const errEl = document.getElementById('qas-error');
+            const saveBtn = document.getElementById('qas-save-btn');
+
+            if (!name) { errEl.textContent = 'Store name is required.'; return; }
+
+            saveBtn.disabled = true;
+            saveBtn.textContent = 'Saving…';
+            errEl.textContent = '';
+
+            try {
+                // Insert new store
+                const { data: newStore, error: storeErr } = await supabase
+                    .from('stores')
+                    .insert({ name, address: address || null, city: city || null, state, zip_code: zip || null, is_active: true })
+                    .select('id')
+                    .single();
+
+                if (storeErr) {
+                    errEl.textContent = 'Error creating store: ' + storeErr.message;
+                    saveBtn.disabled = false;
+                    saveBtn.textContent = 'Save Location';
+                    return;
+                }
+
+                await _doLinkStore(newStore.id, name);
+            } catch (err) {
+                errEl.textContent = 'Unexpected error. Please try again.';
+                saveBtn.disabled = false;
+                saveBtn.textContent = 'Save Location';
+            }
+        };
+
+        async function _doLinkStore(storeId, storeName) {
+            const errEl = document.getElementById('qas-error');
+            const urlParams = new URLSearchParams(window.location.search);
+            const brandId = urlParams.get('brand_id') || (await getBrandIdFromUser());
+
+            if (!brandId) {
+                errEl.textContent = 'Could not determine brand. Please refresh and try again.';
+                return;
+            }
+
+            const { error: linkErr } = await supabase
+                .from('brand_stores')
+                .upsert({ brand_id: brandId, store_id: storeId, source: 'manual' }, { onConflict: 'brand_id,store_id', ignoreDuplicates: true });
+
+            if (linkErr) {
+                errEl.textContent = 'Error linking store: ' + linkErr.message;
+                return;
+            }
+
+            closeQuickAddStore();
+            // Show brief success toast
+            const toast = document.createElement('div');
+            toast.className = 'fixed top-4 left-1/2 -translate-x-1/2 bg-green-600 text-white px-5 py-3 rounded-xl shadow-lg text-sm font-medium z-50';
+            toast.textContent = `✓ ${storeName} added to your locations`;
+            document.body.appendChild(toast);
+            setTimeout(() => toast.remove(), 3000);
+
+            // Reload map
+            const jobs = [];
+            await loadStoreMap(jobs);
         }
         
         function goToEditContactInfo() {
@@ -1809,6 +1967,66 @@
             }
         }
     </script>
+
+    <!-- Quick Add Retail Location Modal (bottom sheet) -->
+    <div id="qas-modal" class="hidden fixed inset-0 z-50 flex items-end justify-center" style="background:rgba(0,0,0,0.45);">
+        <div class="bg-white w-full max-w-lg rounded-t-2xl shadow-2xl p-6 pb-10" style="max-height:92vh;overflow-y:auto;">
+            <!-- Handle bar -->
+            <div class="flex justify-center mb-4">
+                <div class="w-10 h-1 bg-gray-300 rounded-full"></div>
+            </div>
+            <div class="flex items-center justify-between mb-5">
+                <h2 class="text-lg font-bold text-gray-900">Add Retail Location</h2>
+                <button onclick="closeQuickAddStore()" class="text-gray-400 hover:text-gray-600 text-2xl leading-none">&times;</button>
+            </div>
+
+            <!-- Search existing stores -->
+            <div class="mb-3">
+                <label class="block text-sm font-medium text-gray-700 mb-1">Search stores</label>
+                <input id="qas-search" type="text" placeholder="e.g., HEB College Station or 1900 Harvey..."
+                    class="w-full border border-gray-300 rounded-lg px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-green-500"
+                    autocomplete="off" />
+            </div>
+
+            <!-- Search results dropdown -->
+            <div id="qas-results" class="border border-gray-200 rounded-lg mb-4 overflow-hidden" style="display:none;"></div>
+
+            <!-- Manual entry form (shown when store not found) -->
+            <div id="qas-manual" style="display:none;">
+                <div class="text-sm font-medium text-gray-700 mb-3 pt-2 border-t border-gray-100">New store details</div>
+                <div class="mb-3">
+                    <label class="block text-xs text-gray-600 mb-1">Store Name <span class="text-red-500">*</span></label>
+                    <input id="qas-name" type="text" placeholder="e.g., HEB Bridgeland"
+                        class="w-full border border-gray-300 rounded-lg px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-green-500" />
+                </div>
+                <div class="mb-3">
+                    <label class="block text-xs text-gray-600 mb-1">Street Address</label>
+                    <input id="qas-address" type="text" placeholder="e.g., 21110 Bridgeland Creek Pkwy"
+                        class="w-full border border-gray-300 rounded-lg px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-green-500" />
+                </div>
+                <div class="grid grid-cols-2 gap-3 mb-3">
+                    <div>
+                        <label class="block text-xs text-gray-600 mb-1">City</label>
+                        <input id="qas-city" type="text" placeholder="Cypress"
+                            class="w-full border border-gray-300 rounded-lg px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-green-500" />
+                    </div>
+                    <div>
+                        <label class="block text-xs text-gray-600 mb-1">ZIP</label>
+                        <input id="qas-zip" type="text" inputmode="numeric" placeholder="77433"
+                            class="w-full border border-gray-300 rounded-lg px-4 py-3 text-base font-mono focus:outline-none focus:ring-2 focus:ring-green-500" />
+                    </div>
+                </div>
+                <input id="qas-state" type="hidden" value="TX" />
+                <p id="qas-error" class="text-red-500 text-sm mb-3"></p>
+                <button id="qas-save-btn" onclick="saveManualStore()"
+                    class="w-full bg-green-600 hover:bg-green-700 active:bg-green-800 text-white font-semibold py-4 rounded-xl text-base transition-colors">
+                    Save Location
+                </button>
+            </div>
+
+            <button onclick="closeQuickAddStore()" class="w-full mt-3 text-gray-500 py-2 text-sm">Cancel</button>
+        </div>
+    </div>
 
     <!-- Quick Add Product Modal (bottom sheet) -->
     <div id="qap-modal" class="hidden fixed inset-0 z-50 flex items-end justify-center" style="background:rgba(0,0,0,0.45);">
