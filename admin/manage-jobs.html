@@ -1344,10 +1344,16 @@
             }
         }
 
-        // GPS Near Me — find stores within ~10 miles of current location
+        // GPS Near Me — find stores near current location
+        // Strategy:
+        //   1. Try Haversine distance if stores have lat/lng in DB
+        //   2. Fall back to reverse-geocode → city name → city search
+        //      (most stores were imported without coordinates)
         async function findNearbyStores() {
             const btn = document.getElementById('gps-near-me-btn');
             const status = document.getElementById('gps-near-me-status');
+            const nearMeSVG = `<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg> Near Me`;
+
             if (!navigator.geolocation) {
                 status.textContent = 'GPS not available on this device.';
                 status.className = 'mt-1.5 text-xs text-red-500';
@@ -1365,64 +1371,124 @@
                     const userLat = pos.coords.latitude;
                     const userLng = pos.coords.longitude;
 
-                    // Store location on the selector so it can show distances
                     if (storeSelector) {
                         storeSelector.currentLocation = { latitude: userLat, longitude: userLng };
                     }
 
-                    // Fetch all stores with coordinates from DB
                     try {
-                        const { data: stores, error } = await supabase
+                        // ── ATTEMPT 1: Haversine (works if stores have lat/lng) ──────────
+                        const { data: geoStores, error: geoErr } = await supabase
                             .from('stores')
-                            .select('id, STORE, name, address, city, state, latitude, longitude, banner_id')
+                            .select('id, STORE, name, address, city, state, zip_code, latitude, longitude, banner')
                             .not('latitude', 'is', null)
                             .not('longitude', 'is', null);
 
-                        if (error) throw error;
+                        if (!geoErr && geoStores && geoStores.length > 0) {
+                            const R = 3959;
+                            const toRad = d => d * Math.PI / 180;
+                            const nearby = geoStores
+                                .map(s => {
+                                    const dLat = toRad(parseFloat(s.latitude) - userLat);
+                                    const dLon = toRad(parseFloat(s.longitude) - userLng);
+                                    const a = Math.sin(dLat/2)**2 +
+                                        Math.cos(toRad(userLat)) * Math.cos(toRad(parseFloat(s.latitude))) *
+                                        Math.sin(dLon/2)**2;
+                                    const dist = R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+                                    return { ...s, _dist: Math.round(dist * 10) / 10 };
+                                })
+                                .filter(s => s._dist <= 15)
+                                .sort((a, b) => a._dist - b._dist)
+                                .slice(0, 25);
 
-                        // Haversine distance filter — keep stores within 15 miles
-                        const R = 3959;
-                        const toRad = d => d * Math.PI / 180;
-                        const nearby = (stores || [])
-                            .map(s => {
-                                const dLat = toRad(parseFloat(s.latitude) - userLat);
-                                const dLon = toRad(parseFloat(s.longitude) - userLng);
-                                const a = Math.sin(dLat/2)**2 +
-                                    Math.cos(toRad(userLat)) * Math.cos(toRad(parseFloat(s.latitude))) *
-                                    Math.sin(dLon/2)**2;
-                                const dist = R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-                                return { ...s, _dist: Math.round(dist * 10) / 10 };
-                            })
-                            .filter(s => s._dist <= 15)
-                            .sort((a, b) => a._dist - b._dist)
-                            .slice(0, 20); // cap at 20 results
+                            if (nearby.length > 0) {
+                                renderNearbyDropdown(nearby, status, true);
+                                btn.disabled = false;
+                                btn.innerHTML = nearMeSVG;
+                                return;
+                            }
+                        }
 
-                        if (nearby.length === 0) {
-                            status.textContent = 'No stores found within 15 miles. Try searching manually.';
+                        // ── ATTEMPT 2: Reverse-geocode → city name → DB city search ────
+                        // Most stores were imported without coordinates, so we look up the
+                        // city from the user's GPS coords and search by city.
+                        status.textContent = 'Finding your city…';
+
+                        let cityName = null;
+                        let zipCode = null;
+                        try {
+                            // nominatim is free, no key required, works on mobile
+                            const geoResp = await fetch(
+                                `https://nominatim.openstreetmap.org/reverse?lat=${userLat}&lon=${userLng}&format=json&zoom=10`,
+                                { headers: { 'Accept-Language': 'en' } }
+                            );
+                            if (geoResp.ok) {
+                                const geoData = await geoResp.json();
+                                cityName = geoData?.address?.city ||
+                                           geoData?.address?.town ||
+                                           geoData?.address?.village ||
+                                           geoData?.address?.suburb ||
+                                           null;
+                                zipCode  = geoData?.address?.postcode || null;
+                                console.log('📍 Reverse geocode:', geoData?.address);
+                            }
+                        } catch (geoErr) {
+                            console.warn('Reverse geocode failed:', geoErr);
+                        }
+
+                        if (!cityName && !zipCode) {
+                            status.textContent = 'Could not determine your city. Try searching manually (e.g. "HEB Houston").';
+                            status.className = 'mt-1.5 text-xs text-amber-600';
+                            btn.disabled = false;
+                            btn.innerHTML = nearMeSVG;
+                            return;
+                        }
+
+                        // Search stores by city (and optionally zip)
+                        status.textContent = `Searching stores in ${cityName || zipCode}…`;
+
+                        let cityQuery = supabase
+                            .from('stores')
+                            .select('id, STORE, name, address, city, state, zip_code, banner')
+                            .eq('is_active', true);
+
+                        if (cityName) {
+                            cityQuery = cityQuery.ilike('city', `%${cityName}%`);
+                        } else {
+                            cityQuery = cityQuery.ilike('zip_code', `${zipCode}%`);
+                        }
+
+                        const { data: cityStores, error: cityErr } = await cityQuery
+                            .order('STORE', { ascending: true })
+                            .limit(50);
+
+                        if (cityErr) throw cityErr;
+
+                        if (!cityStores || cityStores.length === 0) {
+                            // Last resort: try neighboring ZIP codes via prefix
+                            const zipPrefix = zipCode ? zipCode.slice(0, 3) : null;
+                            if (zipPrefix) {
+                                const { data: zipStores } = await supabase
+                                    .from('stores')
+                                    .select('id, STORE, name, address, city, state, zip_code, banner')
+                                    .eq('is_active', true)
+                                    .ilike('zip_code', `${zipPrefix}%`)
+                                    .order('STORE', { ascending: true })
+                                    .limit(50);
+                                if (zipStores && zipStores.length > 0) {
+                                    const withDist = zipStores.map(s => ({ ...s, _dist: null }));
+                                    renderNearbyDropdown(withDist, status, false, cityName || zipCode);
+                                    btn.disabled = false;
+                                    btn.innerHTML = nearMeSVG;
+                                    return;
+                                }
+                            }
+                            status.textContent = `No stores found near ${cityName || zipCode}. Try searching manually.`;
                             status.className = 'mt-1.5 text-xs text-amber-600';
                         } else {
-                            // Populate the dropdown with nearby results
-                            const dropdown = document.getElementById('store-search-results');
-                            const selectedIds = storeSelector ? storeSelector.getSelectedStores().map(s => s.id) : [];
-                            dropdown.innerHTML = nearby.map(store => {
-                                const isSelected = selectedIds.includes(store.id);
-                                const name = store.STORE || store.name || 'Unknown Store';
-                                const city = store.city || '';
-                                const state = store.state || '';
-                                return `
-                                    <div class="px-4 py-3 cursor-pointer hover:bg-gray-50 border-b border-gray-100 last:border-0 flex items-center justify-between ${isSelected ? 'bg-green-50' : ''}"
-                                         onmousedown="event.preventDefault(); storeSelector.toggleStore('${store.id}'); renderSelectedChips(); document.getElementById('store-search-results').classList.add('hidden');">
-                                        <div>
-                                            <div class="text-sm font-medium text-gray-900">${name}</div>
-                                            <div class="text-xs text-gray-500">${[city, state].filter(Boolean).join(', ')}</div>
-                                        </div>
-                                        <div class="text-xs font-semibold text-blue-600 ml-3">${store._dist} mi</div>
-                                    </div>`;
-                            }).join('');
-                            dropdown.classList.remove('hidden');
-                            status.textContent = `${nearby.length} store${nearby.length !== 1 ? 's' : ''} within 15 miles`;
-                            status.className = 'mt-1.5 text-xs text-green-600';
+                            const withDist = cityStores.map(s => ({ ...s, _dist: null }));
+                            renderNearbyDropdown(withDist, status, false, cityName || zipCode);
                         }
+
                     } catch (err) {
                         console.error('Nearby stores error:', err);
                         status.textContent = 'Could not load nearby stores: ' + err.message;
@@ -1430,18 +1496,50 @@
                     }
 
                     btn.disabled = false;
-                    btn.innerHTML = `<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg> Near Me`;
+                    btn.innerHTML = nearMeSVG;
                 },
                 (err) => {
                     console.warn('GPS error:', err);
                     status.textContent = 'Location access denied — allow location in your browser settings.';
                     status.className = 'mt-1.5 text-xs text-red-500';
                     btn.disabled = false;
-                    btn.innerHTML = `<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg> Near Me`;
+                    btn.innerHTML = nearMeSVG;
                 },
                 { timeout: 10000, enableHighAccuracy: true }
             );
         }
+
+        // Render the nearby stores dropdown
+        function renderNearbyDropdown(stores, statusEl, hasDist, locationLabel) {
+            const dropdown = document.getElementById('store-search-results');
+            const selectedIds = storeSelector ? storeSelector.getSelectedStores().map(s => s.id) : [];
+            dropdown.innerHTML = stores.map(store => {
+                const isSelected = selectedIds.includes(store.id);
+                const name = store.STORE || store.name || 'Unknown Store';
+                const city = store.city || '';
+                const state = store.state || '';
+                const distBadge = hasDist && store._dist != null
+                    ? `<div class="text-xs font-semibold text-blue-600 ml-3 flex-shrink-0">${store._dist} mi</div>`
+                    : '';
+                return `
+                    <div class="px-4 py-3 cursor-pointer hover:bg-gray-50 border-b border-gray-100 last:border-0 flex items-center justify-between ${isSelected ? 'bg-green-50' : ''}"
+                         onmousedown="event.preventDefault(); storeSelector.toggleStore('${store.id}'); renderSelectedChips(); document.getElementById('store-search-results').classList.add('hidden');">
+                        <div>
+                            <div class="text-sm font-medium text-gray-900">${name}</div>
+                            <div class="text-xs text-gray-500">${[city, state].filter(Boolean).join(', ')}</div>
+                        </div>
+                        ${distBadge}
+                    </div>`;
+            }).join('');
+            dropdown.classList.remove('hidden');
+            const label = locationLabel || '';
+            const countText = `${stores.length} store${stores.length !== 1 ? 's' : ''}`;
+            statusEl.textContent = hasDist
+                ? `${countText} within 15 miles`
+                : `${countText} near ${label}`;
+            statusEl.className = 'mt-1.5 text-xs text-green-600';
+        }
+
         window.findNearbyStores = findNearbyStores;
 
         // Render selected store chips above the search input
