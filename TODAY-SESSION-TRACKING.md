@@ -1,113 +1,62 @@
 # Today's Session - Items to Track & Revisit
 
+**Last updated:** March 25, 2026
+**Session focus:** Landing page deployment, repo consolidation, Shelfer UX cleanup
+
 ## ✅ Completed Today
-1. **Fixed image_url error** - Removed image_url field entirely (not needed/not displayed)
-2. **Fixed category reference** - Added collapsible category reference section for CSV uploads
-3. **Updated landing page tagline** - Changed to "A retail visibility platform helping emerging brands see their products on shelves in real time."
-4. **Fixed store CSV template** - Added `metro` column to template
-5. **Made metro optional** - Updated template to show metro can be blank
-6. **Fixed category auto-population** - Enhanced category matching in job creation form with case-insensitive fallback
-7. **Added bulk delete for pending jobs** - Checkboxes, select all, confirmation dialogs, handles large deletions (500+ jobs)
 
-## 🔍 Needs Testing / Verification
+### Landing Page & Architecture (`beshelfassured.com`)
+1. **Pushed redesigned landing page** to `shelfassured-landing` repo.
+2. **Fixed broken hero image** — replaced with a pure CSS responsive phone mockup showing real app UI.
+3. **Added grayscale logo ticker** — infinite scroll animation for retailer trust bar (H-E-B, Whole Foods, Kroger, etc.).
+4. **Fixed mobile layout** — headline now appears above the phone mockup on mobile screens.
+5. **Cleaned up typography** — removed awkward em-dash in the hero subheadline.
+6. **Fixed double Sign In button** — resolved mobile display issue showing both desktop and mobile nav buttons.
+7. **Cleaned up architecture** — `shelfassured-demo` root `index.html` now correctly redirects directly to the sign-in page instead of showing a stale landing page.
 
-### 1. Category Auto-Population in Job Creation
-**Issue:** When selecting a product from autocomplete in job creation form, category should auto-populate from the product's category (set during brand onboarding).
-
-**What we fixed:**
-- Enhanced category matching with case-insensitive fallback
-- Added console logging for debugging
-- Improved trimming and matching logic
-
-**Status:** Needs testing to confirm it works
-**Test steps:**
-1. Create a product in brand onboarding with a category (e.g., "Coffee")
-2. Go to job creation form
-3. Type product name in autocomplete
-4. Click product from dropdown
-5. Verify category dropdown auto-populates
-6. Check browser console for logs
-
-**File:** `admin/manage-jobs.html` (lines 984-1014)
-
-### 2. SunnyGem Brand Deployment
-**Issue:** Marc tried to deploy SunnyGem brand but got error about missing `image_url` column
-
-**Resolution:** Removed image_url field entirely - no longer needed
-**Status:** Should work now - needs retry
-
-**Files changed:**
-- `admin/brands-new.html` - Removed image_url input field and all references
-
-### 3. Store CSV Template Alignment
-**Issue:** CSV template fields needed to match form fields and database
-
-**Resolution:** 
-- Added `metro` column to CSV template
-- Made metro optional (can be blank)
-- All fields now aligned: `retailer,name,address,city,state_zip,metro`
-
-**Status:** ✅ Complete and verified
-
-## 📝 Notes / Future Considerations
-
-1. **Category consistency:** Make sure all 72 categories match exactly between:
-   - Brand onboarding dropdown
-   - Job creation dropdown
-   - Products table stored values
-   - CSV template examples
-
-2. **Product image handling:** If product images are needed in the future:
-   - Can add `image_url` column back
-   - Or implement proper image upload to Supabase Storage
-   - Currently removed as it wasn't being used
-
-3. **Brand onboarding → Job creation workflow:**
-   - Products created during onboarding should appear in job creation autocomplete ✅
-   - Category should auto-populate when product selected (needs testing) 🔍
-   - Store selection should work correctly ✅
-
-## 🚨 Critical Items (Don't Miss)
-
-### Job Submission "Bucket" Error
-**Issue:** Job submissions failing with bucket error message that disappears too quickly. Job doesn't show as completed.
-
-**Symptoms:**
-- Error mentioning "bucket" appears briefly when submitting job
-- Job doesn't appear in completed jobs on brand dashboard
-- Error message disappears too fast to read
-
-**Likely Cause:** 
-- `job_submissions` storage bucket doesn't exist in Supabase
-- OR bucket exists but RLS policies are blocking uploads
-
-**Files:**
-- `dashboard/job-details.html` - Job submission form (tries to upload to `job_submissions` bucket)
-- `JOB-SUBMISSION-TROUBLESHOOTING.md` - Full troubleshooting guide created
-- `check-job-submission-setup.sql` - Diagnostic SQL script
-
-**What we fixed:**
-- ✅ Improved error handling - errors now show in alert that stays visible
-- ✅ Better error messages for bucket/permission issues
-- ✅ Enhanced console logging for debugging
-- ✅ Removed auto-redirect on error (user can see error and retry)
-
-**What needs to be done:**
-1. Check if `job_submissions` bucket exists in Supabase Storage
-2. Create bucket if missing (public bucket)
-3. Set up RLS policies for contractors to upload
-4. Test job submission again
-5. Check browser console (F12) for full error details
-
-## 📅 Next Steps
-1. Test category auto-population functionality
-2. Retry SunnyGem brand deployment
-3. Verify all products created during brand onboarding appear in job creation autocomplete
-4. Test bulk delete functionality (especially for large batches like 500 jobs)
-5. **Fix "View Jobs" button on brand-client dashboard** - Should show filtered list of all jobs for that specific brand (when accessed via brand_id parameter), not redirect to admin dashboard
+### Shelfer App Experience (`dashboard/shelfer.html`)
+8. **Removed "Brands" tab** from the Shelfer bottom navigation (irrelevant to their workflow).
+9. **Fixed "Loading..." bug** on the Shelfer Profile page header.
+10. **Cleaned up Sign In page** — removed the unnecessary Back button and converted "Forgot Password" to a clean text link.
+11. **Drafted Shelfer Experience Product Spec** — documented the planned gamification (tiers, feed, map) and payout mechanics.
 
 ---
 
-**Last updated:** November 2, 2025
-**Session focus:** Brand onboarding fixes, job creation improvements, category management
+## 🚨 High Priority Backlog (Next Session)
 
+### 1. Lead Capture on Landing Page
+**Issue:** The "Request Pilot Access" button on `beshelfassured.com` currently links directly to the sign-in page, losing potential leads.
+**Action:** Restore the lead capture modal to collect Name, Company, Number of Stores, and Problem they are trying to solve. Send data to a Supabase `leads` table and/or email notification.
+
+### 2. Google Sign-In Integration
+**Issue:** Marc requested Google Sign-In as an auth option.
+**Action:** Configure Supabase OAuth for Google and add the button to the `auth/signin.html` page.
+
+### 3. Store Data Gap (Houston HEB Locations)
+**Issue:** Missing store data for HEB locations in the Houston area.
+**Action:** Identify missing stores and import them into the `stores` table.
+
+### 4. OCA Duplicate Products Cleanup
+**Issue:** Duplicate products exist in the database from OCA imports.
+**Action:** Run the prepared SQL cleanup script to merge/remove duplicates.
+
+### 5. Custom Domain for the App
+**Issue:** The app currently lives at `courtneybhenderu-prog.github.io/shelfassured-demo`.
+**Action:** Set up a custom subdomain (e.g., `app.beshelfassured.com`) pointing to the demo repo.
+
+---
+
+## 📅 Future / Deferred Items
+
+### Admin Dashboard Mobile UX
+- **Status:** Deferred.
+- **Notes:** The current admin dashboard (`admin/dashboard.html`) is too cramped and busy for mobile use in-store. Needs a dedicated mobile UX overhaul (larger tap targets, simplified layout, fewer items visible at once) when time permits.
+
+### Shelfer Experience Sprint
+- **Status:** Spec drafted, ready for development.
+- **Features:** 
+  - Live activity feed ("X just made $Y")
+  - Map view for available jobs
+  - Gamified tier system (Shelf Starter → Verified Shelfer → Top Shelf)
+  - Stripe Connect payout integration
+  - Twilio SMS notifications for new jobs
