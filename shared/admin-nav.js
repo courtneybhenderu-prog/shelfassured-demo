@@ -20,6 +20,7 @@
     { id: 'manage-jobs',         label: 'Manage Jobs',         href: 'manage-jobs.html' },
     { id: 'user-management',     label: 'User Management',     href: 'user-management.html' },
     { id: 'barcode-capture',     label: 'Barcode Scanner',     href: 'barcode-capture.html' },
+    { id: 'prospect-pipeline',    label: 'Prospect Pipeline',   href: 'prospect-pipeline.html' },
     { id: 'help-support',        label: 'Help & Support',      href: 'help-support.html' },
   ];
 
@@ -40,6 +41,7 @@
     'brands':             'Brands',
     'user-management':    'User Management',
     'barcode-capture':    'Barcode Scanner',
+    'prospect-pipeline':   'Prospect Pipeline',
     'help-support':       'Help & Support',
   };
 

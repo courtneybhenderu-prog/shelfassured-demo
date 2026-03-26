@@ -1,0 +1,821 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Prospect Pipeline — ShelfAssured Admin</title>
+    <script>
+        window.SA_ROLE = 'admin';
+        window.SA_DISABLE_GLOBAL_GUARD = true;
+    </script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.47.5/dist/umd/supabase.min.js"></script>
+    <link rel="stylesheet" href="../shared/styles.css">
+    <style>
+        /* Pipeline stage badges */
+        .stage-badge {
+            display: inline-block;
+            font-size: 10px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            padding: 2px 8px;
+            border-radius: 20px;
+            white-space: nowrap;
+        }
+        .stage-scanned        { background:#fff7ed; color:#c2410c; }
+        .stage-prospect       { background:#f3f4f6; color:#6b7280; }
+        .stage-contacted      { background:#eff6ff; color:#1d4ed8; }
+        .stage-pitched        { background:#fef9c3; color:#854d0e; }
+        .stage-demo_scheduled { background:#fed7aa; color:#9a3412; }
+        .stage-converted      { background:#dcfce7; color:#166534; }
+        .stage-active_client  { background:#bbf7d0; color:#14532d; }
+
+        /* Lead status badges */
+        .lead-new       { background:#eff6ff; color:#1d4ed8; }
+        .lead-contacted { background:#fef9c3; color:#854d0e; }
+        .lead-qualified { background:#fed7aa; color:#9a3412; }
+        .lead-converted { background:#dcfce7; color:#166534; }
+        .lead-closed    { background:#f3f4f6; color:#6b7280; }
+
+        /* Tab styles */
+        .tab-btn {
+            border-bottom: 2px solid transparent;
+            color: #6b7280;
+            transition: color 0.15s, border-color 0.15s;
+        }
+        .tab-btn.active {
+            border-bottom-color: #C62828;
+            color: #C62828;
+            font-weight: 600;
+        }
+        .tab-btn:hover:not(.active) { color: #374151; }
+
+        /* Kanban columns */
+        .kanban-col {
+            min-width: 200px;
+            flex: 1;
+            background: #f9fafb;
+            border-radius: 10px;
+            padding: 12px;
+        }
+        .kanban-col-header {
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            color: #6b7280;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .kanban-card {
+            background: #fff;
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+            padding: 10px 12px;
+            margin-bottom: 8px;
+            cursor: pointer;
+            transition: box-shadow 0.15s;
+        }
+        .kanban-card:hover { box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+        .kanban-card-name { font-size: 13px; font-weight: 600; color: #111827; }
+        .kanban-card-sub  { font-size: 11px; color: #9ca3af; margin-top: 2px; }
+
+        /* Inline edit select */
+        .stage-select {
+            font-size: 11px;
+            border: 1px solid #e5e7eb;
+            border-radius: 6px;
+            padding: 2px 6px;
+            cursor: pointer;
+            font-weight: 600;
+            background: #fff;
+        }
+
+        /* Modal */
+        #detail-modal {
+            display: none;
+            position: fixed;
+            inset: 0;
+            z-index: 9999;
+            background: rgba(0,0,0,0.5);
+            backdrop-filter: blur(4px);
+            overflow-y: auto;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+        .modal-box {
+            background: #fff;
+            border-radius: 14px;
+            max-width: 560px;
+            width: 100%;
+            margin: 40px auto;
+            padding: 28px 24px;
+            position: relative;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+        }
+    </style>
+</head>
+<body class="bg-gray-50">
+<script src="../shared/admin-nav.js" data-page="prospect-pipeline"></script>
+<div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-6 pb-24">
+
+    <!-- Header -->
+    <div class="flex items-center justify-between mb-6">
+        <div>
+            <h1 class="text-xl font-bold text-gray-900">Prospect Pipeline</h1>
+            <p class="text-sm text-gray-500" id="pipeline-summary">Loading...</p>
+        </div>
+        <div class="flex items-center gap-3">
+            <button onclick="openAddProspectModal()" class="text-sm bg-[#C62828] text-white px-3 py-1.5 rounded-lg hover:bg-red-700 font-medium">+ Add Prospect</button>
+            <button onclick="loadAllData()" class="text-sm text-[#C62828] font-medium hover:underline">Refresh</button>
+        </div>
+    </div>
+
+    <!-- Stats Row -->
+    <div class="grid grid-cols-2 sm:grid-cols-5 gap-3 mb-6">
+        <div class="bg-white rounded-lg shadow-sm p-4">
+            <p class="text-xs font-semibold text-gray-500 uppercase tracking-wide">Total Prospects</p>
+            <p class="text-2xl font-bold text-gray-900 mt-1" id="stat-total">—</p>
+        </div>
+        <div class="bg-white rounded-lg shadow-sm p-4">
+            <p class="text-xs font-semibold text-gray-500 uppercase tracking-wide">Inbound Leads</p>
+            <p class="text-2xl font-bold text-blue-600 mt-1" id="stat-leads">—</p>
+        </div>
+        <div class="bg-white rounded-lg shadow-sm p-4">
+            <p class="text-xs font-semibold text-gray-500 uppercase tracking-wide">Demo Scheduled</p>
+            <p class="text-2xl font-bold text-orange-500 mt-1" id="stat-demo">—</p>
+        </div>
+        <div class="bg-white rounded-lg shadow-sm p-4">
+            <p class="text-xs font-semibold text-gray-500 uppercase tracking-wide">Converted</p>
+            <p class="text-2xl font-bold text-green-600 mt-1" id="stat-converted">—</p>
+        </div>
+        <div class="bg-white rounded-lg shadow-sm p-4">
+            <p class="text-xs font-semibold text-gray-500 uppercase tracking-wide">Active Clients</p>
+            <p class="text-2xl font-bold mt-1" style="color:#C62828" id="stat-active">—</p>
+        </div>
+    </div>
+
+    <!-- Tabs -->
+    <div class="bg-white rounded-lg shadow-sm mb-4">
+        <div class="flex border-b border-gray-200 px-4 overflow-x-auto">
+            <button class="tab-btn active py-3 mr-6 text-sm whitespace-nowrap" onclick="switchTab('kanban')"   id="tab-kanban">Kanban Board</button>
+            <button class="tab-btn py-3 mr-6 text-sm whitespace-nowrap"        onclick="switchTab('list')"     id="tab-list">List View</button>
+            <button class="tab-btn py-3 mr-6 text-sm whitespace-nowrap"        onclick="switchTab('inbound')"  id="tab-inbound">Inbound Leads <span id="inbound-badge" class="ml-1 text-xs bg-blue-100 text-blue-700 font-bold px-1.5 py-0.5 rounded-full"></span></button>
+            <button class="tab-btn py-3 text-sm whitespace-nowrap"             onclick="switchTab('demo-bookings')" id="tab-demo-bookings">Demo Bookings <span id="demo-badge" class="ml-1 text-xs bg-orange-100 text-orange-700 font-bold px-1.5 py-0.5 rounded-full"></span></button>
+        </div>
+    </div>
+
+    <!-- Kanban Board -->
+    <div id="view-kanban">
+        <div class="flex gap-3 overflow-x-auto pb-4" id="kanban-board">
+            <!-- Rendered by JS -->
+        </div>
+    </div>
+
+    <!-- List View -->
+    <div id="view-list" class="hidden">
+        <!-- Filter bar -->
+        <div class="flex flex-wrap items-center gap-3 mb-4">
+            <input id="list-search" type="text" placeholder="Search brands..." oninput="renderList()"
+                class="text-sm border border-gray-200 rounded-lg px-3 py-1.5 w-48 outline-none focus:border-red-400">
+            <select id="list-stage-filter" onchange="renderList()"
+                class="text-sm border border-gray-200 rounded-lg px-3 py-1.5 outline-none focus:border-red-400">
+                <option value="">All Stages</option>
+                <option value="scanned">Scanned</option>
+                <option value="prospect">Prospect</option>
+                <option value="contacted">Contacted</option>
+                <option value="pitched">Pitched</option>
+                <option value="demo_scheduled">Demo Scheduled</option>
+                <option value="converted">Converted</option>
+                <option value="active_client">Active Client</option>
+            </select>
+        </div>
+        <div class="bg-white rounded-lg shadow-sm overflow-hidden">
+            <table class="w-full text-sm">
+                <thead class="bg-gray-50 border-b border-gray-200">
+                    <tr>
+                        <th class="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Brand</th>
+                        <th class="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide hidden sm:table-cell">Contact</th>
+                        <th class="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Stage</th>
+                        <th class="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide hidden md:table-cell">Last Contacted</th>
+                        <th class="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide hidden lg:table-cell">Notes</th>
+                        <th class="px-4 py-3"></th>
+                    </tr>
+                </thead>
+                <tbody id="list-body" class="divide-y divide-gray-100">
+                    <!-- Rendered by JS -->
+                </tbody>
+            </table>
+            <p id="list-empty" class="hidden text-center text-gray-400 text-sm py-12">No brands match your filters.</p>
+        </div>
+    </div>
+
+    <!-- Inbound Leads -->
+    <div id="view-inbound" class="hidden">
+        <div class="bg-white rounded-lg shadow-sm overflow-hidden">
+            <table class="w-full text-sm">
+                <thead class="bg-gray-50 border-b border-gray-200">
+                    <tr>
+                        <th class="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Name / Brand</th>
+                        <th class="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide hidden sm:table-cell">Email</th>
+                        <th class="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide hidden md:table-cell">Stores</th>
+                        <th class="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Status</th>
+                        <th class="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide hidden lg:table-cell">Problem</th>
+                        <th class="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide hidden md:table-cell">Submitted</th>
+                        <th class="px-4 py-3"></th>
+                    </tr>
+                </thead>
+                <tbody id="inbound-body" class="divide-y divide-gray-100">
+                    <!-- Rendered by JS -->
+                </tbody>
+            </table>
+            <p id="inbound-empty" class="hidden text-center text-gray-400 text-sm py-12">No inbound leads yet. They'll appear here when someone fills out the "Request Pilot Access" form on beshelfassured.com.</p>
+        </div>
+    </div>
+
+    <!-- Demo Bookings -->
+    <div id="view-demo-bookings" class="hidden">
+        <div class="bg-white rounded-lg shadow-sm overflow-hidden">
+            <table class="w-full text-sm">
+                <thead class="bg-gray-50 border-b border-gray-200">
+                    <tr>
+                        <th class="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Name / Brand</th>
+                        <th class="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide hidden sm:table-cell">Email</th>
+                        <th class="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Status</th>
+                        <th class="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide hidden md:table-cell">Stores</th>
+                        <th class="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide hidden lg:table-cell">Problem / Notes</th>
+                        <th class="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide hidden md:table-cell">Booked</th>
+                        <th class="px-4 py-3"></th>
+                    </tr>
+                </thead>
+                <tbody id="demo-body" class="divide-y divide-gray-100">
+                    <!-- Rendered by JS -->
+                </tbody>
+            </table>
+            <p id="demo-empty" class="hidden text-center text-gray-400 text-sm py-12">No demo bookings yet. They'll appear here when someone books a $10 demo on beshelfassured.com.</p>
+        </div>
+    </div>
+
+</div>
+
+<!-- ── DETAIL / EDIT MODAL ── -->
+<div id="detail-modal" onclick="if(event.target===this)closeModal()">
+    <div class="modal-box">
+        <button onclick="closeModal()" class="absolute top-4 right-4 text-gray-400 hover:text-gray-600 text-xl leading-none">&times;</button>
+        <div id="modal-content"><!-- Rendered by JS --></div>
+    </div>
+</div>
+
+<!-- ── ADD PROSPECT MODAL ── -->
+<div id="add-prospect-modal" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.5);backdrop-filter:blur(4px);overflow-y:auto;padding:20px;box-sizing:border-box;" onclick="if(event.target===this)closeAddModal()">
+    <div class="modal-box">
+        <button onclick="closeAddModal()" class="absolute top-4 right-4 text-gray-400 hover:text-gray-600 text-xl leading-none">&times;</button>
+        <p class="text-xs font-bold uppercase tracking-widest text-red-700 mb-1">Add Prospect</p>
+        <h3 class="text-lg font-bold text-gray-900 mb-4">Track a new brand</h3>
+        <form id="add-prospect-form" class="space-y-3">
+            <div>
+                <label class="block text-xs font-semibold text-gray-600 mb-1">Brand Name *</label>
+                <input id="ap-name" type="text" required placeholder="e.g. Lone Star Salsa Co."
+                    class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-red-400">
+            </div>
+            <div class="grid grid-cols-2 gap-3">
+                <div>
+                    <label class="block text-xs font-semibold text-gray-600 mb-1">Contact Name</label>
+                    <input id="ap-contact" type="text" placeholder="Jane Smith"
+                        class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-red-400">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-gray-600 mb-1">Contact Email</label>
+                    <input id="ap-email" type="email" placeholder="jane@brand.com"
+                        class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-red-400">
+                </div>
+            </div>
+            <div class="grid grid-cols-2 gap-3">
+                <div>
+                    <label class="block text-xs font-semibold text-gray-600 mb-1">Website</label>
+                    <input id="ap-website" type="text" placeholder="brand.com"
+                        class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-red-400">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-gray-600 mb-1">Pipeline Stage</label>
+                    <select id="ap-stage" class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-red-400">
+                        <option value="prospect">Prospect</option>
+                        <option value="contacted">Contacted</option>
+                        <option value="pitched">Pitched</option>
+                        <option value="demo_scheduled">Demo Scheduled</option>
+                        <option value="scanned">Scanned (Shadow)</option>
+                    </select>
+                </div>
+            </div>
+            <div>
+                <label class="block text-xs font-semibold text-gray-600 mb-1">Notes</label>
+                <textarea id="ap-notes" rows="2" placeholder="Where did you find them? Any context..."
+                    class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-red-400 resize-none"></textarea>
+            </div>
+            <button type="submit" id="ap-submit" class="w-full py-2.5 bg-[#C62828] text-white rounded-lg font-semibold text-sm hover:bg-red-700 transition">
+                Add to Pipeline
+            </button>
+        </form>
+    </div>
+</div>
+
+<script>
+const SUPABASE_URL = 'https://mlmhmzhvwtsswigfvkwx.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1sbWhtemh2d3Rzc3dpZ2Z2a3d4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTg3NTYwNDQsImV4cCI6MjA3NDMzMjA0NH0.sr3x6TkgXlK4Nc8SHPwoS6q5TDGXeExfFK2vPoOTPYk';
+const sc = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+// ── State ──────────────────────────────────────────────────────────────────
+let allBrands    = [];
+let allLeads     = [];
+let allDemoLeads = [];
+let currentTab   = 'kanban';
+
+// ── Stage config ───────────────────────────────────────────────────────────
+const STAGES = [
+    { id: 'scanned',        label: 'Scanned',        cls: 'stage-scanned'        },
+    { id: 'prospect',       label: 'Prospect',       cls: 'stage-prospect'       },
+    { id: 'contacted',      label: 'Contacted',      cls: 'stage-contacted'      },
+    { id: 'pitched',        label: 'Pitched',        cls: 'stage-pitched'        },
+    { id: 'demo_scheduled', label: 'Demo Sched.',    cls: 'stage-demo_scheduled' },
+    { id: 'converted',      label: 'Converted',      cls: 'stage-converted'      },
+    { id: 'active_client',  label: 'Active Client',  cls: 'stage-active_client'  },
+];
+
+const LEAD_STATUSES = {
+    new:       { cls: 'lead-new',       label: 'New'       },
+    contacted: { cls: 'lead-contacted', label: 'Contacted' },
+    qualified: { cls: 'lead-qualified', label: 'Qualified' },
+    converted: { cls: 'lead-converted', label: 'Converted' },
+    closed:    { cls: 'lead-closed',    label: 'Closed'    },
+};
+
+// ── Auth guard ─────────────────────────────────────────────────────────────
+(async () => {
+    const { data: { session } } = await sc.auth.getSession();
+    if (!session) { window.location.href = '../auth/signin.html'; return; }
+    const { data: user } = await sc.from('users').select('role').eq('id', session.user.id).single();
+    if (!user || user.role !== 'admin') { window.location.href = '../auth/signin.html'; return; }
+    // Show marc banner if applicable
+    if (session.user.email === 'marc@beshelfassured.com') {
+        const b = document.getElementById('marc-welcome-banner');
+        if (b) b.classList.remove('hidden');
+    }
+    loadAllData();
+})();
+
+// ── Data loading ───────────────────────────────────────────────────────────
+async function loadAllData() {
+    document.getElementById('pipeline-summary').textContent = 'Loading...';
+    const [brandsRes, leadsRes, demoRes] = await Promise.all([
+        sc.from('brands')
+          .select('id, name, website, contact_email, contact_name, contact_phone, pipeline_stage, is_shadow, internal_notes, outreach_notes, last_contacted, created_at, updated_at')
+          .order('name', { ascending: true }),
+        sc.from('leads')
+          .select('*')
+          .order('created_at', { ascending: false }),
+        sc.from('pilot_leads')
+          .select('*')
+          .order('created_at', { ascending: false }),
+    ]);
+
+    allBrands    = brandsRes.data  || [];
+    allLeads     = leadsRes.data   || [];
+    allDemoLeads = demoRes.data    || [];
+
+    updateStats();
+    renderCurrentTab();
+}
+
+function updateStats() {
+    const shadowBrands = allBrands.filter(b => b.is_shadow !== false);
+    const demoSched    = allBrands.filter(b => b.pipeline_stage === 'demo_scheduled').length;
+    const converted    = allBrands.filter(b => b.pipeline_stage === 'converted').length;
+    const active       = allBrands.filter(b => b.pipeline_stage === 'active_client' || b.is_shadow === false).length;
+    const newLeads     = allLeads.filter(l => l.status === 'new').length;
+
+    setText('stat-total',     shadowBrands.length);
+    setText('stat-leads',     allLeads.length);
+    setText('stat-demo',      demoSched + allDemoLeads.filter(l => l.status === 'demo_booking').length);
+    setText('stat-converted', converted);
+    setText('stat-active',    active);
+
+    // Badges on tabs
+    const inboundBadge = document.getElementById('inbound-badge');
+    if (inboundBadge) inboundBadge.textContent = newLeads > 0 ? newLeads : '';
+
+    const demoBadge = document.getElementById('demo-badge');
+    if (demoBadge) demoBadge.textContent = allDemoLeads.length > 0 ? allDemoLeads.length : '';
+
+    const total = shadowBrands.length;
+    document.getElementById('pipeline-summary').textContent =
+        `${total} prospect${total !== 1 ? 's' : ''} tracked · ${allLeads.length} inbound lead${allLeads.length !== 1 ? 's' : ''} · ${active} active client${active !== 1 ? 's' : ''}`;
+}
+
+function setText(id, val) {
+    const el = document.getElementById(id);
+    if (el) el.textContent = val;
+}
+
+// ── Tab switching ──────────────────────────────────────────────────────────
+function switchTab(tab) {
+    currentTab = tab;
+    ['kanban','list','inbound','demo-bookings'].forEach(t => {
+        document.getElementById(`view-${t}`).classList.toggle('hidden', t !== tab);
+        document.getElementById(`tab-${t}`).classList.toggle('active', t === tab);
+    });
+    renderCurrentTab();
+}
+
+function renderCurrentTab() {
+    if (currentTab === 'kanban')        renderKanban();
+    else if (currentTab === 'list')     renderList();
+    else if (currentTab === 'inbound')  renderInbound();
+    else if (currentTab === 'demo-bookings') renderDemoBookings();
+}
+
+// ── Kanban Board ───────────────────────────────────────────────────────────
+function renderKanban() {
+    const board = document.getElementById('kanban-board');
+    const shadowBrands = allBrands.filter(b => b.is_shadow !== false);
+
+    board.innerHTML = STAGES.map(stage => {
+        const cards = shadowBrands.filter(b => (b.pipeline_stage || 'prospect') === stage.id);
+        return `
+        <div class="kanban-col">
+            <div class="kanban-col-header">
+                <span>${stage.label}</span>
+                <span class="bg-white border border-gray-200 text-gray-600 text-xs font-bold px-1.5 py-0.5 rounded-full">${cards.length}</span>
+            </div>
+            ${cards.map(b => `
+            <div class="kanban-card" onclick="openBrandDetail('${b.id}')">
+                <div class="kanban-card-name">${esc(b.name)}</div>
+                ${b.contact_name ? `<div class="kanban-card-sub">${esc(b.contact_name)}</div>` : ''}
+                ${b.last_contacted ? `<div class="kanban-card-sub">Last: ${formatDate(b.last_contacted)}</div>` : ''}
+                ${b.website ? `<div class="kanban-card-sub truncate">${esc(b.website)}</div>` : ''}
+            </div>`).join('')}
+            ${cards.length === 0 ? `<p class="text-xs text-gray-400 text-center py-4">Empty</p>` : ''}
+        </div>`;
+    }).join('');
+}
+
+// ── List View ──────────────────────────────────────────────────────────────
+function renderList() {
+    const search = (document.getElementById('list-search')?.value || '').toLowerCase();
+    const stageF = document.getElementById('list-stage-filter')?.value || '';
+    let list = allBrands.filter(b => b.is_shadow !== false);
+
+    if (search) list = list.filter(b =>
+        b.name.toLowerCase().includes(search) ||
+        (b.contact_name || '').toLowerCase().includes(search) ||
+        (b.contact_email || '').toLowerCase().includes(search));
+
+    if (stageF) list = list.filter(b => (b.pipeline_stage || 'prospect') === stageF);
+
+    const tbody = document.getElementById('list-body');
+    const empty = document.getElementById('list-empty');
+
+    if (list.length === 0) {
+        tbody.innerHTML = '';
+        empty.classList.remove('hidden');
+        return;
+    }
+    empty.classList.add('hidden');
+
+    tbody.innerHTML = list.map(b => {
+        const stage = b.pipeline_stage || 'prospect';
+        const stageInfo = STAGES.find(s => s.id === stage) || STAGES[1];
+        const notes = b.outreach_notes || b.internal_notes || '';
+        return `
+        <tr class="hover:bg-gray-50 cursor-pointer" onclick="openBrandDetail('${b.id}')">
+            <td class="px-4 py-3">
+                <div class="font-semibold text-gray-900 text-sm">${esc(b.name)}</div>
+                ${b.website ? `<div class="text-xs text-gray-400">${esc(b.website)}</div>` : ''}
+            </td>
+            <td class="px-4 py-3 hidden sm:table-cell">
+                <div class="text-sm text-gray-700">${esc(b.contact_name || '—')}</div>
+                ${b.contact_email ? `<div class="text-xs text-gray-400">${esc(b.contact_email)}</div>` : ''}
+            </td>
+            <td class="px-4 py-3">
+                <select onclick="event.stopPropagation()" onchange="updateStage('${b.id}', this.value)"
+                    class="stage-select ${stageInfo.cls}">
+                    ${STAGES.map(s => `<option value="${s.id}" ${s.id === stage ? 'selected' : ''}>${s.label}</option>`).join('')}
+                </select>
+            </td>
+            <td class="px-4 py-3 hidden md:table-cell text-sm text-gray-500">
+                ${b.last_contacted ? formatDate(b.last_contacted) : '—'}
+            </td>
+            <td class="px-4 py-3 hidden lg:table-cell text-sm text-gray-500 max-w-xs truncate">
+                ${esc(notes.substring(0, 80))}${notes.length > 80 ? '…' : ''}
+            </td>
+            <td class="px-4 py-3 text-right">
+                <button onclick="event.stopPropagation();openBrandDetail('${b.id}')"
+                    class="text-xs text-[#C62828] font-medium hover:underline">Edit</button>
+            </td>
+        </tr>`;
+    }).join('');
+}
+
+// ── Inbound Leads ──────────────────────────────────────────────────────────
+function renderInbound() {
+    const tbody = document.getElementById('inbound-body');
+    const empty = document.getElementById('inbound-empty');
+
+    if (allLeads.length === 0) {
+        tbody.innerHTML = '';
+        empty.classList.remove('hidden');
+        return;
+    }
+    empty.classList.add('hidden');
+
+    tbody.innerHTML = allLeads.map(l => {
+        const st = LEAD_STATUSES[l.status] || LEAD_STATUSES.new;
+        return `
+        <tr class="hover:bg-gray-50 cursor-pointer" onclick="openLeadDetail('${l.id}', 'lead')">
+            <td class="px-4 py-3">
+                <div class="font-semibold text-gray-900 text-sm">${esc(l.name)}</div>
+                <div class="text-xs text-gray-400">${esc(l.company)}</div>
+            </td>
+            <td class="px-4 py-3 hidden sm:table-cell text-sm text-gray-600">${esc(l.email)}</td>
+            <td class="px-4 py-3 hidden md:table-cell text-sm text-gray-500">${esc(l.num_stores || '—')}</td>
+            <td class="px-4 py-3">
+                <select onclick="event.stopPropagation()" onchange="updateLeadStatus('${l.id}', this.value)"
+                    class="stage-select ${st.cls}">
+                    ${Object.entries(LEAD_STATUSES).map(([k,v]) => `<option value="${k}" ${k === l.status ? 'selected' : ''}>${v.label}</option>`).join('')}
+                </select>
+            </td>
+            <td class="px-4 py-3 hidden lg:table-cell text-sm text-gray-500 max-w-xs truncate">
+                ${esc((l.problem || '').substring(0, 80))}${(l.problem || '').length > 80 ? '…' : ''}
+            </td>
+            <td class="px-4 py-3 hidden md:table-cell text-xs text-gray-400">${timeAgo(l.created_at)}</td>
+            <td class="px-4 py-3 text-right">
+                <button onclick="event.stopPropagation();openLeadDetail('${l.id}','lead')"
+                    class="text-xs text-[#C62828] font-medium hover:underline">View</button>
+            </td>
+        </tr>`;
+    }).join('');
+}
+
+// ── Demo Bookings ──────────────────────────────────────────────────────────
+function renderDemoBookings() {
+    const tbody = document.getElementById('demo-body');
+    const empty = document.getElementById('demo-empty');
+
+    if (allDemoLeads.length === 0) {
+        tbody.innerHTML = '';
+        empty.classList.remove('hidden');
+        return;
+    }
+    empty.classList.add('hidden');
+
+    tbody.innerHTML = allDemoLeads.map(l => {
+        const statusMap = {
+            demo_booking: { cls: 'stage-demo_scheduled', label: 'Demo Booking' },
+            new:          { cls: 'stage-prospect',       label: 'New'          },
+            contacted:    { cls: 'stage-contacted',      label: 'Contacted'    },
+            qualified:    { cls: 'stage-pitched',        label: 'Qualified'    },
+            converted:    { cls: 'stage-converted',      label: 'Converted'    },
+            closed:       { cls: 'stage-scanned',        label: 'Closed'       },
+        };
+        const st = statusMap[l.status] || statusMap.new;
+        const notes = l.problem || l.message || l.biggest_challenge || '';
+        return `
+        <tr class="hover:bg-gray-50 cursor-pointer" onclick="openLeadDetail('${l.id}', 'pilot_lead')">
+            <td class="px-4 py-3">
+                <div class="font-semibold text-gray-900 text-sm">${esc(l.name)}</div>
+                <div class="text-xs text-gray-400">${esc(l.company)}</div>
+            </td>
+            <td class="px-4 py-3 hidden sm:table-cell text-sm text-gray-600">${esc(l.email)}</td>
+            <td class="px-4 py-3">
+                <span class="stage-badge ${st.cls}">${st.label}</span>
+            </td>
+            <td class="px-4 py-3 hidden md:table-cell text-sm text-gray-500">${esc(l.store_count || '—')}</td>
+            <td class="px-4 py-3 hidden lg:table-cell text-sm text-gray-500 max-w-xs truncate">
+                ${esc(notes.substring(0, 80))}${notes.length > 80 ? '…' : ''}
+            </td>
+            <td class="px-4 py-3 hidden md:table-cell text-xs text-gray-400">${timeAgo(l.created_at)}</td>
+            <td class="px-4 py-3 text-right">
+                <button onclick="event.stopPropagation();openLeadDetail('${l.id}','pilot_lead')"
+                    class="text-xs text-[#C62828] font-medium hover:underline">View</button>
+            </td>
+        </tr>`;
+    }).join('');
+}
+
+// ── Brand Detail Modal ─────────────────────────────────────────────────────
+function openBrandDetail(brandId) {
+    const b = allBrands.find(x => x.id === brandId);
+    if (!b) return;
+    const stage = b.pipeline_stage || 'prospect';
+    document.getElementById('modal-content').innerHTML = `
+        <p class="text-xs font-bold uppercase tracking-widest text-red-700 mb-1">Brand Prospect</p>
+        <h3 class="text-lg font-bold text-gray-900 mb-4">${esc(b.name)}</h3>
+        <div class="space-y-3">
+            <div class="grid grid-cols-2 gap-3">
+                <div>
+                    <label class="block text-xs font-semibold text-gray-500 mb-1">Pipeline Stage</label>
+                    <select id="md-stage" class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-red-400">
+                        ${STAGES.map(s => `<option value="${s.id}" ${s.id === stage ? 'selected' : ''}>${s.label}</option>`).join('')}
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-gray-500 mb-1">Last Contacted</label>
+                    <input id="md-last-contacted" type="date" value="${b.last_contacted || ''}"
+                        class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-red-400">
+                </div>
+            </div>
+            <div class="grid grid-cols-2 gap-3">
+                <div>
+                    <label class="block text-xs font-semibold text-gray-500 mb-1">Contact Name</label>
+                    <input id="md-contact-name" type="text" value="${esc(b.contact_name || '')}" placeholder="Jane Smith"
+                        class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-red-400">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-gray-500 mb-1">Contact Email</label>
+                    <input id="md-contact-email" type="email" value="${esc(b.contact_email || '')}" placeholder="jane@brand.com"
+                        class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-red-400">
+                </div>
+            </div>
+            <div>
+                <label class="block text-xs font-semibold text-gray-500 mb-1">Outreach Notes</label>
+                <textarea id="md-notes" rows="3" placeholder="What happened on the last call? What's the next step?"
+                    class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-red-400 resize-none">${esc(b.outreach_notes || b.internal_notes || '')}</textarea>
+            </div>
+            <div class="flex gap-2 pt-1">
+                <button onclick="saveBrandDetail('${b.id}')"
+                    class="flex-1 py-2 bg-[#C62828] text-white rounded-lg font-semibold text-sm hover:bg-red-700 transition">
+                    Save Changes
+                </button>
+                <button onclick="closeModal()"
+                    class="px-4 py-2 border border-gray-200 text-gray-600 rounded-lg text-sm hover:bg-gray-50 transition">
+                    Cancel
+                </button>
+            </div>
+            ${b.website ? `<a href="${b.website.startsWith('http') ? b.website : 'https://'+b.website}" target="_blank" class="block text-center text-xs text-blue-500 hover:underline mt-1">${esc(b.website)} ↗</a>` : ''}
+        </div>`;
+    document.getElementById('detail-modal').style.display = 'block';
+    document.body.style.overflow = 'hidden';
+}
+
+async function saveBrandDetail(brandId) {
+    const updates = {
+        pipeline_stage:  document.getElementById('md-stage').value,
+        last_contacted:  document.getElementById('md-last-contacted').value || null,
+        contact_name:    document.getElementById('md-contact-name').value.trim() || null,
+        contact_email:   document.getElementById('md-contact-email').value.trim() || null,
+        outreach_notes:  document.getElementById('md-notes').value.trim() || null,
+        updated_at:      new Date().toISOString(),
+    };
+    const { error } = await sc.from('brands').update(updates).eq('id', brandId);
+    if (error) { alert('Save failed: ' + error.message); return; }
+    // Update local state
+    const idx = allBrands.findIndex(b => b.id === brandId);
+    if (idx >= 0) Object.assign(allBrands[idx], updates);
+    closeModal();
+    updateStats();
+    renderCurrentTab();
+}
+
+// ── Lead Detail Modal ──────────────────────────────────────────────────────
+function openLeadDetail(leadId, type) {
+    const list = type === 'lead' ? allLeads : allDemoLeads;
+    const l = list.find(x => x.id === leadId);
+    if (!l) return;
+
+    const notes = l.problem || l.message || l.biggest_challenge || '';
+    document.getElementById('modal-content').innerHTML = `
+        <p class="text-xs font-bold uppercase tracking-widest text-blue-700 mb-1">${type === 'lead' ? 'Inbound Lead' : 'Demo Booking'}</p>
+        <h3 class="text-lg font-bold text-gray-900 mb-1">${esc(l.name)}</h3>
+        <p class="text-sm text-gray-500 mb-4">${esc(l.company)} · ${esc(l.email)}</p>
+        <div class="space-y-3 text-sm">
+            ${l.num_stores || l.store_count ? `<div><span class="font-semibold text-gray-600">Stores:</span> ${esc(l.num_stores || l.store_count)}</div>` : ''}
+            ${notes ? `<div><span class="font-semibold text-gray-600">Problem:</span><p class="text-gray-700 mt-1 leading-relaxed">${esc(notes)}</p></div>` : ''}
+            <div><span class="font-semibold text-gray-600">Submitted:</span> ${new Date(l.created_at).toLocaleString()}</div>
+            ${type === 'lead' ? `
+            <div>
+                <label class="block text-xs font-semibold text-gray-500 mb-1">Status</label>
+                <select id="ld-status" class="border border-gray-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-red-400">
+                    ${Object.entries(LEAD_STATUSES).map(([k,v]) => `<option value="${k}" ${k === l.status ? 'selected' : ''}>${v.label}</option>`).join('')}
+                </select>
+            </div>
+            <div>
+                <label class="block text-xs font-semibold text-gray-500 mb-1">Internal Notes</label>
+                <textarea id="ld-notes" rows="2" placeholder="Follow-up notes..."
+                    class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-red-400 resize-none">${esc(l.notes || '')}</textarea>
+            </div>
+            <button onclick="saveLeadDetail('${l.id}')"
+                class="w-full py-2 bg-[#C62828] text-white rounded-lg font-semibold text-sm hover:bg-red-700 transition">
+                Save
+            </button>` : ''}
+        </div>`;
+    document.getElementById('detail-modal').style.display = 'block';
+    document.body.style.overflow = 'hidden';
+}
+
+async function saveLeadDetail(leadId) {
+    const updates = {
+        status: document.getElementById('ld-status').value,
+        notes:  document.getElementById('ld-notes').value.trim() || null,
+        updated_at: new Date().toISOString(),
+    };
+    const { error } = await sc.from('leads').update(updates).eq('id', leadId);
+    if (error) { alert('Save failed: ' + error.message); return; }
+    const idx = allLeads.findIndex(l => l.id === leadId);
+    if (idx >= 0) Object.assign(allLeads[idx], updates);
+    closeModal();
+    updateStats();
+    renderCurrentTab();
+}
+
+// ── Inline stage/status updates ────────────────────────────────────────────
+async function updateStage(brandId, stage) {
+    const { error } = await sc.from('brands').update({ pipeline_stage: stage, updated_at: new Date().toISOString() }).eq('id', brandId);
+    if (error) { alert('Update failed: ' + error.message); return; }
+    const b = allBrands.find(x => x.id === brandId);
+    if (b) b.pipeline_stage = stage;
+    updateStats();
+    if (currentTab === 'kanban') renderKanban();
+}
+
+async function updateLeadStatus(leadId, status) {
+    const { error } = await sc.from('leads').update({ status, updated_at: new Date().toISOString() }).eq('id', leadId);
+    if (error) { alert('Update failed: ' + error.message); return; }
+    const l = allLeads.find(x => x.id === leadId);
+    if (l) l.status = status;
+    updateStats();
+}
+
+// ── Add Prospect Modal ─────────────────────────────────────────────────────
+function openAddProspectModal() {
+    document.getElementById('add-prospect-modal').style.display = 'block';
+    document.body.style.overflow = 'hidden';
+}
+function closeAddModal() {
+    document.getElementById('add-prospect-modal').style.display = 'none';
+    document.body.style.overflow = '';
+}
+
+document.getElementById('add-prospect-form').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    const btn = document.getElementById('ap-submit');
+    btn.disabled = true; btn.textContent = 'Adding...';
+
+    const name    = document.getElementById('ap-name').value.trim();
+    const contact = document.getElementById('ap-contact').value.trim();
+    const email   = document.getElementById('ap-email').value.trim();
+    const website = document.getElementById('ap-website').value.trim();
+    const stage   = document.getElementById('ap-stage').value;
+    const notes   = document.getElementById('ap-notes').value.trim();
+
+    const { error } = await sc.from('brands').insert({
+        name,
+        contact_name:    contact || null,
+        contact_email:   email   || null,
+        website:         website || null,
+        pipeline_stage:  stage,
+        outreach_notes:  notes   || null,
+        is_shadow:       true,
+        data_source:     'admin_added',
+    });
+
+    btn.disabled = false; btn.textContent = 'Add to Pipeline';
+    if (error) { alert('Error: ' + error.message); return; }
+    closeAddModal();
+    this.reset();
+    await loadAllData();
+});
+
+// ── Modal helpers ──────────────────────────────────────────────────────────
+function closeModal() {
+    document.getElementById('detail-modal').style.display = 'none';
+    document.body.style.overflow = '';
+}
+document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') { closeModal(); closeAddModal(); }
+});
+
+// ── Utility ────────────────────────────────────────────────────────────────
+function esc(s) {
+    if (!s) return '';
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+function formatDate(d) {
+    if (!d) return '—';
+    return new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+}
+function timeAgo(ts) {
+    if (!ts) return '—';
+    const diff = Date.now() - new Date(ts).getTime();
+    const mins = Math.floor(diff / 60000);
+    if (mins < 60)  return `${mins}m ago`;
+    const hrs = Math.floor(mins / 60);
+    if (hrs < 24)   return `${hrs}h ago`;
+    const days = Math.floor(hrs / 24);
+    if (days < 30)  return `${days}d ago`;
+    return formatDate(ts);
+}
+</script>
+</body>
+</html>
