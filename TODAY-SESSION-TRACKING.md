@@ -60,3 +60,33 @@
   - Gamified tier system (Shelf Starter → Verified Shelfer → Top Shelf)
   - Stripe Connect payout integration
   - Twilio SMS notifications for new jobs
+
+---
+
+## 📌 Strategic Notes & Action Items (Marc & Courtney Meeting - March 25)
+
+### Priority 1: Shelfer UX (Build Next)
+1. **"Find It Next To" Field (High Priority):**
+   - **Action:** Add a "What are 2 competitive brands in your set?" field to job creation.
+   - **Display:** Surface this on the Shelfer job screen as a wayfinding cue (e.g., "Find it next to Slim Jim and Chomps").
+   - **Value:** Dual purpose — helps Shelfers locate products faster and captures competitive intelligence.
+2. **Category List Cleanup:**
+   - **Action:** Remove junk entries ("Disco", "Department Key", "Bulk Grocery") from the database.
+   - **Rule:** Categories remain in the system but are never required and never block submission.
+   - **Next Step (Marc):** Validate remaining list against actual HEB aisle signs.
+3. **Shared Shelfer Test Account:**
+   - **Action:** Use one shared Shelfer login for all in-store testing to consolidate field data and build a realistic demo profile.
+
+### Priority 2: CRM vs. Operational App (The "Mana Dashboard" Question)
+- **Decision:** Do NOT split the app into two separate systems (CRM vs. Operational). The overhead is not worth it at this scale.
+- **Action:** Add a lightweight "Prospect Pipeline" tab to the existing Admin dashboard.
+- **Fields Needed:** Brand name, contact, outreach status (identified / contacted / demo scheduled / client), notes, last contacted date.
+
+### Priority 3: Strategic Guardrails (What NOT to Build)
+- ShelfAssured is an information gatherer and giver, NOT a solver.
+- **Do NOT build:** Integrations with distributor dashboards, Walmart connectors, or AI agents that take actions on behalf of brands.
+- **Goal:** Highlight the out-of-stock issue, but do not assume liability for fixing the underlying DSD/inventory problem.
+
+### Priority 4: Demo Data Seeding
+- **Issue:** The brand dashboard and admin views are currently empty, making demos less impactful.
+- **Action:** Before pitching, seed the database with realistic demo data (a fake brand client, sample jobs, completed submissions, photos) so the platform looks alive and feels like a live, active product.
