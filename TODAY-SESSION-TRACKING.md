@@ -90,3 +90,18 @@
 ### Priority 4: Demo Data Seeding
 - **Issue:** The brand dashboard and admin views are currently empty, making demos less impactful.
 - **Action:** Before pitching, seed the database with realistic demo data (a fake brand client, sample jobs, completed submissions, photos) so the platform looks alive and feels like a live, active product.
+
+### 6. `beshelfassured.com/shelfer` — Shelfer Recruiting Page
+**Issue:** The current landing page mixes brand messaging and Shelfer recruiting on one page. Shelfers need their own dedicated page with a completely different message.
+**Action:** Build `beshelfassured.com/shelfer` as a standalone page targeting people who want to become Shelfers.
+**Key elements:**
+- Earnings calculator ("Visit 3 stores a week, earn up to $X/month")
+- "What a job looks like" 3-step walkthrough (Accept → Audit → Get Paid)
+- Tier system preview (Shelf Starter → Verified Shelfer → Top Shelf)
+- "Apply to be a Shelfer" form → submits to a `shelfer_applications` table
+- FAQ section for Shelfers
+- Separate from brand messaging entirely
+
+### 7. ShelfAssured LLC Formation
+**Status:** In progress — wheels are in motion.
+**Notes:** Currently operating as a DBA under Top of the Marc, LLC. Co-founder agreement also in progress. No action needed from the app side until entity is formalized.
