@@ -1,7 +1,7 @@
 # Today's Session - Items to Track & Revisit
 
-**Last updated:** March 25, 2026
-**Session focus:** Landing page deployment, repo consolidation, Shelfer UX cleanup
+**Last updated:** March 26, 2026
+**Session focus:** Landing page deployment, repo consolidation, Shelfer UX cleanup, lead capture modal, Prospect Pipeline
 
 ## ✅ Completed Today
 
@@ -24,9 +24,11 @@
 
 ## 🚨 High Priority Backlog (Next Session)
 
-### 1. Lead Capture on Landing Page
-**Issue:** The "Request Pilot Access" button on `beshelfassured.com` currently links directly to the sign-in page, losing potential leads.
-**Action:** Restore the lead capture modal to collect Name, Company, Number of Stores, and Problem they are trying to solve. Send data to a Supabase `leads` table and/or email notification.
+### ✅ 1. Lead Capture on Landing Page — COMPLETED March 26
+**Fixed:** All "Request Pilot Access" and "Start Your Pilot" buttons now open a lead capture modal.
+**Modal collects:** Name, Email, Brand, Number of Stores, Problem to solve.
+**Writes to:** `leads` table in Supabase (separate from `pilot_leads`).
+**SQL needed:** Run `create-leads-table.sql` in Supabase SQL Editor to create the `leads` table with RLS.
 
 ### 2. Google Sign-In Integration
 **Issue:** Marc requested Google Sign-In as an auth option.
@@ -77,10 +79,12 @@
 3. **Shared Shelfer Test Account:**
    - **Action:** Use one shared Shelfer login for all in-store testing to consolidate field data and build a realistic demo profile.
 
-### Priority 2: CRM vs. Operational App (The "Mana Dashboard" Question)
-- **Decision:** Do NOT split the app into two separate systems (CRM vs. Operational). The overhead is not worth it at this scale.
-- **Action:** Add a lightweight "Prospect Pipeline" tab to the existing Admin dashboard.
-- **Fields Needed:** Brand name, contact, outreach status (identified / contacted / demo scheduled / client), notes, last contacted date.
+### ✅ Priority 2: Prospect Pipeline — COMPLETED March 26
+- **Built:** `admin/prospect-pipeline.html` — full CRM-style pipeline page accessible from admin nav.
+- **Views:** Kanban board (by stage), List view (searchable/filterable), Inbound Leads tab (from `leads` table), Demo Bookings tab (from `pilot_leads`).
+- **Inline editing:** Stage dropdowns update Supabase on change without page reload.
+- **Modals:** Brand detail (edit stage, contact, last contacted, notes) + Add Prospect (create new shadow brand).
+- **SQL needed:** Run `add-brands-pipeline-columns.sql` to add contact_name, last_contacted, outreach_notes columns to brands table.
 
 ### Priority 3: Strategic Guardrails (What NOT to Build)
 - ShelfAssured is an information gatherer and giver, NOT a solver.
