@@ -447,8 +447,20 @@ document.addEventListener('DOMContentLoaded', async function() {
   // false "no user" results caused by network latency or token refresh timing.
   const { data: { session } } = await supabase.auth.getSession();
   if (!session) {
-    console.log('🔄 No session found, redirecting to signin');
-    window.location.href = '../auth/signin.html';
+    console.log('🔄 No session found, redirecting to role login');
+    // Route to the appropriate role-specific login page.
+    // Compute depth so the relative path works from any subdirectory.
+    const pathParts = window.location.pathname.replace(/\/$/, '').split('/');
+    const depth = pathParts.length - 2; // number of directory levels below root
+    const up = depth > 0 ? Array(depth).fill('..').join('/') + '/' : '';
+    const pageRole = window.SA_PAGE_ROLE || 'shelfer';
+    if (pageRole === 'admin') {
+      window.location.href = up + 'admin/login/';
+    } else if (pageRole === 'brand_client') {
+      window.location.href = up + 'brand/login/';
+    } else {
+      window.location.href = up + 'shelfer/login/';
+    }
     return;
   }
 

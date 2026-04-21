@@ -428,8 +428,12 @@ document.addEventListener('DOMContentLoaded', async function() {
   // false "no user" from network latency or token refresh timing.
   const { data: { session } } = await supabase.auth.getSession();
   if (!session) {
-    console.log('🔄 No session found, redirecting to signin');
-    window.location.href = '../auth/signin.html';
+    console.log('🔄 No session found, redirecting to admin login');
+    // Admin pages always redirect to the admin login portal.
+    const pathParts = window.location.pathname.replace(/\/$/, '').split('/');
+    const depth = pathParts.length - 2;
+    const up = depth > 0 ? Array(depth).fill('..').join('/') + '/' : '';
+    window.location.href = up + 'admin/login/';
     return;
   }
 

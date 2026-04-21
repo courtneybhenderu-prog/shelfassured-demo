@@ -47,6 +47,20 @@ jobs:
             SUPABASE_SERVICE_ROLE_KEY: "${SUPABASE_SERVICE_ROLE_KEY}"
           };
           ENDOFFILE
+          mkdir -p _site/brand
+          cat > _site/brand/config.js << ENDOFFILE
+          window.SA_CONFIG = {
+            SUPABASE_URL: "${SUPABASE_URL}",
+            SUPABASE_ANON_KEY: "${SUPABASE_ANON_KEY}"
+          };
+          ENDOFFILE
+          mkdir -p _site/shelfer
+          cat > _site/shelfer/config.js << ENDOFFILE
+          window.SA_CONFIG = {
+            SUPABASE_URL: "${SUPABASE_URL}",
+            SUPABASE_ANON_KEY: "${SUPABASE_ANON_KEY}"
+          };
+          ENDOFFILE
 
       - name: Setup Pages
         uses: actions/configure-pages@v4

@@ -3,186 +3,68 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sign In - ShelfAssured</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Supabase SDK (UMD build, reliable CDN) -->
+    <title>Sign In — ShelfAssured</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.47.5/dist/umd/supabase.min.js"></script>
-    <link rel="stylesheet" href="../shared/styles.css">
-    
-    <!-- Disable global guard on sign-in page -->
-    <script>
-        window.SA_DISABLE_GLOBAL_GUARD = true;
-    </script>
+    <script>window.SA_DISABLE_GLOBAL_GUARD = true;</script>
+    <style>
+        body { font-family: system-ui, sans-serif; display: flex; align-items: center; justify-content: center; min-height: 100vh; margin: 0; background: #f9fafb; }
+        .card { text-align: center; max-width: 320px; padding: 2rem; }
+        .spinner { width: 32px; height: 32px; border: 3px solid #e5e7eb; border-top-color: #C62828; border-radius: 50%; animation: spin .8s linear infinite; margin: 0 auto 1rem; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        p { color: #6b7280; font-size: 0.875rem; margin: 0; }
+    </style>
 </head>
 <body>
-    <div class="shell">
-        <div class="phone">
-            <section class="screen">
-                <h2 class="section-title">Welcome Back!</h2>
-                <p class="text-gray-500">Sign in to your account.</p>
-                
-                <form id="signin-form" class="mt-4 space-y-3" onsubmit="return false;">
-                    <div class="form-group">
-                        <input id="login-email" type="email" placeholder="Email" class="w-full border rounded px-3 py-3" required>
-                    </div>
-                    <div class="form-group">
-                        <input id="login-password" type="password" placeholder="Password" class="w-full border rounded px-3 py-3" required>
-                    </div>
-                    
-                    <div class="form-group">
-                        <label class="flex items-center gap-2">
-                            <input id="remember-me" type="checkbox" class="w-4 h-4">
-                            <span class="text-sm text-gray-600">Remember me</span>
-                        </label>
-                    </div>
-                    
-                    <button type="button" class="w-full btn-red" onclick="handleSignIn()">Sign In</button>
-                    <button type="button" class="w-full btn-gray" onclick="goToPage('signup.html')">Create Account</button>
-                    <div class="text-center">
-                        <button type="button" class="text-sm text-gray-500 underline" onclick="handleForgotPassword()">Forgot password?</button>
-                    </div>
-                </form>
-                
-                <div id="signin-message" class="mt-3 text-sm hidden"></div>
-            </section>
-        </div>
+    <div class="card">
+        <div class="spinner"></div>
+        <p>Redirecting to sign in…</p>
     </div>
-
-    <script src="../config.js?v=20260305"></script>
-    <script src="../shared/api.js?v=20260305"></script>
-
-    <!-- Sign-in logic inlined to avoid external script caching issues -->
+    <script src="../config.js?v=20260421"></script>
+    <script src="../shared/api.js?v=20260421"></script>
     <script>
-    // ── Restore remembered credentials ──────────────────────────────────────
-    (function() {
-        const email = localStorage.getItem('rememberedEmail');
-        const pw    = localStorage.getItem('rememberedPassword');
-        const on    = localStorage.getItem('rememberMe') === 'true';
-        if (email && on) {
-            document.getElementById('login-email').value = email;
-            document.getElementById('remember-me').checked = true;
-            if (pw) {
-                try { document.getElementById('login-password').value = atob(pw); } catch(e) {}
-            }
+    // This page is a compatibility shim for any old bookmarks or hardcoded links.
+    // It checks if there's an active session and routes accordingly,
+    // otherwise falls back to the shelfer login (the most common entry point).
+    (async function() {
+        const BASE = location.origin.includes('localhost')
+            ? location.origin
+            : 'https://beshelfassured.com';
+
+        // Wait for Supabase client
+        let waited = 0;
+        while (!window.saClient && waited < 3000) {
+            await new Promise(r => setTimeout(r, 100));
+            waited += 100;
         }
-        document.getElementById('remember-me').addEventListener('change', function(e) {
-            if (!e.target.checked) localStorage.removeItem('rememberedPassword');
-        });
-    })();
 
-    // ── Utility: show message ────────────────────────────────────────────────
-    function showMsg(el, msg, type) {
-        if (!el) return;
-        el.textContent = msg;
-        el.className = 'mt-3 text-sm ' + (type === 'error' ? 'text-red-600' : type === 'success' ? 'text-green-600' : 'text-blue-600');
-        el.classList.remove('hidden');
-    }
-
-    // ── Sign In ──────────────────────────────────────────────────────────────
-    window.handleSignIn = async function() {
-        const email     = document.getElementById('login-email').value.trim().toLowerCase();
-        const password  = document.getElementById('login-password').value;
-        const rememberMe = document.getElementById('remember-me').checked;
-        const msgEl     = document.getElementById('signin-message');
-
-        if (!email || !password) {
-            showMsg(msgEl, 'Please enter both email and password', 'error');
+        const client = window.saClient;
+        if (!client) {
+            window.location.href = BASE + '/shelfer/login/';
             return;
         }
 
-        showMsg(msgEl, 'Signing in...', 'info');
+        const { data: { session } } = await client.auth.getSession();
+        if (!session) {
+            // No session — send to shelfer login as default
+            window.location.href = BASE + '/shelfer/login/';
+            return;
+        }
 
+        // Has session — route to correct dashboard
         try {
-            // Use saClient (set by api.js) or fall back to window.supabase.createClient
-            const client = window.saClient;
-            if (!client) {
-                showMsg(msgEl, 'App not ready yet — please wait a moment and try again', 'error');
-                return;
-            }
-
-            const { data, error } = await client.auth.signInWithPassword({ email, password });
-
-            if (error) {
-                console.error('❌ Sign in failed:', error);
-                showMsg(msgEl, 'Sign in failed: ' + error.message, 'error');
-                return;
-            }
-
-            showMsg(msgEl, 'Signed in successfully!', 'success');
-            console.log('✅ Signed in:', data.user.email);
-
-            // Save remember-me prefs
-            if (rememberMe) {
-                localStorage.setItem('rememberedEmail', email);
-                localStorage.setItem('rememberMe', 'true');
-                localStorage.setItem('rememberedPassword', btoa(password));
+            const { data: profile } = await client.from('users').select('role').eq('id', session.user.id).single();
+            const role = profile?.role || 'shelfer';
+            if (role === 'admin') {
+                window.location.href = BASE + '/admin/dashboard.html';
+            } else if (role === 'brand_client') {
+                window.location.href = BASE + '/dashboard/brand-client.html';
             } else {
-                localStorage.removeItem('rememberedEmail');
-                localStorage.removeItem('rememberMe');
-                localStorage.removeItem('rememberedPassword');
+                window.location.href = BASE + '/dashboard/shelfer.html';
             }
-
-            // Get role from users table
-            let role = 'shelfer';
-            try {
-                const { data: profile } = await client
-                    .from('users')
-                    .select('role, approval_status, full_name')
-                    .eq('id', data.user.id)
-                    .single();
-                if (profile && profile.role) role = profile.role;
-            } catch(e) {
-                console.warn('Could not fetch profile, defaulting to shelfer role');
-            }
-
-            console.log('🎯 Role:', role);
-
-            // Role-based redirect
-            let dest;
-            if (role === 'admin')        dest = '../admin/dashboard.html';
-            else if (role === 'brand_client') dest = '../dashboard/brand-client.html';
-            else                          dest = '../dashboard/shelfer.html';
-
-            console.log('➡️ Redirecting to:', dest);
-            setTimeout(() => { window.location.href = dest; }, 800);
-
-        } catch(err) {
-            console.error('❌ Sign in error:', err);
-            showMsg(msgEl, 'Error: ' + err.message, 'error');
+        } catch (e) {
+            window.location.href = BASE + '/shelfer/login/';
         }
-    };
-
-    // ── Forgot Password ──────────────────────────────────────────────────────
-    window.handleForgotPassword = async function() {
-        const email = document.getElementById('login-email').value.trim().toLowerCase();
-        const msgEl = document.getElementById('signin-message');
-
-        if (!email) {
-            showMsg(msgEl, 'Please enter your email address first', 'error');
-            return;
-        }
-
-        showMsg(msgEl, 'Sending password reset email...', 'info');
-
-        try {
-            const client = window.saClient;
-            if (!client) { showMsg(msgEl, 'App not ready — try again in a moment', 'error'); return; }
-
-            const base = location.origin.includes('localhost')
-                ? 'http://localhost:8000'
-                : 'https://courtneybhenderu-prog.github.io/shelfassured-demo';
-
-            const { error } = await client.auth.resetPasswordForEmail(email, {
-                redirectTo: base + '/auth/confirmed.html'
-            });
-
-            if (error) showMsg(msgEl, 'Error: ' + error.message, 'error');
-            else        showMsg(msgEl, 'Password reset email sent! Check your inbox.', 'success');
-
-        } catch(err) {
-            showMsg(msgEl, 'Error: ' + err.message, 'error');
-        }
-    };
+    })();
     </script>
 </body>
 </html>
