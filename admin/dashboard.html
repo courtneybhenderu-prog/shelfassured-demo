@@ -1,195 +1,438 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Admin Dashboard - ShelfAssured</title>
-    <script>
-        window.SA_PAGE_ROLE = 'admin';
-        window.SA_DISABLE_GLOBAL_GUARD = true;
-    </script>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.47.5/dist/umd/supabase.min.js"></script>
-    <link rel="stylesheet" href="../shared/styles.css">
-    <style>
-        .flag-card {
-            border-left: 4px solid;
-            transition: box-shadow 0.15s;
-        }
-        .flag-card:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
-        .flag-urgent  { border-color: #DC2626; }
-        .flag-warning { border-color: #D97706; }
-        .flag-info    { border-color: #2563EB; }
-        .stat-card { transition: box-shadow 0.15s; }
-        .stat-card:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
-        .pulse-dot {
-            display: inline-block;
-            width: 8px; height: 8px;
-            border-radius: 50%;
-            animation: pulse 2s infinite;
-        }
-        @keyframes pulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.4; }
-        }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Command Center — ShelfAssured Admin</title>
+  <script>window.SA_PAGE_ROLE = 'admin'; window.SA_DISABLE_GLOBAL_GUARD = true;</script>
+  <script src="../config.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.47.5/dist/umd/supabase.min.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { font-size: 14px; }
+    body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; background: #F5F0EB; color: #1a1a1a; min-height: 100vh; display: flex; }
+    #sidebar { width: 232px; flex-shrink: 0; background: #1C1C1E; display: flex; flex-direction: column; position: fixed; top: 0; left: 0; bottom: 0; z-index: 100; overflow-y: auto; transition: transform .25s ease; }
+    .sb-logo { padding: 22px 18px 18px; border-bottom: 1px solid rgba(255,255,255,.08); display: flex; align-items: center; gap: 10px; }
+    .sb-logo-text { font-size: 17px; font-weight: 800; color: #fff; letter-spacing: -.3px; }
+    .sb-logo-text span { color: #D4A017; }
+    .sb-admin-badge { font-size: 9px; font-weight: 700; letter-spacing: .8px; background: #C62828; color: #fff; padding: 2px 6px; border-radius: 4px; }
+    .sb-section { padding: 14px 10px 4px; }
+    .sb-section-label { font-size: 9.5px; font-weight: 700; color: rgba(255,255,255,.3); letter-spacing: 1.2px; text-transform: uppercase; padding: 0 8px 6px; }
+    .sb-link { display: flex; align-items: center; gap: 9px; padding: 8px 10px; border-radius: 8px; font-size: 13px; font-weight: 500; color: rgba(255,255,255,.58); text-decoration: none; cursor: pointer; transition: background .12s, color .12s; position: relative; }
+    .sb-link:hover { background: rgba(255,255,255,.07); color: rgba(255,255,255,.9); }
+    .sb-link.active { background: rgba(198,40,40,.2); color: #fff; }
+    .sb-link.active .sb-icon { color: #ef4444; }
+    .sb-icon { font-size: 15px; width: 18px; text-align: center; flex-shrink: 0; }
+    .sb-badge { margin-left: auto; background: #C62828; color: #fff; font-size: 10px; font-weight: 700; padding: 1px 6px; border-radius: 10px; min-width: 18px; text-align: center; display: none; }
+    .sb-badge.gold { background: #D4A017; }
+    .sb-badge.show { display: inline-block; }
+    .sb-footer { margin-top: auto; padding: 14px 10px; border-top: 1px solid rgba(255,255,255,.08); }
+    .sb-user { display: flex; align-items: center; gap: 9px; padding: 8px 10px; border-radius: 8px; cursor: pointer; }
+    .sb-user:hover { background: rgba(255,255,255,.07); }
+    .sb-avatar { width: 30px; height: 30px; border-radius: 50%; background: #C62828; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; flex-shrink: 0; }
+    .sb-user-name { font-size: 12.5px; font-weight: 600; color: #fff; }
+    .sb-user-role { font-size: 10.5px; color: rgba(255,255,255,.4); }
+    .sb-signout-btn { display: block; width: 100%; margin-top: 8px; padding: 7px 10px; border-radius: 7px; background: transparent; border: 1px solid rgba(255,255,255,.12); color: rgba(255,255,255,.5); font-size: 12px; font-weight: 600; cursor: pointer; text-align: center; transition: all .12s; }
+    .sb-signout-btn:hover { background: rgba(255,255,255,.06); color: rgba(255,255,255,.8); }
+    #sb-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.5); z-index: 99; }
+    #sb-overlay.open { display: block; }
+    #sb-hamburger { display: none; position: fixed; top: 14px; left: 14px; z-index: 101; background: #1C1C1E; border: none; border-radius: 8px; padding: 8px; cursor: pointer; flex-direction: column; gap: 4px; }
+    #sb-hamburger span { display: block; width: 18px; height: 2px; background: rgba(255,255,255,.7); border-radius: 2px; }
+    #main { margin-left: 232px; flex: 1; min-height: 100vh; display: flex; flex-direction: column; }
+    #topbar { background: #fff; border-bottom: 1px solid #E8E0D8; padding: 14px 24px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 50; }
+    .topbar-title { font-size: 17px; font-weight: 800; color: #1a1a1a; }
+    .topbar-sub { font-size: 11.5px; color: #9a8f84; margin-top: 1px; }
+    .topbar-actions { display: flex; gap: 8px; align-items: center; }
+    .btn { padding: 7px 14px; border-radius: 8px; font-size: 12.5px; font-weight: 600; cursor: pointer; border: none; display: inline-flex; align-items: center; gap: 5px; text-decoration: none; transition: opacity .12s; }
+    .btn:hover { opacity: .88; }
+    .btn-primary { background: #C62828; color: #fff; }
+    .btn-ghost { background: #F5F0EB; color: #1a1a1a; border: 1px solid #E0D8CF; }
+    #content { padding: 22px 24px; flex: 1; }
+    .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 20px; }
+    .stat-card { background: #fff; border-radius: 12px; padding: 16px 18px; border: 1px solid #EDE6DC; border-left: 4px solid transparent; }
+    .stat-card.c-red   { border-left-color: #C62828; }
+    .stat-card.c-gold  { border-left-color: #D4A017; }
+    .stat-card.c-blue  { border-left-color: #2563EB; }
+    .stat-card.c-green { border-left-color: #16a34a; }
+    .stat-label { font-size: 10px; font-weight: 700; color: #9a8f84; text-transform: uppercase; letter-spacing: .6px; }
+    .stat-value { font-size: 30px; font-weight: 800; color: #1a1a1a; line-height: 1.1; margin: 3px 0 2px; }
+    .stat-card.c-red  .stat-value { color: #C62828; }
+    .stat-card.c-gold .stat-value { color: #D4A017; }
+    .stat-sub { font-size: 11px; color: #9a8f84; }
+    .stat-pill { display: inline-flex; align-items: center; gap: 3px; font-size: 10.5px; font-weight: 700; padding: 2px 7px; border-radius: 20px; margin-top: 5px; }
+    .pill-red   { background: #fef2f2; color: #C62828; }
+    .pill-gold  { background: #fffbeb; color: #92400e; }
+    .pill-blue  { background: #eff6ff; color: #2563EB; }
+    .pill-green { background: #f0fdf4; color: #16a34a; }
+    .two-col { display: grid; grid-template-columns: 1fr 340px; gap: 16px; margin-bottom: 16px; }
+    .sc { background: #fff; border-radius: 12px; border: 1px solid #EDE6DC; overflow: hidden; }
+    .sc-header { padding: 14px 18px; border-bottom: 1px solid #F0E8DE; display: flex; align-items: center; justify-content: space-between; }
+    .sc-title { font-size: 13px; font-weight: 700; color: #1a1a1a; }
+    .sc-count { font-size: 11px; font-weight: 700; color: #C62828; background: #fef2f2; padding: 2px 8px; border-radius: 20px; }
+    .sc-link { font-size: 11.5px; color: #C62828; font-weight: 600; text-decoration: none; }
+    .sc-link:hover { text-decoration: underline; }
+    .sc-empty { padding: 24px; text-align: center; font-size: 12.5px; color: #9a8f84; }
+    .action-item { padding: 13px 18px; border-bottom: 1px solid #F5F0EB; display: flex; align-items: flex-start; gap: 11px; }
+    .action-item:last-child { border-bottom: none; }
+    .action-icon { width: 34px; height: 34px; border-radius: 9px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 15px; }
+    .ai-red  { background: #fef2f2; }
+    .ai-gold { background: #fffbeb; }
+    .ai-blue { background: #eff6ff; }
+    .action-body { flex: 1; min-width: 0; }
+    .action-title { font-size: 13px; font-weight: 600; color: #1a1a1a; }
+    .action-sub { font-size: 11.5px; color: #9a8f84; margin-top: 2px; }
+    .action-cta { flex-shrink: 0; padding: 5px 12px; border-radius: 7px; font-size: 11.5px; font-weight: 700; border: none; cursor: pointer; text-decoration: none; display: inline-flex; align-items: center; white-space: nowrap; }
+    .cta-red     { background: #C62828; color: #fff; }
+    .cta-gold    { background: #D4A017; color: #fff; }
+    .cta-outline { background: transparent; color: #C62828; border: 1.5px solid #C62828; }
+    .brand-row { padding: 12px 18px; border-bottom: 1px solid #F5F0EB; display: flex; align-items: center; gap: 10px; }
+    .brand-row:last-child { border-bottom: none; }
+    .brand-logo { width: 34px; height: 34px; border-radius: 8px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 800; color: #fff; }
+    .brand-name { font-size: 13px; font-weight: 700; color: #1a1a1a; }
+    .brand-meta { font-size: 11px; color: #9a8f84; margin-top: 1px; }
+    .brand-right { margin-left: auto; text-align: right; flex-shrink: 0; }
+    .jobs-tbl { width: 100%; border-collapse: collapse; }
+    .jobs-tbl th { padding: 9px 14px; text-align: left; font-size: 10px; font-weight: 700; color: #9a8f84; text-transform: uppercase; letter-spacing: .5px; border-bottom: 1px solid #F0E8DE; }
+    .jobs-tbl td { padding: 11px 14px; font-size: 12.5px; border-bottom: 1px solid #F5F0EB; vertical-align: middle; }
+    .jobs-tbl tr:last-child td { border-bottom: none; }
+    .jobs-tbl tr:hover td { background: #FAF7F3; cursor: pointer; }
+    .status-badge { display: inline-block; padding: 2px 8px; border-radius: 20px; font-size: 10.5px; font-weight: 700; letter-spacing: .2px; }
+    .sb-pending  { background: #fffbeb; color: #92400e; }
+    .sb-review   { background: #fef2f2; color: #C62828; }
+    .sb-active   { background: #eff6ff; color: #1d4ed8; }
+    .sb-done     { background: #f0fdf4; color: #16a34a; }
+    .sb-cancel   { background: #f3f4f6; color: #6b7280; }
+    .chain-chip { display: inline-block; padding: 1px 6px; border-radius: 4px; font-size: 9.5px; font-weight: 800; background: #fffbeb; color: #92400e; border: 1px solid #fde68a; margin-right: 4px; }
+    .bottom-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px; }
+    .shelfer-row { padding: 11px 18px; border-bottom: 1px solid #F5F0EB; display: flex; align-items: center; gap: 9px; }
+    .shelfer-row:last-child { border-bottom: none; }
+    .sh-avatar { width: 30px; height: 30px; border-radius: 50%; flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; color: #fff; }
+    .sh-name { font-size: 12.5px; font-weight: 600; color: #1a1a1a; }
+    .sh-meta { font-size: 11px; color: #9a8f84; }
+    .appr-pill { margin-left: auto; padding: 2px 9px; border-radius: 20px; font-size: 10.5px; font-weight: 700; flex-shrink: 0; }
+    .appr-approved { background: #f0fdf4; color: #16a34a; }
+    .appr-pending  { background: #fffbeb; color: #92400e; }
+    .svc-row { padding: 11px 18px; border-bottom: 1px solid #F5F0EB; display: flex; align-items: center; gap: 8px; }
+    .svc-row:last-child { border-bottom: none; }
+    .svc-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+    .dot-green { background: #16a34a; }
+    .dot-gold  { background: #D4A017; }
+    .svc-name { font-size: 12.5px; font-weight: 600; color: #1a1a1a; }
+    .svc-detail { margin-left: auto; font-size: 11px; color: #9a8f84; }
+    .skeleton { background: linear-gradient(90deg, #f0ebe4 25%, #e8e0d8 50%, #f0ebe4 75%); background-size: 200% 100%; animation: shimmer 1.4s infinite; border-radius: 6px; }
+    @keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+    @media (max-width: 900px) {
+      #sidebar { transform: translateX(-100%); }
+      #sidebar.open { transform: translateX(0); }
+      #sb-hamburger { display: flex; }
+      #main { margin-left: 0; }
+      .stats-grid { grid-template-columns: repeat(2, 1fr); }
+      .two-col { grid-template-columns: 1fr; }
+      .bottom-row { grid-template-columns: 1fr; }
+      #topbar { padding-left: 56px; }
+    }
+    @media (max-width: 480px) {
+      .stats-grid { grid-template-columns: repeat(2, 1fr); gap: 8px; }
+      #content { padding: 14px 14px; }
+    }
+  </style>
 </head>
-<body class="bg-gray-50">
-<script src="../shared/admin-nav.js" data-page="dashboard"></script>
-
-<div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-6 pb-24">
-
-    <!-- Marc Pittenger personalized welcome banner (shown only for marc@beshelfassured.com) -->
-    <div id="marc-welcome-banner" class="hidden mb-6 rounded-xl overflow-hidden shadow-sm" style="background:linear-gradient(135deg,#C62828 0%,#7f1d1d 100%);">
-        <div class="px-6 py-5 flex items-start justify-between gap-4">
-            <div class="flex-1">
-                <p class="text-xs font-semibold text-red-200 uppercase tracking-widest mb-1">Welcome to ShelfAssured</p>
-                <h2 class="text-xl font-bold text-white mb-2">Hey Marc, glad to see you here. We've been busy!</h2>
-                <p class="text-sm text-red-100 leading-relaxed">Your platform is live and ready for the March 14th demo. Real shelfer submissions are already coming in, brand intelligence is tracking, and the pitch report generator is good to go. I think you'll like what you see.</p>
-                <div class="flex flex-wrap gap-2 mt-4">
-                    <a href="scan-intelligence.html" class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white bg-opacity-20 hover:bg-opacity-30 text-white text-xs font-semibold rounded-lg transition">
-                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
-                        Scan Intelligence
-                    </a>
-                    <a href="brand-hub.html" class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white bg-opacity-20 hover:bg-opacity-30 text-white text-xs font-semibold rounded-lg transition">
-                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-2 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/></svg>
-                        Brand Hub
-                    </a>
-                    <a href="shelfer-hub.html" class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white bg-opacity-20 hover:bg-opacity-30 text-white text-xs font-semibold rounded-lg transition">
-                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
-                        Shelfer Hub
-                    </a>
-                </div>
-            </div>
-            <button onclick="document.getElementById('marc-welcome-banner').remove()" class="text-red-200 hover:text-white transition flex-shrink-0 mt-0.5" title="Dismiss">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
-            </button>
-        </div>
+<body>
+<aside id="sidebar">
+  <div class="sb-logo">
+    <div><div class="sb-logo-text">Shelf<span>Assured</span></div></div>
+    <span class="sb-admin-badge">ADMIN</span>
+  </div>
+  <div class="sb-section">
+    <div class="sb-section-label">Main</div>
+    <a class="sb-link active" href="dashboard.html"><span class="sb-icon">⊞</span> Command Center</a>
+    <a class="sb-link" href="review-submissions.html"><span class="sb-icon">✓</span> Review Submissions<span class="sb-badge" id="badge-submissions">0</span></a>
+    <a class="sb-link" href="manage-jobs.html"><span class="sb-icon">📝</span> Manage Jobs</a>
+  </div>
+  <div class="sb-section">
+    <div class="sb-section-label">Hubs</div>
+    <a class="sb-link" href="brand-hub.html"><span class="sb-icon">🏷️</span> Brand Hub</a>
+    <a class="sb-link" href="shelfer-hub.html"><span class="sb-icon">👥</span> Shelfer Hub<span class="sb-badge gold" id="badge-shelfers">0</span></a>
+    <a class="sb-link" href="prospect-pipeline.html"><span class="sb-icon">📊</span> Prospect Pipeline</a>
+  </div>
+  <div class="sb-section">
+    <div class="sb-section-label">Intelligence</div>
+    <a class="sb-link" href="scan-intelligence.html"><span class="sb-icon">🔍</span> Scan Intelligence</a>
+    <a class="sb-link" href="report-queue.html"><span class="sb-icon">📈</span> Report Queue</a>
+  </div>
+  <div class="sb-section">
+    <div class="sb-section-label">Settings</div>
+    <a class="sb-link" href="user-management.html"><span class="sb-icon">⚙️</span> User Management</a>
+    <a class="sb-link" href="help-support.html"><span class="sb-icon">❓</span> Help &amp; Support</a>
+    <a class="sb-link" href="barcode-capture.html"><span class="sb-icon">📷</span> Barcode Scanner</a>
+  </div>
+  <div class="sb-footer">
+    <div class="sb-user">
+      <div class="sb-avatar" id="sb-avatar-initials">C</div>
+      <div>
+        <div class="sb-user-name" id="sb-user-name">Loading…</div>
+        <div class="sb-user-role">Admin · ShelfAssured</div>
+      </div>
     </div>
-
-    <!-- Welcome bar -->
-    <div class="flex items-center justify-between mb-6">
+    <button class="sb-signout-btn" id="sb-signout">Sign Out</button>
+  </div>
+</aside>
+<button id="sb-hamburger" aria-label="Open menu"><span></span><span></span><span></span></button>
+<div id="sb-overlay"></div>
+<div id="main">
+  <div id="topbar">
+    <div>
+      <div class="topbar-title">Command Center</div>
+      <div class="topbar-sub" id="topbar-sub">Loading…</div>
+    </div>
+    <div class="topbar-actions">
+      <button class="btn btn-ghost" onclick="refreshDashboard()">↻ Refresh</button>
+      <a class="btn btn-primary" href="manage-jobs.html">+ Create Job</a>
+    </div>
+  </div>
+  <div id="content">
+    <div id="marc-banner" style="display:none;margin-bottom:16px;border-radius:12px;overflow:hidden;background:linear-gradient(135deg,#C62828 0%,#7f1d1d 100%);padding:18px 20px;">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;">
         <div>
-            <h1 class="text-xl font-bold text-gray-900">Command Center</h1>
-            <p class="text-sm text-gray-500" id="last-updated">Loading...</p>
+          <p style="font-size:10px;font-weight:700;color:rgba(255,200,200,.8);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px;">Welcome to ShelfAssured</p>
+          <h2 style="font-size:16px;font-weight:800;color:#fff;margin-bottom:6px;">Hey Marc, glad to see you here. We've been busy!</h2>
+          <p style="font-size:12px;color:rgba(255,200,200,.9);line-height:1.5;">Your platform is live. Real shelfer submissions are coming in, brand intelligence is tracking, and the pitch report generator is ready. Take a look around.</p>
         </div>
-        <button onclick="refreshDashboard()" class="text-sm text-[#C62828] font-medium hover:underline">Refresh</button>
+        <button onclick="document.getElementById('marc-banner').style.display='none'" style="background:none;border:none;color:rgba(255,200,200,.7);font-size:18px;cursor:pointer;flex-shrink:0;">×</button>
+      </div>
     </div>
-
-    <!-- Live Stats Row -->
-    <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-8">
-        <div class="stat-card bg-white rounded-lg shadow-sm p-4 cursor-pointer" onclick="goToPage('shelfer-hub.html')">
-            <p class="text-xs font-semibold text-gray-500 uppercase tracking-wide">Total Jobs</p>
-            <p class="text-3xl font-bold text-gray-900 mt-1" id="stat-total-jobs">—</p>
-            <p class="text-xs text-gray-400 mt-1">All time</p>
-        </div>
-        <div class="stat-card bg-white rounded-lg shadow-sm p-4 cursor-pointer" onclick="goToPage('shelfer-hub.html')">
-            <p class="text-xs font-semibold text-gray-500 uppercase tracking-wide">Completed</p>
-            <p class="text-3xl font-bold text-green-600 mt-1" id="stat-completed">—</p>
-            <p class="text-xs text-gray-400 mt-1">Jobs finished</p>
-        </div>
-        <div class="stat-card bg-white rounded-lg shadow-sm p-4 cursor-pointer" onclick="goToPage('shelfer-hub.html')">
-            <p class="text-xs font-semibold text-gray-500 uppercase tracking-wide">Active Shelfers</p>
-            <p class="text-3xl font-bold text-blue-600 mt-1" id="stat-shelfers">—</p>
-            <p class="text-xs text-gray-400 mt-1">Approved</p>
-        </div>
-        <div class="stat-card bg-white rounded-lg shadow-sm p-4 cursor-pointer" onclick="goToPage('brand-hub.html')">
-            <p class="text-xs font-semibold text-gray-500 uppercase tracking-wide">Client Brands</p>
-            <p class="text-3xl font-bold text-purple-600 mt-1" id="stat-brands">—</p>
-            <p class="text-xs text-gray-400 mt-1" id="stat-brands-sub">Clients</p>
-        </div>
+    <div class="stats-grid">
+      <div class="stat-card c-red">
+        <div class="stat-label">Pending Review</div>
+        <div class="stat-value" id="stat-review"><span class="skeleton" style="display:inline-block;width:32px;height:30px;"></span></div>
+        <div class="stat-sub">Submissions awaiting approval</div>
+        <div class="stat-pill pill-red" id="stat-review-pill" style="display:none;">⚡ Needs action</div>
+      </div>
+      <div class="stat-card c-gold">
+        <div class="stat-label">Shelfer Approvals</div>
+        <div class="stat-value" id="stat-shelfers"><span class="skeleton" style="display:inline-block;width:24px;height:30px;"></span></div>
+        <div class="stat-sub">New signups waiting</div>
+        <div class="stat-pill pill-gold" id="stat-shelfers-pill" style="display:none;">⚡ Needs action</div>
+      </div>
+      <div class="stat-card c-blue">
+        <div class="stat-label">Open Jobs</div>
+        <div class="stat-value" id="stat-open-jobs"><span class="skeleton" style="display:inline-block;width:24px;height:30px;"></span></div>
+        <div class="stat-sub">Pending assignment</div>
+        <div class="stat-pill pill-blue">→ Active</div>
+      </div>
+      <div class="stat-card c-green">
+        <div class="stat-label">Active Brands</div>
+        <div class="stat-value" id="stat-brands"><span class="skeleton" style="display:inline-block;width:24px;height:30px;"></span></div>
+        <div class="stat-sub" id="stat-brands-sub">Clients on platform</div>
+        <div class="stat-pill pill-green">↑ Growing</div>
+      </div>
     </div>
-
-    <!-- Flags: Needs Immediate Attention -->
-    <div class="mb-8">
-        <div class="flex items-center justify-between mb-3">
-            <h2 class="text-sm font-bold text-gray-700 uppercase tracking-wide">Needs Attention</h2>
-            <span class="text-xs text-gray-400" id="flags-count">Loading...</span>
+    <div class="two-col">
+      <div class="sc">
+        <div class="sc-header">
+          <span class="sc-title">Needs Attention</span>
+          <span class="sc-count" id="attn-count">…</span>
         </div>
-        <div id="flags-container" class="space-y-3">
-            <div class="bg-white rounded-lg p-4 text-center text-gray-400 text-sm">Loading flags...</div>
+        <div id="attn-feed"><div class="sc-empty">Loading…</div></div>
+      </div>
+      <div class="sc">
+        <div class="sc-header">
+          <span class="sc-title">Brand Snapshot</span>
+          <a class="sc-link" href="brand-hub.html">Brand Hub →</a>
         </div>
+        <div id="brand-snapshot"><div class="sc-empty">Loading brands…</div></div>
+      </div>
     </div>
-
-    <!-- Two-column: Recent Jobs + Quick Actions -->
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-
-        <!-- Recent Jobs -->
-        <div class="bg-white rounded-lg shadow-sm">
-            <div class="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
-                <h2 class="text-sm font-bold text-gray-700 uppercase tracking-wide">Recent Jobs</h2>
-                <a href="manage-jobs.html" class="text-xs text-[#C62828] hover:underline">View all</a>
-            </div>
-            <div id="recent-jobs" class="divide-y divide-gray-100">
-                <div class="p-4 text-center text-gray-400 text-sm">Loading...</div>
-            </div>
+    <div class="bottom-row">
+      <div class="sc">
+        <div class="sc-header">
+          <span class="sc-title">Recent Jobs</span>
+          <a class="sc-link" href="manage-jobs.html">All Jobs →</a>
         </div>
-
-        <!-- Quick Actions -->
-        <div class="bg-white rounded-lg shadow-sm">
-            <div class="px-4 py-3 border-b border-gray-100">
-                <h2 class="text-sm font-bold text-gray-700 uppercase tracking-wide">Quick Actions</h2>
-            </div>
-            <div class="p-4 grid grid-cols-2 gap-3">
-                <button onclick="goToPage('manage-jobs.html')" class="btn-red text-sm py-3">Manage Jobs</button>
-                <button onclick="goToPage('review-submissions.html')" class="btn-red text-sm py-3">Review Submissions</button>
-                <button onclick="goToPage('user-management.html')" class="btn-red text-sm py-3">User Management</button>
-                <button onclick="goToPage('help-support.html')" class="btn-red text-sm py-3">Help &amp; Support</button>
-                <button onclick="goToPage('brand-hub.html')" class="btn-red text-sm py-3">Brands</button>
-                <button onclick="goToPage('scan-intelligence.html')" class="btn-red text-sm py-3" style="background:#7c3aed" onmouseover="this.style.background='#6d28d9'" onmouseout="this.style.background='#7c3aed'">Scan Intelligence</button>
-            </div>
+        <div id="recent-jobs-wrap"><div class="sc-empty">Loading jobs…</div></div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:16px;">
+        <div class="sc">
+          <div class="sc-header">
+            <span class="sc-title">Shelfer Roster</span>
+            <a class="sc-link" href="shelfer-hub.html">Shelfer Hub →</a>
+          </div>
+          <div id="shelfer-roster"><div class="sc-empty">Loading shelfers…</div></div>
         </div>
+        <div class="sc">
+          <div class="sc-header"><span class="sc-title">System Status</span></div>
+          <div class="svc-row"><div class="svc-dot dot-green"></div><span class="svc-name">Supabase Database</span><span class="svc-detail">Operational</span></div>
+          <div class="svc-row"><div class="svc-dot dot-green"></div><span class="svc-name">Storage (Photos)</span><span class="svc-detail">Operational</span></div>
+          <div class="svc-row"><div class="svc-dot dot-green"></div><span class="svc-name">Auth API</span><span class="svc-detail">Operational</span></div>
+          <div class="svc-row"><div class="svc-dot dot-gold"></div><span class="svc-name">Email (Resend)</span><span class="svc-detail">Configured</span></div>
+        </div>
+      </div>
     </div>
-
-    <!-- Audit Requests -->
-    <div class="bg-white rounded-lg shadow-sm mb-8">
-        <div class="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
-            <h2 class="text-sm font-bold text-gray-700 uppercase tracking-wide">Pending Audit Requests</h2>
-            <a href="brand-hub.html" class="text-xs text-[#C62828] hover:underline">View all</a>
-        </div>
-        <div id="audit-requests" class="divide-y divide-gray-100">
-            <div class="p-4 text-center text-gray-400 text-sm">Loading...</div>
-        </div>
-    </div>
-
-    <!-- System Status -->
-    <div class="bg-white rounded-lg shadow-sm">
-        <div class="px-4 py-3 border-b border-gray-100">
-            <h2 class="text-sm font-bold text-gray-700 uppercase tracking-wide">System Status</h2>
-        </div>
-        <div class="p-4 flex flex-wrap gap-6">
-            <div class="flex items-center gap-2">
-                <span class="pulse-dot bg-green-400"></span>
-                <span class="text-sm text-gray-600">Database Online</span>
-            </div>
-            <div class="flex items-center gap-2">
-                <span class="pulse-dot bg-green-400"></span>
-                <span class="text-sm text-gray-600">Storage Healthy</span>
-            </div>
-            <div class="flex items-center gap-2">
-                <span class="pulse-dot bg-green-400"></span>
-                <span class="text-sm text-gray-600">API Responsive</span>
-            </div>
-        </div>
-    </div>
+  </div>
 </div>
-
-<!-- Bottom Nav -->
-<div class="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 z-50">
-    <div class="flex justify-around py-3 text-xs sm:text-sm">
-        <button onclick="goToPage('dashboard.html')" class="font-bold text-[#C62828]">Admin</button>
-        <button onclick="goToPage('shelfer-hub.html')" class="text-gray-500 hover:text-gray-700">Shelfer Hub</button>
-        <button onclick="goToPage('brand-hub.html')" class="text-gray-500 hover:text-gray-700">Brand Hub</button>
-        <button onclick="goToPage('../dashboard/profile.html')" class="text-gray-500 hover:text-gray-700">Profile</button>
-    </div>
-</div>
-
-<script src="config.js"></script>
 <script src="../shared/api.js"></script>
-<script src="../pages/admin-dashboard.js"></script>
 <script>
-    function goToPage(page) { window.location.href = page; }
-    window.goToPage = goToPage;
+let sb;
+(async () => {
+  let a = 0;
+  while (!window.saClient && a < 30) { await new Promise(r => setTimeout(r, 100)); a++; }
+  if (!window.saClient) { window.location.href = '../auth/signin.html'; return; }
+  sb = window.saClient;
+  await boot();
+})();
+async function boot() {
+  const { data: { session } } = await sb.auth.getSession();
+  if (!session) { window.location.href = '../auth/signin.html'; return; }
+  const { data: profile } = await sb.from('users').select('role, full_name, approval_status').eq('id', session.user.id).single();
+  if (profile && profile.role !== 'admin') { window.location.href = '../auth/signin.html'; return; }
+  const name = profile?.full_name || session.user.email || 'Admin';
+  const initials = name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0,2);
+  document.getElementById('sb-user-name').textContent = name;
+  document.getElementById('sb-avatar-initials').textContent = initials;
+  if (session.user.email === 'marc@beshelfassured.com') document.getElementById('marc-banner').style.display = 'block';
+  await loadDashboard();
+}
+async function loadDashboard() {
+  try {
+    const [
+      { data: jobs }, { data: users }, { data: auditRequests },
+      { data: helpRequests }, { data: brands }, { data: submissions }
+    ] = await Promise.all([
+      sb.from('jobs').select('id, title, status, created_at, total_payout, payout_per_store, brand_id, contractor_id').order('created_at', { ascending: false }),
+      sb.from('users').select('id, full_name, email, role, approval_status, created_at').order('created_at', { ascending: false }),
+      sb.from('audit_requests').select('id, title, audit_type, status, created_at').order('created_at', { ascending: false }),
+      sb.from('help_requests').select('id, subject, status, priority, created_at').eq('status', 'open').order('created_at', { ascending: false }),
+      sb.from('brands').select('id, name, is_shadow').order('created_at', { ascending: false }),
+      sb.from('job_submissions').select('id, job_id, status, created_at').eq('status', 'pending_review').order('created_at', { ascending: false })
+    ]);
+    const allJobs = jobs||[], allUsers = users||[], allBrands = brands||[];
+    const allAudits = auditRequests||[], openHelp = helpRequests||[], pendingSubs = submissions||[];
+    renderStats(allJobs, allUsers, allBrands, pendingSubs);
+    renderAttention(allJobs, allUsers, allAudits, openHelp, pendingSubs);
+    renderBrandSnapshot(allBrands, allJobs);
+    renderRecentJobs(allJobs.slice(0,6), allBrands);
+    renderShelferRoster(allUsers.filter(u => u.role === 'shelfer').slice(0,5));
+    const ps = allUsers.filter(u => u.role === 'shelfer' && u.approval_status === 'pending').length;
+    setBadge('badge-submissions', pendingSubs.length);
+    setBadge('badge-shelfers', ps, true);
+    const now = new Date();
+    document.getElementById('topbar-sub').textContent = 'Last updated ' + now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  } catch(err) {
+    console.error('Dashboard load error:', err);
+    document.getElementById('topbar-sub').textContent = 'Error loading data';
+  }
+}
+function renderStats(jobs, users, brands, pendingSubs) {
+  const reviewCount = pendingSubs.length;
+  const shelferPending = users.filter(u => u.role === 'shelfer' && u.approval_status === 'pending').length;
+  const openJobs = jobs.filter(j => j.status === 'pending' && !j.contractor_id).length;
+  const activeBrands = brands.filter(b => !b.is_shadow).length;
+  const shadowBrands = brands.filter(b => b.is_shadow).length;
+  setText('stat-review', reviewCount);
+  setText('stat-shelfers', shelferPending);
+  setText('stat-open-jobs', openJobs);
+  setText('stat-brands', activeBrands);
+  if (shadowBrands > 0) setText('stat-brands-sub', '+ ' + shadowBrands + ' scanned');
+  if (reviewCount > 0) document.getElementById('stat-review-pill').style.display = 'inline-flex';
+  if (shelferPending > 0) document.getElementById('stat-shelfers-pill').style.display = 'inline-flex';
+}
+function renderAttention(jobs, users, audits, help, pendingSubs) {
+  const items = [];
+  const now = Date.now();
+  const H = h => h * 3600000;
+  if (pendingSubs.length > 0) items.push({ icon:'📋', ic:'ai-red', title: pendingSubs.length + ' submission' + (pendingSubs.length>1?'s':'') + ' pending review', sub: 'Awaiting approval · ' + timeAgo(pendingSubs[0].created_at), ctaText:'Review →', ctaCls:'cta-red', ctaHref:'review-submissions.html' });
+  const ps = users.filter(u => u.role === 'shelfer' && u.approval_status === 'pending');
+  if (ps.length > 0) {
+    const names = ps.slice(0,2).map(u => u.full_name || u.email.split('@')[0]).join(' and ');
+    const extra = ps.length > 2 ? ' + ' + (ps.length-2) + ' more' : '';
+    items.push({ icon:'👤', ic:'ai-gold', title: ps.length + ' new Shelfer' + (ps.length>1?'s':'') + ' awaiting approval', sub: names + extra + ' signed up', ctaText:'Approve →', ctaCls:'cta-gold', ctaHref:'shelfer-hub.html' });
+  }
+  const pa = audits.filter(a => a.status === 'pending_review');
+  if (pa.length > 0) {
+    const overdue = pa.filter(a => now - new Date(a.created_at).getTime() > H(48));
+    items.push({ icon:'📦', ic:'ai-blue', title: pa.length + ' audit request' + (pa.length>1?'s':'') + ' pending' + (overdue.length>0?' — OVERDUE':''), sub: (pa[0].title||'Audit request') + ' · ' + timeAgo(pa[0].created_at), ctaText:'View →', ctaCls:'cta-outline', ctaHref:'brand-hub.html' });
+  }
+  const stalled = jobs.filter(j => j.status === 'assigned' && now - new Date(j.created_at).getTime() > H(48));
+  if (stalled.length > 0) items.push({ icon:'⚠️', ic:'ai-gold', title: stalled.length + ' stalled job' + (stalled.length>1?'s':''), sub: 'Accepted but not submitted after 48 hours', ctaText:'Review →', ctaCls:'cta-outline', ctaHref:'manage-jobs.html' });
+  if (help.length > 0) items.push({ icon:'❓', ic:'ai-blue', title: help.length + ' open support ticket' + (help.length>1?'s':''), sub: (help[0].subject||'Support request') + ' · ' + timeAgo(help[0].created_at), ctaText:'View →', ctaCls:'cta-outline', ctaHref:'help-support.html' });
+  const feed = document.getElementById('attn-feed');
+  document.getElementById('attn-count').textContent = items.length + ' item' + (items.length!==1?'s':'');
+  if (items.length === 0) { feed.innerHTML = '<div class="sc-empty">✅ All clear — nothing needs your attention right now.</div>'; return; }
+  feed.innerHTML = items.map(item => '<div class="action-item"><div class="action-icon ' + item.ic + '">' + item.icon + '</div><div class="action-body"><div class="action-title">' + esc(item.title) + '</div><div class="action-sub">' + esc(item.sub) + '</div></div><a href="' + item.ctaHref + '" class="action-cta ' + item.ctaCls + '">' + item.ctaText + '</a></div>').join('');
+}
+const BRAND_COLORS = ['#C62828','#7C3AED','#D4A017','#0891b2','#16a34a','#ea580c'];
+function renderBrandSnapshot(brands, jobs) {
+  const cb = brands.filter(b => !b.is_shadow).slice(0,5);
+  if (cb.length === 0) { document.getElementById('brand-snapshot').innerHTML = '<div class="sc-empty">No brands yet</div>'; return; }
+  document.getElementById('brand-snapshot').innerHTML = cb.map((brand, i) => {
+    const oc = jobs.filter(j => j.brand_id === brand.id && j.status === 'pending').length;
+    const initial = (brand.name||'?')[0].toUpperCase();
+    const color = BRAND_COLORS[i % BRAND_COLORS.length];
+    return '<div class="brand-row"><div class="brand-logo" style="background:' + color + ';">' + initial + '</div><div><div class="brand-name">' + esc(brand.name||'Unknown Brand') + '</div><div class="brand-meta">' + (oc>0 ? oc + ' open job' + (oc>1?'s':'') : 'No open jobs') + '</div></div><div class="brand-right"><a href="brand-hub.html" style="font-size:11px;color:#C62828;font-weight:600;text-decoration:none;">View →</a></div></div>';
+  }).join('');
+}
+function renderRecentJobs(jobs, brands) {
+  const bm = {};
+  (brands||[]).forEach(b => { bm[b.id] = b.name; });
+  if (jobs.length === 0) { document.getElementById('recent-jobs-wrap').innerHTML = '<div class="sc-empty">No jobs yet</div>'; return; }
+  const sm = { pending:{label:'Pending',cls:'sb-pending'}, assigned:{label:'Assigned',cls:'sb-active'}, in_progress:{label:'In Progress',cls:'sb-active'}, pending_review:{label:'In Review',cls:'sb-review'}, completed:{label:'Completed',cls:'sb-done'}, rejected:{label:'Rejected',cls:'sb-cancel'}, cancelled:{label:'Cancelled',cls:'sb-cancel'} };
+  const rows = jobs.map(job => {
+    const s = sm[job.status] || { label: cap(job.status||''), cls:'sb-pending' };
+    const title = job.title||'Untitled Job';
+    const cm = title.match(/^([A-Z][A-Z\s]+?)\s*[–—-]/);
+    const chain = cm ? cm[1].trim() : '';
+    const sp = cm ? title.replace(cm[0],'').trim() : title;
+    const bn = bm[job.brand_id]||'—';
+    const payout = job.total_payout||job.payout_per_store||0;
+    return '<tr onclick="window.location.href=\'../dashboard/job-details.html?job_id=' + job.id + '\'"><td>' + (chain?'<span class="chain-chip">'+esc(chain)+'</span>':'') + esc(sp.slice(0,28)) + (sp.length>28?'…':'') + '</td><td>' + esc(bn) + '</td><td>$' + Number(payout).toFixed(2) + '</td><td><span class="status-badge ' + s.cls + '">' + s.label + '</span></td></tr>';
+  }).join('');
+  document.getElementById('recent-jobs-wrap').innerHTML = '<table class="jobs-tbl"><thead><tr><th>Store</th><th>Brand</th><th>Payout</th><th>Status</th></tr></thead><tbody>' + rows + '</tbody></table>';
+}
+const SHELFER_COLORS = ['#C62828','#7C3AED','#0891b2','#16a34a','#ea580c','#D4A017'];
+function renderShelferRoster(shelfers) {
+  if (shelfers.length === 0) { document.getElementById('shelfer-roster').innerHTML = '<div class="sc-empty">No shelfers yet</div>'; return; }
+  document.getElementById('shelfer-roster').innerHTML = shelfers.map((s, i) => {
+    const name = s.full_name||s.email||'Unknown';
+    const initials = name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0,2);
+    const color = SHELFER_COLORS[i % SHELFER_COLORS.length];
+    const approved = s.approval_status === 'approved';
+    return '<div class="shelfer-row"><div class="sh-avatar" style="background:' + color + ';">' + initials + '</div><div><div class="sh-name">' + esc(name) + '</div><div class="sh-meta">Joined ' + timeAgo(s.created_at) + '</div></div><span class="appr-pill ' + (approved?'appr-approved':'appr-pending') + '">' + (approved?'Approved':'Pending') + '</span></div>';
+  }).join('');
+}
+function setBadge(id, count) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.textContent = count;
+  el.classList.toggle('show', count > 0);
+}
+const sidebar = document.getElementById('sidebar');
+const overlay = document.getElementById('sb-overlay');
+const hamburger = document.getElementById('sb-hamburger');
+hamburger.addEventListener('click', () => { sidebar.classList.toggle('open'); overlay.classList.toggle('open'); });
+overlay.addEventListener('click', () => { sidebar.classList.remove('open'); overlay.classList.remove('open'); });
+document.getElementById('sb-signout').addEventListener('click', async () => {
+  if (sb) await sb.auth.signOut();
+  window.location.href = '../auth/signin.html';
+});
+async function refreshDashboard() {
+  document.getElementById('topbar-sub').textContent = 'Refreshing…';
+  await loadDashboard();
+}
+window.refreshDashboard = refreshDashboard;
+function setText(id, val) { const el = document.getElementById(id); if (el) el.textContent = val; }
+function esc(str) { if (!str) return ''; const d = document.createElement('div'); d.textContent = String(str); return d.innerHTML; }
+function cap(str) { return str ? str.charAt(0).toUpperCase() + str.slice(1) : ''; }
+function timeAgo(dateStr) {
+  if (!dateStr) return '';
+  const diff = Date.now() - new Date(dateStr).getTime();
+  const mins = Math.floor(diff/60000), hours = Math.floor(diff/3600000), days = Math.floor(diff/86400000);
+  if (mins < 60) return mins + 'm ago';
+  if (hours < 24) return hours + 'h ago';
+  return days + 'd ago';
+}
 </script>
 </body>
 </html>
