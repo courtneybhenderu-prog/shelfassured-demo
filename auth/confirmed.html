@@ -83,7 +83,7 @@
     try { if (typeof ensureProfile === "function") await ensureProfile(user); } catch(e) {}
     const base = location.origin.includes("localhost")
       ? location.origin
-      : "https://courtneybhenderu-prog.github.io/shelfassured-demo";
+      : "https://app.beshelfassured.com";
     if (tokenType === "recovery") {
       sub.textContent   = "Redirecting to set your new password...";
       setTimeout(() => location.replace(base + "/auth/new-password.html"), 800);
@@ -96,7 +96,8 @@
     } else if (mdRole === "brand" || mdRole === "brand_client") {
       redirectUrl = base + "/dashboard/brand-client.html";
     } else {
-      redirectUrl = base + "/dashboard/shelfer.html";
+      // Shelfers go to the new SPA — pending approval screen handles unapproved accounts
+      redirectUrl = base + "/shelfer/";
     }
     sub.textContent   = "Redirecting you now...";
     setTimeout(() => location.replace(redirectUrl), 800);

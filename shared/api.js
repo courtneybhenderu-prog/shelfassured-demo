@@ -180,8 +180,8 @@ window.saSignUp = async function(email, password, userData = {}) {
   try {
     // Pick base depending on where the app is running
     const SA_BASE = location.origin.includes('localhost')
-      ? 'http://localhost:8000'
-      : 'https://courtneybhenderu-prog.github.io/shelfassured-demo';
+      ? location.origin
+      : 'https://app.beshelfassured.com';
     
     console.log('🔄 Calling supabase.auth.signUp...');
     const { data, error } = await supabase.auth.signUp({
