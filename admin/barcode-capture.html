@@ -13,7 +13,7 @@
     <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
     <link rel="stylesheet" href="../shared/styles.css">
     <!-- Shared admin hamburger nav -->
-    <script src="../shared/admin-nav.js" data-page="barcode-capture"></script>
+    <script src="../shared/admin-shell.js" data-page="barcode-capture" data-title="Barcode Scanner" data-sub="Capture and catalog product barcodes" data-actions='[]'></script>
     <style>
         #qr-reader video { width: 100% !important; border-radius: 0.5rem; }
         #qr-reader { border: none !important; padding: 0 !important; }
@@ -47,7 +47,7 @@
         .slide-up { animation: slideUp 0.3s ease-out; }
     </style>
 </head>
-<body class="bg-gray-100 min-h-screen pb-20">
+<body class="">
 
     <!-- scan-count badge lives in the content area now; admin-nav provides the top bar -->
     <div class="max-w-lg mx-auto px-4 pt-3 flex items-center justify-between">
